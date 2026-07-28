@@ -3,7 +3,7 @@
 Versions track build milestones: `0.<milestone>.<patch>`. The project reaches
 `1.0.0` when all 8 milestones are complete and the paper forms are retired.
 
-## [0.4.0] — Milestones 1–4
+## [0.5.0] — Milestones 1–4
 
 Delivered together as the first review checkpoint.
 

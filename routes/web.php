@@ -76,7 +76,7 @@ Route::middleware(['kiosk', 'kiosk.idle'])->group(function (): void {
     Route::get('/kiosk/operators/{machine?}', OperatorPicker::class)->name('kiosk.operators');
 
     // PIN pad for one operator, then the PIN submission itself.
-    Route::get('/kiosk/pin/{user}', [KioskSessionController::class, 'create'])->name('kiosk.pin.create');
+    Route::get('/kiosk/pin/{user}', [KioskSessionController::class, 'create'])->name('kiosk.pin.show');
     Route::post('/kiosk/pin', [KioskSessionController::class, 'store'])->name('kiosk.pin');
 
     // Drop the operator session but keep the tablet enrolled.
