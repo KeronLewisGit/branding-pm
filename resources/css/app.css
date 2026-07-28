@@ -1,0 +1,147 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Alpine: hide x-cloak'd elements until Alpine has booted. */
+[x-cloak] {
+    display: none !important;
+}
+
+@layer base {
+    /* Kill the grey flash on tap — we provide our own active states. */
+    html {
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    /*
+     * Stop double-tap-to-zoom from fighting rapid checkbox taps on the
+     * shop-floor tablets. `manipulation` keeps pan + pinch-zoom working.
+     */
+    a,
+    button,
+    input,
+    select,
+    textarea,
+    label,
+    [role="button"] {
+        touch-action: manipulation;
+    }
+
+    /*
+     * Focus must ALWAYS be visible. Components may add their own rings on
+     * top; nothing may remove this without a replacement.
+     */
+    :focus-visible {
+        outline: 2px solid theme('colors.sky.500');
+        outline-offset: 2px;
+    }
+}
+
+/*
+ * Shop-floor primitives only. Anything used fewer than ~20 times belongs as
+ * Tailwind utilities in the markup, not here.
+ */
+@layer components {
+    /* Buttons — 56px minimum tap target (contract §8). */
+    .btn {
+        @apply inline-flex min-h-14 select-none items-center justify-center gap-2 rounded-xl px-6 text-lg font-semibold transition-colors disabled:pointer-events-none disabled:opacity-50;
+    }
+
+    .btn-primary {
+        @apply bg-sky-600 text-white hover:bg-sky-500 active:bg-sky-700;
+    }
+
+    .btn-ghost {
+        @apply border border-slate-300 bg-transparent text-slate-700 hover:bg-slate-100 active:bg-slate-200;
+    }
+
+    .btn-danger {
+        @apply bg-rose-600 text-white hover:bg-rose-500 active:bg-rose-700;
+    }
+
+    .card {
+        @apply rounded-2xl border border-slate-200 bg-white text-slate-900 shadow-sm;
+    }
+
+    /* Form primitives — label + control + error stack. */
+    .field {
+        @apply space-y-1.5;
+    }
+
+    .label {
+        @apply block text-base font-medium text-slate-700;
+    }
+
+    .input {
+        @apply block min-h-14 w-full rounded-xl border-slate-300 text-lg shadow-sm focus:border-sky-500 focus:ring-sky-500;
+    }
+
+    .badge {
+        @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-sm font-semibold;
+    }
+
+    /* Pair the dot with a text label — colour never carries meaning alone. */
+    .status-dot {
+        @apply inline-block h-3.5 w-3.5 shrink-0 rounded-full;
+    }
+
+    /* The 80px checklist row (contract §8: min-h-20). */
+    .tap-row {
+        @apply flex min-h-20 w-full select-none items-center gap-4 px-4 text-left;
+    }
+
+    /*
+     * Kiosk (dark, high-contrast) overrides. The kiosk layout puts `kiosk`
+     * on <body>, so the same primitives read correctly under plant lighting
+     * without every view needing dark variants.
+     */
+    .kiosk .card {
+        @apply border-slate-700 bg-slate-900 text-slate-100;
+    }
+
+    .kiosk .label {
+        @apply text-slate-200;
+    }
+
+    .kiosk .input {
+        @apply border-slate-600 bg-slate-800 text-slate-100 placeholder:text-slate-400;
+    }
+
+    .kiosk .btn-ghost {
+        @apply border-slate-600 text-slate-100 hover:bg-slate-800 active:bg-slate-700;
+    }
+
+    .kiosk .tap-row {
+        @apply text-slate-100;
+    }
+}
+
+/* Respect the OS reduced-motion setting everywhere. */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* Print: hide nav chrome, flatten decoration. */
+@media print {
+    [data-nav-chrome],
+    .no-print {
+        display: none !important;
+    }
+
+    body {
+        background: #fff !important;
+        color: #000 !important;
+    }
+
+    .card {
+        box-shadow: none !important;
+        border-color: theme('colors.slate.300') !important;
+    }
+}
