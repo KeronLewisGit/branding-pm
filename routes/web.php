@@ -5,17 +5,26 @@ declare(strict_types=1);
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Kiosk\KioskEnrolmentController;
 use App\Http\Controllers\Kiosk\KioskSessionController;
+use App\Http\Controllers\ReportExportController;
+use App\Http\Controllers\RunPdfController;
+use App\Livewire\Dashboard;
 use App\Livewire\Admin\HolidayManager;
 use App\Livewire\Admin\LocationManager;
 use App\Livewire\Admin\MachineManager;
 use App\Livewire\Admin\PartManager;
+use App\Livewire\Admin\QrStickerSheet;
 use App\Livewire\Admin\TemplateEditor;
 use App\Livewire\Admin\TemplateManager;
+use App\Livewire\Issues\IssueDetail;
+use App\Livewire\Issues\IssueRegister;
 use App\Livewire\Kiosk\MachinePicker;
 use App\Livewire\Kiosk\MachineRuns;
 use App\Livewire\Kiosk\OperatorPicker;
+use App\Livewire\Reports\ReportViewer;
+use App\Livewire\Runs\ApprovalQueue;
 use App\Livewire\Runs\RunForm;
 use App\Livewire\Runs\RunIndex;
+use App\Livewire\Runs\RunReview;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -101,11 +110,51 @@ Route::middleware(['auth', 'permission:kiosk.manage'])->group(function (): void 
 | no-op for ordinary password sessions, which carry no kiosk session keys.
 */
 Route::middleware(['auth', 'kiosk.idle'])->group(function (): void {
-    // Milestone 7 — placeholder view, states so on screen.
-    Route::view('/dashboard', 'dashboard')->name('dashboard');
+    Route::get('/dashboard', Dashboard::class)->name('dashboard');
+
+    /*
+    | Reports (milestone 7). `report.view` shows the numbers; taking them out
+    | of the building needs `export.data` as well, which the export
+    | controller checks for itself.
+    */
+    Route::middleware('permission:report.view')->group(function (): void {
+        Route::get('/reports', ReportViewer::class)->name('reports.index');
+        Route::get('/reports/{report}/csv', [ReportExportController::class, 'csv'])->name('reports.csv');
+        Route::get('/reports/{report}/pdf', [ReportExportController::class, 'pdf'])->name('reports.pdf');
+    });
 
     Route::get('/runs', RunIndex::class)->name('runs.index');
+
+    /*
+     * The approval queue MUST be declared before /runs/{run}: registered the
+     * other way round, "approvals" would be bound as a run id and 404.
+     * `permission:run.approve` is the coarse gate — both components
+     * re-authorise in mount(), and every decision re-checks its policy.
+     */
+    Route::get('/runs/approvals', ApprovalQueue::class)
+        ->middleware('permission:run.approve')
+        ->name('runs.approvals');
+
     Route::get('/runs/{run}', RunForm::class)->name('runs.show');
+
+    // The paper-form facsimile (milestone 7). Gated on the run's own view
+    // policy, not `export.data` — printing a sheet you may already read is
+    // the same disclosure, and a supervisor signing off has to file it.
+    Route::get('/runs/{run}/pdf', RunPdfController::class)->name('runs.pdf');
+
+    Route::get('/runs/{run}/review', RunReview::class)
+        ->middleware('permission:run.approve')
+        ->name('runs.review');
+
+    /*
+    | Issues register (milestone 6). `issue.view` is the coarse gate; both
+    | components re-authorise through IssuePolicy, which scopes visibility to
+    | the machines the user may see.
+    */
+    Route::middleware('permission:issue.view')->group(function (): void {
+        Route::get('/issues', IssueRegister::class)->name('issues.index');
+        Route::get('/issues/{issue}', IssueDetail::class)->name('issues.show');
+    });
 });
 
 /*
@@ -120,6 +169,9 @@ Route::middleware(['auth', 'kiosk.idle'])->group(function (): void {
 Route::middleware('auth')->prefix('admin')->name('admin.')->group(function (): void {
     Route::middleware('permission:machine.manage')->group(function (): void {
         Route::get('/machines', MachineManager::class)->name('machines');
+        // Before /machines/{...} would matter — there is no such route today,
+        // but the literal segment is registered first regardless.
+        Route::get('/machines/qr', QrStickerSheet::class)->name('machines.qr');
         Route::get('/locations', LocationManager::class)->name('locations');
     });
 

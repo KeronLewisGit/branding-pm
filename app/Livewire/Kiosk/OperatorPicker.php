@@ -25,7 +25,7 @@ use Livewire\Component;
  * Tapping a tile links to route('kiosk.pin.show') — the PIN pad rendered
  * by Kiosk\KioskSessionController::create().
  */
-#[Layout('layouts.kiosk')]
+#[Layout('layouts::kiosk')]
 class OperatorPicker extends Component
 {
     #[Locked]

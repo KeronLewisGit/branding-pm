@@ -12,6 +12,14 @@
       80px height) so it is reachable without scrolling.
     - Per-row wire:target keeps a slow save on ONE row — the list never
       greys out wholesale.
+
+    Raw PHP in this file is written in the BLOCK form only, deliberately.
+    Blade extracts raw PHP with a non-greedy regex that pairs the first
+    opening directive with the first closing one, so the parenthesised
+    one-line form, placed above a block, is taken as that block's opening tag
+    and swallows every line between the two. Do not mix the two forms here.
+    (Contract §1.1. Note the literal directives are avoided even in this
+    comment — the extraction runs before comments are stripped.)
 --}}
 @use('App\Enums\ResponseType')
 @use('App\Enums\RunItemStatus')
@@ -19,7 +27,9 @@
 @use('App\Enums\Shift')
 @use('App\Enums\IssueSeverity')
 
-@php($isEditable = $this->isEditable)
+@php
+    $isEditable = $this->isEditable;
+@endphp
 
 <div class="mx-auto w-full max-w-3xl pb-24">
 
@@ -75,7 +85,9 @@
 
         {{-- Shift — unmistakable, so a night operator never fills the day sheet --}}
         @if ($run->shift->isSplit())
-            @php($isNight = $run->shift === Shift::Night)
+            @php
+                $isNight = $run->shift === Shift::Night;
+            @endphp
             <div class="mt-4 flex items-center gap-3 rounded-2xl border-2 px-5 py-4 {{ $isNight ? 'border-indigo-400 bg-indigo-950/70 text-indigo-100' : 'border-amber-400 bg-amber-400/10 text-amber-100' }}">
                 @if ($isNight)
                     <svg class="h-9 w-9 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" aria-hidden="true">
@@ -131,7 +143,9 @@
                 </span>
             @endif
         </div>
-        @php($pct = $progress['total'] > 0 ? (int) round($progress['done'] / $progress['total'] * 100) : 0)
+        @php
+            $pct = $progress['total'] > 0 ? (int) round($progress['done'] / $progress['total'] * 100) : 0;
+        @endphp
         <div class="mt-2 h-3 overflow-hidden rounded-full bg-slate-800" role="progressbar"
             aria-valuemin="0" aria-valuemax="{{ $progress['total'] }}" aria-valuenow="{{ $progress['done'] }}">
             <div class="h-full rounded-full bg-emerald-500 transition-all duration-300" style="width: {{ $pct }}%"></div>
@@ -254,7 +268,9 @@
                             </div>
 
                             @if ($item->response_type === ResponseType::PassFail)
-                                @php($passTarget = "markPass({$item->id}, '{$status->value}')")
+                                @php
+                                    $passTarget = "markPass({$item->id}, '{$status->value}')";
+                                @endphp
                                 <div class="mt-3 flex gap-3 sm:pl-16">
                                     <button type="button"
                                         class="flex min-h-14 flex-1 items-center justify-center rounded-xl border-2 text-lg font-bold transition-colors disabled:opacity-60 {{ $status === RunItemStatus::Done ? 'border-emerald-500 bg-emerald-600 text-white' : 'border-slate-600 bg-slate-800 text-slate-200' }}"
@@ -436,6 +452,33 @@
         @endif
     </section>
 
+    {{-- ── Sign-off record — the two signature blocks off the paper form ── --}}
+
+    @if ($run->operator_signature_path || in_array($run->status, [RunStatus::Submitted, RunStatus::Approved, RunStatus::Rejected], true))
+        <section class="card mt-8 p-5">
+            <h2 class="text-xl font-bold">{{ __('app.runs.signoff') }}</h2>
+
+            <div class="mt-4 grid gap-4 sm:grid-cols-2">
+                <x-signature-block
+                    :label="__('app.runs.operator_signature')"
+                    :user="$run->operator"
+                    :path="$run->operator_signature_path"
+                    :signed-at="$run->operator_signed_at" />
+
+                <x-signature-block
+                    :label="__('app.runs.supervisor_signature')"
+                    :user="$run->supervisor"
+                    :path="$run->supervisor_signature_path"
+                    :signed-at="$run->supervisor_signed_at"
+                    :note="$run->supervisor_comment" />
+            </div>
+
+            @if ($run->status === RunStatus::Submitted)
+                <p class="mt-4 text-base text-slate-400">{{ __('app.runs.awaiting_supervisor') }}</p>
+            @endif
+        </section>
+    @endif
+
     {{-- ── Submission ──────────────────────────────────────────── --}}
 
     @if ($isEditable)
@@ -524,7 +567,9 @@
                     <p class="mt-1 text-base text-rose-400">{{ $message }}</p>
                 @enderror
 
-                @php($needsPhoto = (bool) ($actionItem->templateItem?->requires_photo_on_fail ?? false))
+                @php
+                    $needsPhoto = (bool) ($actionItem->templateItem?->requires_photo_on_fail ?? false);
+                @endphp
                 @if ($needsPhoto)
                     <p class="mt-3 text-base font-semibold text-amber-300">{{ __('app.runs.photo_required_on_fail') }}</p>
                 @endif
@@ -595,8 +640,9 @@
             </div>
         </x-modal>
 
-        {{-- Confirm submission --}}
-        <x-modal name="confirm-submit" :title="__('app.runs.confirm_submit_title')">
+        {{-- Confirm submission — signature + identity re-confirmation --}}
+        <x-modal name="confirm-submit" :title="__('app.runs.confirm_submit_title')" max-width="xl"
+            x-data="{ signature: '', confirmation: '', busy: false }">
             <p class="text-lg text-slate-200">{{ __('app.runs.confirm_submit_body') }}</p>
 
             <dl class="mt-4 space-y-1 text-lg">
@@ -620,19 +666,57 @@
                 </div>
             </dl>
 
-            {{-- TODO(milestone 5): operator signature canvas + PIN
-                 re-confirmation render HERE, between this summary and the
-                 buttons below. RunForm::submit() carries the matching
-                 server-side seam inside its transaction. --}}
+            {{-- Operator signature. The canvas value lives in this Alpine
+                 scope and is handed to submit() as an argument — it is never
+                 a Livewire property (see resources/js/app.js). --}}
+            <div class="mt-6">
+                <x-signature-pad
+                    x-model="signature"
+                    :label="__('app.runs.operator_signature')"
+                    :hint="__('app.runs.signature_hint')" />
+                @error('signature')
+                    <p class="mt-2 text-base text-rose-400">{{ $message }}</p>
+                @enderror
+            </div>
+
+            {{-- Identity re-confirmation. On a shared tablet the session only
+                 says someone signed in earlier, not who is signing now. --}}
+            @php
+                $method = $this->confirmationMethod;
+            @endphp
+            @if ($method !== 'none')
+                <div class="mt-6">
+                    <label for="sign-confirmation" class="block text-lg font-semibold">
+                        {{ $method === 'pin' ? __('app.runs.confirm_with_pin') : __('app.runs.confirm_with_password') }}
+                    </label>
+                    <p class="mt-1 text-base text-slate-400">
+                        {{ __('app.runs.confirm_identity_hint', ['name' => auth()->user()->full_name]) }}
+                    </p>
+                    <input
+                        id="sign-confirmation"
+                        type="password"
+                        @if ($method === 'pin') inputmode="numeric" autocomplete="one-time-code" @else autocomplete="current-password" @endif
+                        class="input mt-2 min-h-14 w-full text-center text-2xl tracking-[0.5em]"
+                        x-model="confirmation"
+                        x-on:keydown.enter.prevent="if (signature && ! busy) { busy = true; $wire.submit(signature, confirmation).finally(() => { confirmation = ''; busy = false }) }"
+                    >
+                    @error('confirmation')
+                        <p class="mt-2 text-base text-rose-400">{{ $message }}</p>
+                    @enderror
+                </div>
+            @endif
 
             <div class="mt-6 flex gap-3">
                 <button type="button"
                     class="flex min-h-14 flex-1 items-center justify-center rounded-xl border-2 border-slate-600 text-lg font-semibold text-slate-300 active:bg-slate-800"
-                    x-on:click="show = false">
+                    x-on:click="confirmation = ''; show = false">
                     {{ __('app.actions.cancel') }}
                 </button>
-                <x-button class="min-h-14 flex-1 text-lg" wire:click="submit" wire:target="submit" wire:loading.attr="disabled">
-                    {{ __('app.actions.submit') }}
+                <x-button class="min-h-14 flex-1 text-lg"
+                    x-bind:disabled="! signature || busy"
+                    x-on:click="busy = true; $wire.submit(signature, confirmation).finally(() => { confirmation = ''; busy = false })">
+                    <span x-show="! busy">{{ __('app.runs.sign_and_submit') }}</span>
+                    <span x-show="busy" x-cloak>{{ __('app.runs.saving') }}</span>
                 </x-button>
             </div>
         </x-modal>

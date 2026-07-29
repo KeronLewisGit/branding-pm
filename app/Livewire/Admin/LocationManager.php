@@ -30,7 +30,7 @@ use Livewire\WithPagination;
  * There is no LocationPolicy (BUILD-CONTRACT §5 lists none) — locations are
  * gated by the `machine.manage` permission, same as the sidebar nav entry.
  */
-#[Layout('layouts.app')]
+#[Layout('layouts::app')]
 class LocationManager extends Component
 {
     use AuthorizesRequests;

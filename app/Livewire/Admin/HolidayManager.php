@@ -30,7 +30,7 @@ use Livewire\WithPagination;
  *
  * Gated by `holiday.manage` (BUILD-CONTRACT §5 defines no HolidayPolicy).
  */
-#[Layout('layouts.app')]
+#[Layout('layouts::app')]
 class HolidayManager extends Component
 {
     use AuthorizesRequests;

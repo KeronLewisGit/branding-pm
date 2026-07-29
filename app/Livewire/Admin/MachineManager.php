@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Livewire\Admin;
 
+use App\Enums\IssueSeverity;
+use App\Enums\IssueStatus;
 use App\Models\Location;
 use App\Models\Machine;
 use App\Models\Part;
@@ -33,7 +35,7 @@ use Livewire\WithPagination;
  * on create only; on edit it is never rewritten automatically, and changing
  * it shows a loud warning because every printed sticker encodes the old code.
  */
-#[Layout('layouts.app')]
+#[Layout('layouts::app')]
 class MachineManager extends Component
 {
     use AuthorizesRequests;
@@ -423,6 +425,15 @@ class MachineManager extends Component
         $machines = Machine::query()
             ->with('location.site')
             ->withCount(['parts', 'templates'])
+            // Open breakdowns are flagged wherever a machine is listed
+            // (SPEC §Issues). Counted here rather than through the
+            // Machine::open_breakdown accessor, which would be a query per row.
+            ->withCount(['issues as open_breakdown_count' => fn (Builder $query) => $query
+                ->where('severity', IssueSeverity::Breakdown->value)
+                ->whereIn('status', array_map(
+                    fn (IssueStatus $status): string => $status->value,
+                    IssueStatus::openStatuses(),
+                ))])
             ->when($this->search !== '', function (Builder $query): void {
                 $term = '%'.addcslashes($this->search, '\\%_').'%';
 

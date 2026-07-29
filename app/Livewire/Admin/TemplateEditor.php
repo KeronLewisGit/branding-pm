@@ -36,7 +36,7 @@ use Livewire\Component;
  *   `checklist_run_items.description` are snapshots taken at generation time.
  *   Edits here only shape runs generated AFTER the edit.
  */
-#[Layout('layouts.app')]
+#[Layout('layouts::app')]
 class TemplateEditor extends Component
 {
     use AuthorizesRequests;

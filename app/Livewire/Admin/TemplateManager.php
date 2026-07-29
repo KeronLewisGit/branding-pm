@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Livewire\Admin;
 
-use App\Models\ChecklistTemplate;
-use App\Models\Machine;
 use App\Enums\Frequency;
 use App\Enums\WorkCategory;
+use App\Models\ChecklistTemplate;
+use App\Models\Machine;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -31,7 +31,7 @@ use Livewire\WithPagination;
  * template has never generated a run (the `restrict` FK on
  * `checklist_runs.checklist_template_id` protects history otherwise).
  */
-#[Layout('layouts.app')]
+#[Layout('layouts::app')]
 class TemplateManager extends Component
 {
     use AuthorizesRequests;

@@ -14,11 +14,11 @@ Original functional spec: `docs/SPEC.md`.
 
 | Question | Answer | Consequence |
 |---|---|---|
-| Toolchain | PHP/Composer/MySQL are **not installed** on the build machine | Author source only. Nothing is executed. Every file must be correct by inspection. `composer install && php artisan migrate --seed` must work first try. |
+| Toolchain | PHP/Composer/MySQL are **not installed on the Windows host**; since milestone 5 the stack runs under `docker compose` | Author source, then verify it against the running containers. Every command goes through `docker compose exec php …`. See §1.1. |
 | Working days | **Mon–Sat**, Sunday excluded, public holidays excluded | `sites.working_days` JSON, default `[1,2,3,4,5,6]` (ISO-8601 weekday numbers). `holidays` table. |
 | Shifts | **Two shifts — day and night** | Daily templates generate **one run per shift per machine per day**. See §2 `shift`. |
 | Operator email | **Mixed** — some have company email, some do not | `users.email` nullable + unique. `users.password` nullable. Login form accepts **email OR employee number**. Kiosk PIN login works for everyone. |
-| Build scope | **Milestones 1–4**, then stop for review | Milestones 5–8 are NOT in this pass. Do not build signatures/approval, issues UI, dashboards, reports, PDF export, PWA. Schema and models for them DO get built (migrations cover the whole domain). |
+| Build scope | Milestone by milestone, review between each. **1–4 shipped together; 5 shipped; 6 in progress.** | Do not build ahead of the current milestone. Schema and models for every milestone DO exist already (the migrations cover the whole domain), so later work adds screens, not tables. |
 | CMMS/ERP feed | Not asked for now — assumed **no live integration** | Keep CSV export as the seam. No API client code. |
 
 **Deviations from the written spec, deliberate, each logged in `docs/seed-notes.md`:**
@@ -42,21 +42,50 @@ Original functional spec: `docs/SPEC.md`.
 
 ## 1. Stack and versions
 
-- PHP `^8.3`, Laravel `^11.0`
-- `livewire/livewire ^3.5`
-- `spatie/laravel-permission ^6.9`
-- `spatie/laravel-activitylog ^4.8`
-- `barryvdh/laravel-dompdf ^3.0` (installed now, used in milestone 7)
+`composer.json` is the authority; this list is the summary. It was raised from
+PHP 8.3 / Laravel 11 / Livewire 3 during milestone 5 — see §1.1 for what that
+changed in the code, because milestones 1–4 were authored against the older APIs.
+
+- PHP `^8.4`, Laravel `^13.0`
+- `livewire/livewire ^4.3`
+- `spatie/laravel-permission ^8.3`
+- `spatie/laravel-activitylog ^5.0`
+- `barryvdh/laravel-dompdf ^3.1` (installed now, used in milestone 7)
 - `simplesoftwareio/simple-qrcode ^4.2` (installed now, used in milestone 8)
-- `laravel/breeze ^2.1` (dev) — **do not run its installer**; the Blade auth views are
-  hand-authored here because Composer cannot run on the build machine.
-- Dev: `pestphp/pest ^3.0`, `pestphp/pest-plugin-laravel ^3.0`, `fakerphp/faker`
+- `laravel/breeze ^2.4` (dev) — **do not run its installer**; the Blade auth views are
+  hand-authored here.
+- Dev: `pestphp/pest ^5.0`, `pestphp/pest-plugin-laravel ^5.0`, `fakerphp/faker`,
+  `laravel/pint`
 - Front end: `tailwindcss ^3.4`, `@tailwindcss/forms`, `alpinejs ^3.14`, `vite ^5.4`,
   `laravel-vite-plugin ^1.0`
 - Queue `database`, cache `file`, session `database`, filesystem disk `public`.
   **No Redis anywhere.**
 - Timezone: store UTC. `config('app.timezone') = 'UTC'`,
   `config('app.display_timezone')` = `env('APP_DISPLAY_TIMEZONE', 'America/Port_of_Spain')`.
+
+### 1.1 Consequences of the version raise
+
+- **activitylog 5** moved the trait and renamed a builder method. Use
+  `Spatie\Activitylog\Models\Concerns\LogsActivity` and
+  `Spatie\Activitylog\Support\LogOptions`, and `->dontLogEmptyChanges()` in place of
+  v4's `->dontSubmitEmptyLogs()`. The v4 namespaces do not exist in 5 and fail at
+  autoload time, not at runtime.
+- **Blade raw-PHP blocks.** `storePhpBlocks()` extracts with
+  `/(?<!@)@php(.*?)@endphp/s`, so a short-form `@php(...)` that appears **before** a
+  `@php … @endphp` block in the same file is matched as that block's opening tag and
+  swallows every line between the two. Within one file, either use the short form
+  throughout, or put block forms first. This has bitten `run-form.blade.php` once
+  already; it now uses block form exclusively and says so at the top.
+- **Local runtime.** PHP, Composer and MySQL still are not installed on the Windows
+  host — the stack runs entirely through `docker compose` (php-fpm, nginx, mysql,
+  scheduler). `vendor/` lives in a named volume, so run every composer and artisan
+  command as `docker compose exec php …`, never from the host.
+- **storage/ permissions.** artisan run through `docker compose exec` executes as
+  root and leaves root-owned `0644` files in `storage/`, which php-fpm's www-data
+  workers then cannot rewrite — the symptom is a 500 on every authenticated page,
+  because `@can()` makes spatie/laravel-permission write its cache. The `php`
+  service re-opens those permissions on start; after a root-run artisan command that
+  writes `storage/`, `docker compose restart php`.
 
 ---
 
@@ -336,7 +365,9 @@ Named routes other code may link to:
 | `kiosk.pin` | POST `/kiosk/pin` | PIN auth for a run |
 | `kiosk.release` | POST `/kiosk/release` | drop session back to kiosk |
 | `runs.index` | GET `/runs` | |
+| `runs.approvals` | GET `/runs/approvals` | milestone 5 — supervisor queue. **Must be registered before `runs.show`**, or the literal segment binds as a run id. `permission:run.approve`. |
 | `runs.show` | GET `/runs/{run}` | the completion form |
+| `runs.review` | GET `/runs/{run}/review` | milestone 5 — review + approve/reject. `permission:run.approve`. |
 | `admin.machines` | GET `/admin/machines` | |
 | `admin.locations` | GET `/admin/locations` | |
 | `admin.parts` | GET `/admin/parts` | |
@@ -406,7 +437,9 @@ Log the transition to the activity log with a `system` causer.
 
 ---
 
-## 9. Definition of done for this pass (milestones 1–4)
+## 9. Definition of done per milestone
+
+### Milestones 1–4 (shipped, v0.5.0)
 
 1. Scaffold, auth (email-or-employee-number + kiosk PIN), roles/permissions,
    all migrations, master-data seeders, `README.md`.
@@ -417,6 +450,40 @@ Log the transition to the activity log with a `system` causer.
 4. The run completion form — items, N/A + fail with reason, parts steppers, notes,
    progress indicator, autosave, required-item enforcement on submit.
 
-Not in this pass: signature canvas, supervisor approval queue, issues UI,
-dashboards, reports, CSV/PDF export, PWA/service worker, QR sticker sheet.
-The schema and models for those DO exist.
+### Milestone 5 (shipped, v0.6.0)
+
+5. Signature capture on a canvas, stored as PNG through `App\Support\SignatureImage`;
+   operator signature + PIN (or password) re-confirmation at submission; supervisor
+   approval queue, review screen, approve-with-signature and reject-with-comment.
+   Approved runs are immutable. Two-person rule enforced in the policy.
+
+### Milestone 6 (shipped, v0.7.0)
+
+6. Issues register: filterable list, detail view, assignment, status transitions and
+   resolution notes; open-`breakdown` machines flagged wherever a machine is shown.
+
+### Milestone 7 (shipped, v0.8.0)
+
+7. Dashboard, four reports, CSV and PDF export, and the per-run PDF facsimile of the
+   paper work order with a verification hash. `App\Support\Reporting\Compliance` is
+   the single definition of compliance — nothing computes its own.
+
+### Milestone 8 (shipped, v0.9.0)
+
+8. PWA (manifest, service worker, offline queue scoped to the open run), QR sticker
+   sheet, Pest feature suite, `docs/DEPLOYMENT.md`.
+
+All eight milestones are built. What remains before `1.0.0` is verification, not
+construction — see the Unreleased section of `CHANGELOG.md` and `seed-notes.md` §E.
+
+### Additional route names (added after §6 was written)
+
+| name | URI | milestone |
+|---|---|---|
+| `reports.index` | GET `/reports` | 7 |
+| `reports.csv` | GET `/reports/{report}/csv` | 7 — needs `export.data` |
+| `reports.pdf` | GET `/reports/{report}/pdf` | 7 — needs `export.data` |
+| `runs.pdf` | GET `/runs/{run}/pdf` | 7 — gated on the run's view policy |
+| `issues.index` | GET `/issues` | 6 |
+| `issues.show` | GET `/issues/{issue}` | 6 |
+| `admin.machines.qr` | GET `/admin/machines/qr` | 8 |

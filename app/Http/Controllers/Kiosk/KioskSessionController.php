@@ -185,7 +185,7 @@ class KioskSessionController extends Controller
     }
 
     /**
-     * @param array{user_id?: int|string|null, employee_number?: string|null} $input
+     * @param  array{user_id?: int|string|null, employee_number?: string|null}  $input
      */
     private function identifier(array $input): string
     {
@@ -197,7 +197,7 @@ class KioskSessionController extends Controller
     }
 
     /**
-     * @param array{user_id?: int|string|null, employee_number?: string|null} $input
+     * @param  array{user_id?: int|string|null, employee_number?: string|null}  $input
      */
     private function resolveUser(array $input): ?User
     {

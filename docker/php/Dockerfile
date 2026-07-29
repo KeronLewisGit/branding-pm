@@ -1,4 +1,6 @@
-FROM php:8.3-fpm
+# PHP 8.4 rather than 8.3: Laravel 13 itself allows ^8.3, but
+# spatie/laravel-activitylog 5 and pest 5 both require ^8.4.
+FROM php:8.4-fpm
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \

@@ -22,7 +22,7 @@ use Livewire\WithPagination;
  * Run listing (route `runs.index`). Machines are always scoped through
  * MachineScope — an operator only ever sees runs for machines they may see.
  */
-#[Layout('layouts.app')]
+#[Layout('layouts::app')]
 class RunIndex extends Component
 {
     use WithPagination;

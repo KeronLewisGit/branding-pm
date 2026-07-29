@@ -104,7 +104,10 @@ class DemoSeeder extends Seeder
 
         $holidays = Holiday::all();
         $templates = ChecklistTemplate::where('is_active', true)->get();
-        $machines = Machine::all()->keyBy('id');
+        // location is read per run below to pick the operator, so eager-load it:
+        // Model::preventLazyLoading() is enabled outside production and would
+        // otherwise throw on the first access.
+        $machines = Machine::with('location')->get()->keyBy('id');
         $partsById = Part::all()->keyBy('id');
 
         $today = Carbon::today($timezone);

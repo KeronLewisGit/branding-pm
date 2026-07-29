@@ -98,6 +98,16 @@
                                             {{ trim(($machine->manufacturer ?? '').' '.($machine->model ?? '')) }}
                                         </span>
                                     @endif
+                                    {{-- Open breakdown — flagged wherever a machine is listed --}}
+                                    @if ($machine->open_breakdown_count > 0)
+                                        @can('issue.view')
+                                            <a href="{{ route('issues.index', ['machine' => $machine->id, 'severity' => 'breakdown']) }}" class="mt-1 inline-block">
+                                                <x-badge color="red">{{ __('app.issues.open_breakdown_flag') }}</x-badge>
+                                            </a>
+                                        @else
+                                            <x-badge color="red" class="mt-1">{{ __('app.issues.open_breakdown_flag') }}</x-badge>
+                                        @endcan
+                                    @endif
                                 </td>
                                 <td class="px-4 py-3 font-mono text-sm">{{ $machine->code }}</td>
                                 <td class="px-4 py-3">

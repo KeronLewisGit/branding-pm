@@ -58,8 +58,26 @@
                     <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                         {{ __('app.nav.dashboard') }}
                     </x-nav-link>
-                    <x-nav-link :href="route('runs.index')" :active="request()->routeIs('runs.*')">
+                    <x-nav-link :href="route('runs.index')" :active="request()->routeIs('runs.index') || request()->routeIs('runs.show')">
                         {{ __('app.nav.runs') }}
+                    </x-nav-link>
+                @endcan
+
+                @can('run.approve')
+                    <x-nav-link :href="route('runs.approvals')" :active="request()->routeIs('runs.approvals') || request()->routeIs('runs.review')">
+                        {{ __('app.nav.approvals') }}
+                    </x-nav-link>
+                @endcan
+
+                @can('issue.view')
+                    <x-nav-link :href="route('issues.index')" :active="request()->routeIs('issues.*')">
+                        {{ __('app.nav.issues') }}
+                    </x-nav-link>
+                @endcan
+
+                @can('report.view')
+                    <x-nav-link :href="route('reports.index')" :active="request()->routeIs('reports.*')">
+                        {{ __('app.nav.reports') }}
                     </x-nav-link>
                 @endcan
 
@@ -70,8 +88,11 @@
                 @endcanany
 
                 @can('machine.manage')
-                    <x-nav-link :href="route('admin.machines')" :active="request()->routeIs('admin.machines*')">
+                    <x-nav-link :href="route('admin.machines')" :active="request()->routeIs('admin.machines')">
                         {{ __('app.nav.machines') }}
+                    </x-nav-link>
+                    <x-nav-link :href="route('admin.machines.qr')" :active="request()->routeIs('admin.machines.qr')">
+                        {{ __('app.qr.title') }}
                     </x-nav-link>
                     <x-nav-link :href="route('admin.locations')" :active="request()->routeIs('admin.locations*')">
                         {{ __('app.nav.locations') }}

@@ -8,10 +8,19 @@
                 <span class="status-dot bg-status-missed" aria-hidden="true"></span>
                 {{ __('app.runs.summary_missed', ['count' => $missedCount]) }}
             </span>
-            <span class="inline-flex min-h-14 items-center gap-2 rounded-lg border border-sky-200 bg-sky-50 px-4 font-semibold text-sky-800">
-                <span class="status-dot bg-status-submitted" aria-hidden="true"></span>
-                {{ __('app.runs.summary_awaiting_approval', ['count' => $awaitingCount]) }}
-            </span>
+            {{-- Supervisors go straight from the count to the queue it counts. --}}
+            @can('run.approve')
+                <a href="{{ route('runs.approvals') }}"
+                   class="inline-flex min-h-14 items-center gap-2 rounded-lg border border-sky-200 bg-sky-50 px-4 font-semibold text-sky-800 hover:bg-sky-100">
+                    <span class="status-dot bg-status-submitted" aria-hidden="true"></span>
+                    {{ __('app.runs.summary_awaiting_approval', ['count' => $awaitingCount]) }}
+                </a>
+            @else
+                <span class="inline-flex min-h-14 items-center gap-2 rounded-lg border border-sky-200 bg-sky-50 px-4 font-semibold text-sky-800">
+                    <span class="status-dot bg-status-submitted" aria-hidden="true"></span>
+                    {{ __('app.runs.summary_awaiting_approval', ['count' => $awaitingCount]) }}
+                </span>
+            @endcan
         </div>
     </div>
 
@@ -110,9 +119,24 @@
                                 {{ $run->submitted_at?->timezone($displayTz)->format('D j M, g:i A') ?? '—' }}
                             </td>
                             <td class="px-4 py-3 text-right">
-                                <a href="{{ route('runs.show', $run) }}"
-                                   class="inline-flex min-h-14 items-center rounded-lg px-4 font-semibold text-sky-700 hover:bg-sky-50">
-                                    {{ __('app.actions.view') }}
+                                {{-- A submitted run is a decision waiting to be made, so
+                                     supervisors get the review screen, not the sheet. --}}
+                                @if ($run->status === \App\Enums\RunStatus::Submitted && auth()->user()->can('run.approve'))
+                                    <a href="{{ route('runs.review', $run) }}"
+                                       class="inline-flex min-h-14 items-center rounded-lg px-4 font-semibold text-sky-700 hover:bg-sky-50">
+                                        {{ __('app.approvals.review') }}
+                                    </a>
+                                @else
+                                    <a href="{{ route('runs.show', $run) }}"
+                                       class="inline-flex min-h-14 items-center rounded-lg px-4 font-semibold text-sky-700 hover:bg-sky-50">
+                                        {{ __('app.actions.view') }}
+                                    </a>
+                                @endif
+
+                                {{-- The paper-form facsimile, for filing and audits --}}
+                                <a href="{{ route('runs.pdf', $run) }}"
+                                   class="inline-flex min-h-14 items-center rounded-lg px-4 font-semibold text-slate-600 hover:bg-slate-100">
+                                    {{ __('app.actions.print') }}
                                 </a>
                             </td>
                         </tr>
