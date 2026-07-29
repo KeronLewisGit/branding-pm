@@ -27,7 +27,7 @@ use Livewire\Component;
  * itself is the principal. When a real user IS signed in (e.g. a supervisor
  * browsing the kiosk), their MachineScope applies.
  */
-#[Layout('layouts.kiosk')]
+#[Layout('layouts::kiosk')]
 class MachinePicker extends Component
 {
     #[Url(as: 'location')]

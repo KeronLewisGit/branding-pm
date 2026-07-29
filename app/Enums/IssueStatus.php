@@ -40,4 +40,50 @@ enum IssueStatus: string
     {
         return [self::Open, self::Acknowledged, self::InProgress];
     }
+
+    public function isOpen(): bool
+    {
+        return in_array($this, self::openStatuses(), true);
+    }
+
+    /**
+     * Legal next statuses. The register offers exactly these and the detail
+     * component refuses anything else, so a stale button in an old tab cannot
+     * drive an issue backwards through the workflow.
+     *
+     * Resolved and Closed both reopen to `open` rather than to whatever they
+     * were before: if a repair did not hold, the issue starts again.
+     *
+     * @return list<self>
+     */
+    public function allowedNext(): array
+    {
+        return match ($this) {
+            self::Open => [self::Acknowledged, self::InProgress, self::Resolved],
+            self::Acknowledged => [self::InProgress, self::Resolved],
+            self::InProgress => [self::Resolved],
+            self::Resolved => [self::Closed, self::Open],
+            self::Closed => [self::Open],
+        };
+    }
+
+    public function canTransitionTo(self $status): bool
+    {
+        return in_array($status, $this->allowedNext(), true);
+    }
+
+    /**
+     * Tailwind token for the status badge. Paired with a text label
+     * everywhere — status is never carried by colour alone (contract §8).
+     */
+    public function color(): string
+    {
+        return match ($this) {
+            self::Open => 'rose',
+            self::Acknowledged => 'amber',
+            self::InProgress => 'sky',
+            self::Resolved => 'emerald',
+            self::Closed => 'slate',
+        };
+    }
 }

@@ -12,6 +12,12 @@
 
     <title>{{ $title ?? config('app.name', 'Branding PM') }}</title>
 
+    {{-- PWA: the kiosk is the installable surface (manifest start_url = /kiosk) --}}
+    <link rel="manifest" href="/manifest.webmanifest">
+    <meta name="theme-color" content="#020617">
+    <meta name="mobile-web-app-capable" content="yes">
+    <link rel="apple-touch-icon" href="/icons/icon-192.png">
+
     {{-- Livewire 3 auto-injects its styles/scripts — @vite is all we need. --}}
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
@@ -55,6 +61,41 @@
             </div>
         </div>
     </header>
+
+    {{--
+        Connection badge. Silent while online with nothing queued; loud the
+        moment the tablet is holding answers, because the one thing an
+        operator must never do is walk away believing a sheet was saved.
+    --}}
+    <div x-data="connectionStatus" x-cloak>
+        <div x-show="! online || queued > 0"
+             class="sticky top-20 z-40 flex items-center gap-3 border-b border-amber-500 bg-amber-950/90 px-4 py-3 text-amber-100 backdrop-blur sm:px-6"
+             role="status" aria-live="polite">
+            <svg class="h-7 w-7 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 18.75h.008v.008H12v-.008zM3.98 8.223a13.5 13.5 0 0116.04 0M6.62 11.1a9.5 9.5 0 0110.76 0M9.26 13.98a5.5 5.5 0 015.48 0" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 3l18 18" />
+            </svg>
+            <p class="flex-1 text-lg font-semibold">
+                <span x-show="! online">{{ __('app.offline.working_offline') }}</span>
+                <span x-show="online && queued > 0">{{ __('app.offline.syncing') }}</span>
+                <span x-show="queued > 0" class="block text-base font-normal"
+                      x-text="`{{ __('app.offline.queued_count') }}`.replace(':count', queued)"></span>
+            </p>
+        </div>
+
+        {{-- Answers stranded by a reload: never replayed, always announced. --}}
+        <div x-show="stranded > 0"
+             class="sticky top-20 z-40 border-b-2 border-rose-500 bg-rose-950/95 px-4 py-3 text-rose-100 sm:px-6"
+             role="alert">
+            <p class="text-lg font-bold">{{ __('app.offline.stranded_title') }}</p>
+            <p class="mt-1 text-base" x-text="`{{ __('app.offline.stranded_body') }}`.replace(':count', stranded)"></p>
+            <button type="button"
+                    class="mt-2 min-h-14 rounded-xl border-2 border-rose-400 px-5 text-base font-semibold"
+                    x-on:click="discardStranded()">
+                {{ __('app.offline.stranded_dismiss') }}
+            </button>
+        </div>
+    </div>
 
     <main class="flex-1 px-4 py-6 sm:px-6">
         @if (session('status'))

@@ -6,16 +6,37 @@ services:
         build:
             context: .
             dockerfile: docker/php/Dockerfile
+        environment:
+            # Bind-mounted vendor/ on Windows/macOS is slow enough that
+            # unzipping large packages exceeds Composer's 300s default.
+            COMPOSER_PROCESS_TIMEOUT: 0
+        # php-fpm's master runs as root but its workers run as www-data, while
+        # `docker compose exec php php artisan …` runs as root — so artisan
+        # leaves root-owned 0644 files in storage/ (laravel.log, the file
+        # cache, compiled views) that the workers then cannot rewrite. The
+        # symptom is a 500 on every authenticated page, because @can() makes
+        # spatie/laravel-permission write its cache. Re-open those on start.
+        command: >-
+            sh -c "chmod -R a+rwX storage bootstrap/cache 2>/dev/null || true; exec php-fpm"
         volumes:
             - .:/var/www/html
+            # vendor/ lives in a named volume, NOT on the host filesystem:
+            # thousands of small files over a bind mount make both Composer
+            # and every request dramatically slower on Docker Desktop.
+            # Consequence: vendor/ is not visible from Windows. Run composer
+            # through `docker compose exec php`, never from the host.
+            - vendor:/var/www/html/vendor
         depends_on:
             mysql:
                 condition: service_healthy
 
     nginx:
         image: nginx:1.27-alpine
+        # Host port is configurable: 8080 is a popular port and is often already
+        # taken (Docker's own WSL relay grabs it on some Windows setups).
+        # Override with APP_PORT in .env.
         ports:
-            - '8080:80'
+            - '${APP_PORT:-8080}:80'
         volumes:
             - .:/var/www/html:ro
             - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
@@ -45,9 +66,11 @@ services:
         command: php artisan schedule:work
         volumes:
             - .:/var/www/html
+            - vendor:/var/www/html/vendor
         depends_on:
             mysql:
                 condition: service_healthy
 
 volumes:
     mysql-data:
+    vendor:

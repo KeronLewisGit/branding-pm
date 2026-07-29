@@ -26,7 +26,7 @@ use Livewire\Component;
  * failure modes (unknown / inactive / out of scope) each render friendly
  * kiosk copy instead.
  */
-#[Layout('layouts.kiosk')]
+#[Layout('layouts::kiosk')]
 class MachineRuns extends Component
 {
     public ?Machine $machine = null;

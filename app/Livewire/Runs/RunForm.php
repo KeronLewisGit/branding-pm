@@ -14,9 +14,13 @@ use App\Models\ChecklistRun;
 use App\Models\ChecklistRunItem;
 use App\Models\ChecklistRunPart;
 use App\Models\Issue;
+use App\Models\User;
+use App\Support\SignatureImage;
 use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
@@ -41,7 +45,7 @@ use Livewire\WithFileUploads;
  *   relative to unknown server state (toggleDone passes the expected status
  *   for exactly this reason — replaying it is a no-op, not a flip-flop).
  */
-#[Layout('layouts.kiosk')]
+#[Layout('layouts::kiosk')]
 class RunForm extends Component
 {
     use AuthorizesRequests;
@@ -60,6 +64,9 @@ class RunForm extends Component
         'items.completedBy',
         'runParts',
         'attachments',
+        // Signature blocks (milestone 5) print the signer's name and number.
+        'operator',
+        'supervisor',
     ];
 
     public ChecklistRun $run;
@@ -148,6 +155,28 @@ class RunForm extends Component
     {
         return $this->run->status->isEditable()
             && auth()->user()->can('update', $this->run);
+    }
+
+    /**
+     * How the signer re-confirms their identity at the moment of signing
+     * (SPEC §2: "signature … plus the PIN confirmation").
+     *
+     * `pin` for anyone with a PIN — every shop-floor operator, and the only
+     * path that matters on a shared kiosk tablet, where the session belongs
+     * to whoever tapped their name last. `password` for office users who
+     * have no PIN (a supervisor covering a shift). `none` only for an
+     * account with neither, which cannot have logged in at all.
+     */
+    #[Computed]
+    public function confirmationMethod(): string
+    {
+        $user = auth()->user();
+
+        return match (true) {
+            $user?->hasPin() => 'pin',
+            (bool) $user?->canLoginWithPassword() => 'password',
+            default => 'none',
+        };
     }
 
     // ── Item actions (each one writes immediately) ──────────────────
@@ -618,7 +647,15 @@ class RunForm extends Component
         $this->dispatch('open-modal', name: 'confirm-submit');
     }
 
-    public function submit(): void
+    /**
+     * Sign and submit. The signature arrives as an ACTION ARGUMENT, not a
+     * bound property: a ~20 KB PNG data URL as a public property would ride
+     * in the Livewire snapshot on every request, in both directions, for the
+     * whole time the sheet is open. The confirmation secret is passed the
+     * same way so it is never held in component state (and so never echoed
+     * back to the browser in the next snapshot).
+     */
+    public function submit(string $signature = '', string $confirmation = ''): void
     {
         $this->run->unsetRelation('items');
 
@@ -634,27 +671,120 @@ class RunForm extends Component
         // + operator machine scope.
         $this->authorize('submit', $this->run);
 
-        // TODO(milestone 5): capture the operator signature (canvas → PNG →
-        // operator_signature_path + operator_signed_at) and the PIN
-        // re-confirmation HERE, inside this transaction, before the status
-        // flips. The confirm-submit modal in the view holds the matching UI
-        // seam — nothing needs restructuring, only inserting.
+        /** @var User $user */
+        $user = auth()->user();
 
-        DB::transaction(function (): void {
+        $this->resetErrorBag(['signature', 'confirmation']);
+
+        if ($signature === '') {
+            $this->addError('signature', __('app.runs.signature_required'));
+
+            return;
+        }
+
+        // Not a "the pad was empty" case — the payload is not a PNG we are
+        // willing to store. Say so differently, or the operator signs again
+        // and again against an error that is not about their signing.
+        if (! SignatureImage::isValid($signature)) {
+            $this->addError('signature', __('app.runs.signature_invalid'));
+
+            return;
+        }
+
+        if (! $this->confirmIdentity($user, $confirmation)) {
+            return;
+        }
+
+        // A template that does not require sign-off has nobody to route to,
+        // so submission completes it outright (seed-notes §D10). One that
+        // does goes to the supervisor queue as `submitted`.
+        $needsSignoff = (bool) $this->run->loadMissing('template')->template->requires_supervisor_signoff;
+
+        DB::transaction(function () use ($needsSignoff, $signature, $user): void {
+            $superseded = $this->run->operator_signature_path;
+
             $this->run->update([
-                'status' => RunStatus::Submitted,
+                'status' => $needsSignoff ? RunStatus::Submitted : RunStatus::Approved,
                 'submitted_at' => now(), // server clock — never the client's
-                'operator_id' => $this->run->operator_id ?? auth()->id(),
+                // The signature identifies who attests to the work, so the
+                // signer becomes the operator of record even if someone else
+                // started the sheet.
+                'operator_id' => $user->id,
+                'operator_signature_path' => SignatureImage::store($signature, $this->run, 'operator'),
+                'operator_signed_at' => now(),
             ]);
+
+            // A rejected run being re-signed supersedes its earlier image.
+            SignatureImage::delete($superseded);
         });
 
         $this->dispatch('close-modal', name: 'confirm-submit');
 
-        session()->flash('status', __('app.runs.submitted_message'));
+        session()->flash('status', $needsSignoff
+            ? __('app.runs.submitted_message')
+            : __('app.runs.submitted_no_signoff_message'));
 
-        $this->redirectRoute('kiosk.machine', [
-            'machine' => $this->run->loadMissing('machine')->machine,
-        ]);
+        // Back to the machine's run list on a kiosk tablet; an office user
+        // who signed a run with their password has no device cookie and
+        // would land on the "this tablet is not enrolled" screen.
+        if (session()->has('kiosk.device_id')) {
+            $this->redirectRoute('kiosk.machine', [
+                'machine' => $this->run->loadMissing('machine')->machine,
+            ]);
+
+            return;
+        }
+
+        $this->redirectRoute('runs.index');
+    }
+
+    /**
+     * Re-confirm the signer's identity, rate-limited per run and user with
+     * the same lockout the kiosk PIN pad uses. On a shared tablet the session
+     * alone proves nothing about who is holding it right now.
+     */
+    private function confirmIdentity(User $user, string $confirmation): bool
+    {
+        $method = $this->confirmationMethod;
+
+        if ($method === 'none') {
+            return true; // no PIN and no password — nothing to check against
+        }
+
+        $key = 'run-sign:'.$this->run->id.':'.$user->id;
+        $maxAttempts = (int) config('checklists.pin_max_attempts');
+        $lockoutSeconds = (int) config('checklists.pin_lockout_minutes') * 60;
+
+        if (RateLimiter::tooManyAttempts($key, $maxAttempts)) {
+            $this->addError('confirmation', __('app.kiosk.pin_locked', [
+                'minutes' => max(1, (int) ceil(RateLimiter::availableIn($key) / 60)),
+            ]));
+
+            return false;
+        }
+
+        $secret = $method === 'pin' ? $user->pin : $user->password;
+
+        if ($confirmation === '' || ! Hash::check($confirmation, (string) $secret)) {
+            RateLimiter::hit($key, $lockoutSeconds);
+
+            // The attempt is logged; the value tried never is.
+            activity('run')
+                ->performedOn($this->run)
+                ->causedBy($user)
+                ->withProperties(['method' => $method, 'ip' => request()->ip()])
+                ->log('run.sign_confirmation_failed');
+
+            $this->addError('confirmation', $method === 'pin'
+                ? __('app.kiosk.pin_incorrect')
+                : __('app.runs.password_incorrect'));
+
+            return false;
+        }
+
+        RateLimiter::clear($key);
+
+        return true;
     }
 
     // ── Internals ───────────────────────────────────────────────────

@@ -82,6 +82,10 @@ cheap to reverse if you disagree.
 | D7 | — | Added `checklist_run_parts.part_code_snapshot` (spec has only `part_name_snapshot`). | Same reasoning: the external part code can be reissued (see B1 — `XXX` in particular is likely to change). |
 | D8 | — | Added tables `user_machine`, `kiosk_devices`, `settings`. | Operator→machine scoping, kiosk device authentication and the configurable settings the spec asks for all need somewhere to live. |
 | D9 | Approve/reject is a supervisor permission. | A supervisor **cannot approve a run they themselves operated**, even if they hold `run.approve`. | The paper form has two distinct signature blocks. Letting one person sign both destroys the control the form exists to provide. If this blocks a real single-person shift, it should be an explicit, logged setting — not an accident. |
+| D10 | Submitting a run sets status `submitted`; a supervisor then approves or rejects it. | A run whose template has `requires_supervisor_signoff = false` goes straight to **`approved`** on submission, with no supervisor signature. | The approval queue is "everything with status `submitted`". A template that needs no sign-off would otherwise put runs in that queue with nobody entitled to clear them, and they would sit there forever looking non-compliant. The column only has meaning if it changes what submission does. All 13 seeded templates require sign-off, so nothing in the current data takes this path. |
+| D11 | "Signed URLs for attachments." | Signature images and run photos are served as **plain URLs on the `public` disk**. | The `public` (local) disk cannot produce signed URLs; signing needs either a private disk plus a streaming controller, or S3. That is one change covering photos and signatures together, and it belongs with the storage decision in deployment (milestone 8) rather than half-done here. Both go through one accessor each (`Attachment::getUrlAttribute()`, `SignatureImage::url()`), so it is a two-method change when the disk is settled. |
+| D12 | "Operator signature … plus the PIN confirmation." | Signing re-confirms with a **PIN where the signer has one, otherwise their password**. | Every shop-floor operator has a PIN, so the spec's path is the normal one. But supervisors and managers have no PIN (`users.pin` is nullable) and can legitimately complete a run when covering a shift — with a PIN-only rule they could never sign one. Both paths are rate-limited per run and user with the same lockout as the kiosk PIN pad. |
+| D13 | — | Signing a run sets `operator_id` to **the signer**, replacing whoever first touched the sheet. | The signature is the attestation; the record must name the person who made it. If A starts a run and B finishes and signs it, B is the operator of record — otherwise the two-person rule at sign-off (D9) is measured against the wrong person. |
 
 ---
 
@@ -101,3 +105,12 @@ cheap to reverse if you disagree.
    a run completed within grace is simply `approved` with no lateness flag.
 7. Does any of this eventually have to feed an existing CMMS or ERP? Assumed **no** for
    now; CSV export is the seam if the answer changes.
+8. **D10** — is "approved on submission with no signature" the right behaviour for a
+   template with `requires_supervisor_signoff = false`, or should such runs finish in a
+   separate status (e.g. `completed`) so compliance reporting can tell a signed
+   approval from an unsigned one? No seeded template uses it, so this is cheap to change
+   now and expensive once history exists.
+9. **D9 / rejections** — when a supervisor sends a run back, the operator's signature is
+   kept until they re-sign, and the superseded image is deleted at that point. Should
+   the earlier signature instead be retained as part of the audit trail (i.e. every
+   submission attempt keeps its own signed record)? That needs a table, not a column.

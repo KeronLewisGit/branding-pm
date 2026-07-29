@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>No connection — Branding PM</title>
+    <style>
+        /* Standalone by necessity: this page is served when the network is
+           gone, so it cannot pull in the app stylesheet. */
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #020617;
+            color: #e2e8f0;
+            font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+            padding: 2rem;
+        }
+        .card {
+            max-width: 32rem;
+            text-align: center;
+        }
+        h1 { font-size: 1.75rem; margin: 0 0 1rem; }
+        p { font-size: 1.125rem; line-height: 1.6; color: #cbd5e1; margin: 0 0 1rem; }
+        .hint { color: #94a3b8; font-size: 1rem; }
+        button {
+            margin-top: 1.5rem;
+            min-height: 3.5rem;
+            padding: 0 2rem;
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #020617;
+            background: #38bdf8;
+            border: 0;
+            border-radius: 0.75rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>No connection</h1>
+        <p>This tablet has lost the plant Wi-Fi, and this screen was not already open.</p>
+        <p class="hint">
+            A checklist you already had open keeps working — your answers are saved
+            on the tablet and sent as soon as the signal comes back. Go back to it
+            rather than starting again here.
+        </p>
+        <button type="button" onclick="window.location.reload()">Try again</button>
+    </div>
+</body>
+</html>

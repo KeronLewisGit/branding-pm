@@ -29,7 +29,7 @@ use Livewire\WithPagination;
  * deactivation offered as the alternative. Gated by `part.manage`
  * (BUILD-CONTRACT §5 defines no PartPolicy).
  */
-#[Layout('layouts.app')]
+#[Layout('layouts::app')]
 class PartManager extends Component
 {
     use AuthorizesRequests;

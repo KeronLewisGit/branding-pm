@@ -2,28 +2,32 @@
     "$schema": "https://getcomposer.org/schema.json",
     "name": "branding/branding-pm",
     "type": "project",
-    "version": "0.5.0",
+    "version": "0.9.0",
     "description": "Preventive Maintenance Checklist System for the Branding & Signage department.",
-    "keywords": ["laravel", "maintenance", "checklist"],
+    "keywords": [
+        "laravel",
+        "maintenance",
+        "checklist"
+    ],
     "license": "proprietary",
     "require": {
-        "php": "^8.3",
-        "barryvdh/laravel-dompdf": "^3.0",
-        "laravel/framework": "^11.0",
-        "laravel/tinker": "^2.9",
-        "livewire/livewire": "^3.5",
+        "php": "^8.4",
+        "barryvdh/laravel-dompdf": "^3.1",
+        "laravel/framework": "^13.0",
+        "laravel/tinker": "^3.0",
+        "livewire/livewire": "^4.3",
         "simplesoftwareio/simple-qrcode": "^4.2",
-        "spatie/laravel-activitylog": "^4.8",
-        "spatie/laravel-permission": "^6.9"
+        "spatie/laravel-activitylog": "^5.0",
+        "spatie/laravel-permission": "^8.3"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",
-        "laravel/breeze": "^2.1",
-        "laravel/pint": "^1.13",
+        "laravel/breeze": "^2.4",
+        "laravel/pint": "^1.18",
         "mockery/mockery": "^1.6",
-        "nunomaduro/collision": "^8.1",
-        "pestphp/pest": "^3.0",
-        "pestphp/pest-plugin-laravel": "^3.0"
+        "nunomaduro/collision": "^8.9",
+        "pestphp/pest": "^5.0",
+        "pestphp/pest-plugin-laravel": "^5.0"
     },
     "autoload": {
         "psr-4": {
