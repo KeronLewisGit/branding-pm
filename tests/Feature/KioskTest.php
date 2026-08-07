@@ -9,6 +9,7 @@ use App\Models\Location;
 use App\Models\Machine;
 use App\Models\Site;
 use App\Models\User;
+use App\Support\DeviceType;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
@@ -173,6 +174,74 @@ it('locks out an enrolled tablet the moment it is deactivated', function (): voi
     $this->withCookies($cookie)
         ->get('/kiosk')
         ->assertForbidden();
+});
+
+/*
+|--------------------------------------------------------------------------
+| "Not set up as a kiosk" — worded for whatever is asking
+|--------------------------------------------------------------------------
+*/
+
+it('names the right kind of device on the not-enrolled screen', function (string $userAgent, DeviceType $expected): void {
+    expect(DeviceType::detect($userAgent))->toBe($expected);
+
+    $this->withHeader('User-Agent', $userAgent)
+        ->get('/kiosk')
+        ->assertForbidden()
+        ->assertSee(__('app.kiosk.not_enrolled.title.'.$expected->value));
+})->with([
+    'windows laptop' => ['Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36', DeviceType::Computer],
+    'ipad, classic UA' => ['Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1', DeviceType::Tablet],
+    'android tablet' => ['Mozilla/5.0 (Linux; Android 13; SM-X200) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36', DeviceType::Tablet],
+    'android phone' => ['Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Mobile Safari/537.36', DeviceType::Phone],
+    'iphone' => ['Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1', DeviceType::Phone],
+]);
+
+it('falls back to the neutral wording when the User-Agent says nothing', function (): void {
+    expect(DeviceType::detect(''))->toBe(DeviceType::Unknown)
+        ->and(DeviceType::detect(null))->toBe(DeviceType::Unknown);
+
+    $this->withHeader('User-Agent', '')
+        ->get('/kiosk')
+        ->assertForbidden()
+        ->assertSee(__('app.kiosk.not_enrolled.title.unknown'));
+});
+
+it('lets the browser correct an iPad that claims to be a Mac', function (): void {
+    // Safari on iPad has sent a Macintosh User-Agent by default since
+    // iPadOS 13 — identical to a MacBook's. The server renders the computer
+    // wording and ships a script that swaps it when the browser reports
+    // touch points.
+    $mac = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15';
+
+    $this->withHeader('User-Agent', $mac)
+        ->get('/kiosk')
+        ->assertForbidden()
+        ->assertSee(__('app.kiosk.not_enrolled.title.computer'))
+        ->assertSee('maxTouchPoints', escape: false)
+        ->assertSee(__('app.kiosk.not_enrolled.title.tablet'));
+
+    // A Windows touchscreen laptop also reports touch points, and calling it
+    // a tablet would be worse than calling it a computer — so it gets no
+    // correction script at all.
+    $windows = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36';
+
+    $this->withHeader('User-Agent', $windows)
+        ->get('/kiosk')
+        ->assertForbidden()
+        ->assertDontSee('maxTouchPoints', escape: false);
+});
+
+it('treats the device type as wording only, never as access', function (): void {
+    $device = kioskDevice();
+    aMachine();
+
+    // A phone with a valid device cookie is still a kiosk. The User-Agent is
+    // client-controlled and must not gate anything.
+    $this->withHeader('User-Agent', 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1')
+        ->withCookies(kioskCookie($device))
+        ->get('/kiosk')
+        ->assertOk();
 });
 
 /*

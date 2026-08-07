@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Middleware;
 
 use App\Models\KioskDevice;
+use App\Support\DeviceType;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -39,7 +40,18 @@ class EnsureKioskDevice
         if ($device === null) {
             // Absent, unknown, or deactivated device — plain instructions,
             // no hint about which of those it was.
-            return response()->view('kiosk.not-enrolled', [], Response::HTTP_FORBIDDEN);
+            //
+            // The device type only picks the noun in the copy ("this tablet"
+            // vs "this computer"). It is read from a User-Agent, which the
+            // client controls, so it must never influence anything but
+            // wording.
+            $userAgent = $request->userAgent();
+            $deviceType = DeviceType::detect($userAgent);
+
+            return response()->view('kiosk.not-enrolled', [
+                'deviceType' => $deviceType,
+                'mayBeTablet' => $deviceType->mayBeATabletInDisguise($userAgent),
+            ], Response::HTTP_FORBIDDEN);
         }
 
         $this->touchLastSeen($device);

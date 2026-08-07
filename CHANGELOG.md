@@ -3,6 +3,46 @@
 Versions track build milestones: `0.<milestone>.<patch>`. The project reaches
 `1.0.0` when all 8 milestones are complete and the paper forms are retired.
 
+## [0.11.2] — The not-enrolled screen says what it is looking at
+
+The 403 told everyone that "this **tablet** is not set up as a kiosk" and to
+"ask your supervisor or IT to enrol this tablet". On a laptop that reads as a
+broken message and sends the reader off looking for a tablet — and on a laptop
+the reader is very often the person who can fix it.
+
+`App\Support\DeviceType` buckets the User-Agent into tablet / phone / computer
+/ unknown, and the screen is worded from it. The help line differs by more than
+the noun: at a computer it points to **Admin → Kiosk Tablets → Enrol this
+browser**, because that person can usually enrol themselves; on the floor it
+still says go and find someone. A phone is told the kiosk runs on the floor
+tablets.
+
+**The verdict is wording only.** A User-Agent is client-controlled, so it must
+never gate access — there is a test asserting a phone with a valid device
+cookie still gets the kiosk.
+
+### The iPad problem
+Since iPadOS 13, Safari on iPad requests desktop sites **by default** and sends
+a Macintosh User-Agent, byte-for-byte what a MacBook sends. No server-side
+pattern matching separates them, so naive sniffing would have called this
+project's own test iPad a computer.
+
+The server renders the computer wording and ships a small script that swaps in
+the tablet wording when the browser reports more than one touch point. It is
+attached **only** for Macintosh: a Windows touchscreen laptop also reports
+touch points, and calling that a tablet is a worse answer than calling it a
+computer. Progressive enhancement — with JavaScript off the page still reads
+correctly, just as "computer".
+
+No package. A UA database exists to tell thousands of phone models apart; this
+needs four buckets, and the plant IT team would inherit the upkeep.
+
+### Tests
+8 new (57 total, 200 assertions), including a dataset over six real
+User-Agents, the empty-UA fallback, the iPad-as-Mac correction being present
+for Macintosh and absent for Windows, and the assertion that device type never
+affects access.
+
 ## [0.11.1] — Kiosk review: running it on a laptop
 
 Reviewed the kiosk for a PC rather than the 10" tablet it was designed around.
