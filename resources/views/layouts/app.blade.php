@@ -99,6 +99,12 @@
                     </x-nav-link>
                 @endcan
 
+                @can('kiosk.manage')
+                    <x-nav-link :href="route('admin.kiosk')" :active="request()->routeIs('admin.kiosk')">
+                        {{ __('app.nav.kiosk_devices') }}
+                    </x-nav-link>
+                @endcan
+
                 @can('part.manage')
                     <x-nav-link :href="route('admin.parts')" :active="request()->routeIs('admin.parts*')">
                         {{ __('app.nav.parts') }}

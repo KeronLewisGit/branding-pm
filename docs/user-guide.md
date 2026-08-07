@@ -442,11 +442,42 @@ narrows what they see — and it narrows their exports too.
 
 ## The kiosk tablets
 
-Each tablet is **enrolled once** as a device. After that it sits on the machine
-grid and operators sign in with a PIN only.
+**Admin → Kiosk Tablets.**
 
-Enrolment, the two-minute idle drop and what to do when a tablet is lost or
-replaced are covered in [`DEPLOYMENT.md`](DEPLOYMENT.md) §7.
+Each tablet is **enrolled once**. After that it sits on the machine grid and
+operators sign in with a PIN only. A tablet that has not been enrolled shows
+"this tablet is not set up as a kiosk" and nothing else — so this is the first
+thing to do on a new install, and the answer when someone says a new tablet
+"doesn't work".
+
+To set one up: **Add a tablet**, name it something you could find on a shelf,
+then **Enrol a tablet**. You get a QR code. Walk to the tablet, scan it with
+the camera, and it is done. You do not log in on the tablet, and you should
+not — that would mean typing an admin password on a device that sits unattended
+on a shop floor all shift.
+
+The code expires in 15 minutes. Anyone who scans it in that window turns their
+own phone into that kiosk. That is not as bad as it sounds — they would still
+need an operator's PIN to record anything — but generate a fresh one rather
+than saving it or sending it on.
+
+**If a tablet goes missing**, the difference between the buttons matters:
+
+- **Deactivate** — locks it out on its next tap, and you can switch it back on.
+- **Un-enrol** — signs it out for good. The entry and its history stay, so the
+  replacement tablet can be enrolled under the same name. Use this one when a
+  tablet is actually lost or stolen.
+- **Delete** — removes the entry completely. Rarely what you want.
+
+Both take effect immediately. There is no waiting period.
+
+One thing to settle with whoever runs your network: **the kiosk address must not
+change.** Tablets remember the address they were enrolled on. If the server is
+on a DHCP address that moves, every tablet stops working at once. Ask for a
+fixed address or a name before you enrol anything.
+
+The two-minute idle drop, backups and the rest are in
+[`DEPLOYMENT.md`](DEPLOYMENT.md) §7.
 
 ---
 

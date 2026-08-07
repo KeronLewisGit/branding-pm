@@ -60,6 +60,56 @@ class KioskEnrolmentController extends Controller
     }
 
     /**
+     * Enrol THIS browser from a temporary signed link (route
+     * `kiosk.enrol.link`, `signed` middleware, NO auth).
+     *
+     * The reason this exists: `enrol()` above requires an authenticated
+     * holder of `kiosk.manage`, which means typing an admin password into
+     * the tablet — on a shop floor, in front of whoever is standing there,
+     * on a device that is about to be left unattended all shift. The admin
+     * generates a link on their own machine instead and scans it with the
+     * tablet.
+     *
+     * What the link is worth if it leaks: the bearer can make a browser look
+     * like this kiosk. That grants the machine grid and the PIN pad, nothing
+     * more — every action beyond browsing still needs an operator's PIN, and
+     * the kiosk session drops after two minutes idle. It is deliberately
+     * short-lived (KioskDeviceManager::LINK_TTL_MINUTES) and the device's
+     * token can be rotated from the admin screen, which invalidates every
+     * browser previously enrolled as it.
+     */
+    public function enrolViaLink(Request $request, KioskDevice $device): RedirectResponse
+    {
+        // `signed` has already rejected a tampered or expired URL.
+        if (! $device->is_active) {
+            return redirect()
+                ->route('login')
+                ->with('error', __('app.kiosk.device_inactive'));
+        }
+
+        Cookie::queue(cookie(
+            EnsureKioskDevice::COOKIE,
+            $device->token,
+            EnsureKioskDevice::COOKIE_LIFETIME_MINUTES,
+        ));
+
+        // No causer: nobody is authenticated on the tablet. The IP and the
+        // device are what there is to record.
+        activity('kiosk')
+            ->performedOn($device)
+            ->withProperties([
+                'ip' => $request->ip(),
+                'user_agent' => (string) $request->userAgent(),
+                'via' => 'signed_link',
+            ])
+            ->log('kiosk.device_enrolled');
+
+        return redirect()
+            ->route('kiosk.home')
+            ->with('status', __('app.kiosk.enrolled', ['name' => $device->name]));
+    }
+
+    /**
      * Remove the device cookie from THIS browser. The kiosk_devices row is
      * untouched — the tablet can be re-enrolled at any time.
      * Suggested route: POST /kiosk/unenrol (name `kiosk.unenrol`).

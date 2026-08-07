@@ -7,14 +7,15 @@ use App\Http\Controllers\Kiosk\KioskEnrolmentController;
 use App\Http\Controllers\Kiosk\KioskSessionController;
 use App\Http\Controllers\ReportExportController;
 use App\Http\Controllers\RunPdfController;
-use App\Livewire\Dashboard;
 use App\Livewire\Admin\HolidayManager;
+use App\Livewire\Admin\KioskDeviceManager;
 use App\Livewire\Admin\LocationManager;
 use App\Livewire\Admin\MachineManager;
 use App\Livewire\Admin\PartManager;
 use App\Livewire\Admin\QrStickerSheet;
 use App\Livewire\Admin\TemplateEditor;
 use App\Livewire\Admin\TemplateManager;
+use App\Livewire\Dashboard;
 use App\Livewire\Issues\IssueDetail;
 use App\Livewire\Issues\IssueRegister;
 use App\Livewire\Kiosk\MachinePicker;
@@ -77,9 +78,18 @@ Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])
 Route::middleware(['kiosk', 'kiosk.idle'])->group(function (): void {
     Route::get('/kiosk', MachinePicker::class)->name('kiosk.home');
 
-    // QR sticker deep link. Machine::getRouteKeyName() is `code`, so this
-    // binds on the slug printed on the sticker, not the numeric id.
-    Route::get('/m/{machine}', MachineRuns::class)->name('kiosk.machine');
+    // QR sticker deep link, carrying the slug printed on the sticker.
+    //
+    // The parameter is `{code}`, NOT `{machine}`, and that is load-bearing.
+    // Livewire's ImplicitRouteBinding matches route parameters against the
+    // component's public property NAMES: a `{machine}` parameter would bind
+    // to MachineRuns::$machine (typed ?Machine) and resolve the model before
+    // mount() ever ran — turning an unknown slug into a bare 404 and handing
+    // mount() a model where it wants the raw string. MachineRuns does its own
+    // lookup precisely so a peeled or out-of-date sticker gets a readable
+    // kiosk screen instead. `{code}` matches the public string $code, which
+    // Livewire passes through untouched.
+    Route::get('/m/{code}', MachineRuns::class)->name('kiosk.machine');
 
     // "Tap your name" grid, optionally scoped to a machine and a run.
     Route::get('/kiosk/operators/{machine?}', OperatorPicker::class)->name('kiosk.operators');
@@ -93,9 +103,22 @@ Route::middleware(['kiosk', 'kiosk.idle'])->group(function (): void {
 });
 
 /*
-| Tablet enrolment. An admin hits this once per device to plant the cookie;
-| it is NOT behind the `kiosk` middleware, because that is what it creates.
-*/
+ * Tablet enrolment — plants the device cookie, so it is NOT behind the
+ * `kiosk` middleware, because that cookie is what `kiosk` checks for.
+ *
+ * Two ways in. The signed link below is the one the admin screen uses and is
+ * deliberately NOT behind `auth`.
+ *
+ * The signature is the credential: it is minted by a holder of
+ * `kiosk.manage` on the admin screen, expires in minutes, and is scanned by
+ * the tablet. The alternative is typing an admin password into a shared
+ * shop-floor device, which is worse. See KioskEnrolmentController for what
+ * the link is worth if it leaks.
+ */
+Route::get('/kiosk/link/{device}', [KioskEnrolmentController::class, 'enrolViaLink'])
+    ->middleware('signed')
+    ->name('kiosk.enrol.link');
+
 Route::middleware(['auth', 'permission:kiosk.manage'])->group(function (): void {
     Route::get('/kiosk/enrol/{device}', [KioskEnrolmentController::class, 'enrol'])->name('kiosk.enrol');
     Route::post('/kiosk/unenrol', [KioskEnrolmentController::class, 'unenrol'])->name('kiosk.unenrol');
@@ -174,6 +197,12 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function (): v
         Route::get('/machines/qr', QrStickerSheet::class)->name('machines.qr');
         Route::get('/locations', LocationManager::class)->name('locations');
     });
+
+    // Kiosk tablets. `kiosk.manage`, not `machine.manage` — enrolling a
+    // tablet is a different job from editing the equipment list.
+    Route::get('/kiosk', KioskDeviceManager::class)
+        ->middleware('permission:kiosk.manage')
+        ->name('kiosk');
 
     Route::get('/parts', PartManager::class)
         ->middleware('permission:part.manage')

@@ -3,6 +3,78 @@
 Versions track build milestones: `0.<milestone>.<patch>`. The project reaches
 `1.0.0` when all 8 milestones are complete and the paper forms are retired.
 
+## [0.11.0] — The QR deep link, and a way to set a tablet up
+
+### Fixed: every machine on the kiosk opened the "unknown machine" screen
+
+Tapping any machine tile, or scanning any QR sticker, produced *“This machine
+was not found. The code "{"id":6,"location_id":4,…}" does not match any
+machine.”* — the machine's own JSON quoted back as the thing that could not be
+found. An unknown code was worse: a bare 404, which is precisely the failure
+`MachineRuns` was written to avoid.
+
+The cause is a name collision. Livewire's `ImplicitRouteBinding` intersects
+route parameters with the component's **public property names**, so the
+`{machine}` route parameter bound to `MachineRuns::$machine` (typed
+`?Machine`), resolved the model before `mount()` ran, and handed it to a
+`mount(string $machine)` — where PHP coerced it through
+`Model::__toString()`, which is `toJson()`. When the code did not resolve, the
+same binding threw `ModelNotFoundException` first, hence the 404.
+
+The route parameter is now `{code}`, matching the public `string $code`, which
+Livewire passes through untouched. Both the route and the component carry a
+comment saying why the name is load-bearing, because reverting it looks
+harmless. Four call sites updated; the picker's URLs were correct all along.
+
+Worth noting the code was authored against **Livewire 3** and the project now
+requires **Livewire 4** (`^4.3`) on **Laravel 13** and **PHP 8.4** — two majors
+past the stack SPEC §Tech Stack names, and past what the README and
+BUILD-CONTRACT still describe. This is the first place that gap has drawn
+blood.
+
+### Admin → Kiosk Tablets
+
+There was no way to set a tablet up. `kiosk_devices` had no seeder, no factory
+and no screen, so a clean install had zero devices and `/kiosk` was a flat 403
+with nothing in the UI to explain it — the tablet had to be created by hand in
+tinker and then enrolled by visiting `/kiosk/enrol/{id}` on the device itself.
+
+`/admin/kiosk` (permission `kiosk.manage`) lists tablets worst-first —
+never-enrolled at the top — with in-use / enrolled / deactivated / not-enrolled
+status, last-seen, and create, rename, activate and delete.
+
+**Enrolment is by temporary signed link, shown as a QR code**, valid 15
+minutes and requiring no login. The old authenticated route still works, but
+the alternative it replaces is typing an admin password into a shared
+shop-floor device in front of whoever is standing there. What the link is worth
+if it leaks — the machine grid and the PIN pad, nothing that records anything —
+is documented on the controller, in the modal, and in the deployment guide.
+
+**Un-enrol** rotates the device token, which drops every browser enrolled as
+that device on its next request; **Deactivate** is the reversible version. Both
+are immediate: the middleware resolves the token per request through an
+`is_active` scope. This is the lost-tablet path, and it did not exist before.
+
+### Tests
+13 new feature tests (45 total, 160 assertions). The deep link with a valid and
+an invalid code — including an assertion that the page contains no JSON, which
+is the regression above — plus enrolment by signed link with nobody logged in,
+expiry, tampering, deactivated devices, token rotation locking a tablet out,
+the QR actually rendering, and permission on the admin screen.
+
+The kiosk cookie helper carries a comment about `withCookies()` encrypting what
+it is given: passing an already-encrypted value encrypts it twice and every
+request 403s, which reads as a middleware bug rather than a test bug. It cost
+three rounds to find.
+
+### Also
+- `APP_URL` moved to the LAN address, with a note that it is a DHCP lease that
+  has already moved once. Tablets remember the address they were enrolled on
+  and PWA `start_url` is absolute, so a kiosk deployment needs a reservation or
+  a DNS name — now called out in `DEPLOYMENT.md` §7 and the manager guide.
+- `DEPLOYMENT.md` §7 rewritten around the new flow, including the
+  deactivate/un-enrol/delete distinction and the HTTPS requirement for the PWA.
+
 ## [0.10.1] — First execution
 
 Ran the application for the first time, under the shipped `docker-compose.yml`.

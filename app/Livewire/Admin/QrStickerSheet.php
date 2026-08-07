@@ -106,7 +106,7 @@ class QrStickerSheet extends Component
 
     public function url(Machine $machine): string
     {
-        return route('kiosk.machine', ['machine' => $machine->code]);
+        return route('kiosk.machine', ['code' => $machine->code]);
     }
 
     /**
