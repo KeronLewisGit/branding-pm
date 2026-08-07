@@ -3,6 +3,52 @@
 Versions track build milestones: `0.<milestone>.<patch>`. The project reaches
 `1.0.0` when all 8 milestones are complete and the paper forms are retired.
 
+## [0.11.1] — Kiosk review: running it on a laptop
+
+Reviewed the kiosk for a PC rather than the 10" tablet it was designed around.
+The interaction model holds up — the "N/A / Fail" control is a visible button
+on every row and long-press is only an accelerator, the signature pad is on
+pointer events so a mouse draws, and right-click opens the actions sheet. Two
+real defects and one footgun.
+
+### Fixed: the idle timeout was only half configurable
+`EnforceKioskIdleTimeout` reads `checklists.kiosk_idle_seconds`, but the kiosk
+layout hardcoded `idleRelease(120, …)`. Raising
+`CHECKLISTS_KIOSK_IDLE_SECONDS` moved the server's deadline while the browser
+went on dropping the operator at two minutes — the setting looked broken
+rather than ignored. The layout now renders the same config value, verified
+end to end (600 in, 600 out) and covered by a test.
+
+### Fixed: no way to enrol the machine you are sitting at
+Enrolment is by QR code, and you cannot scan a QR with the screen displaying
+it — which is exactly the case when the app is served from the laptop being
+used as the kiosk. The enrol modal now offers **Enrol this browser**, wired to
+the pre-existing authenticated `kiosk.enrol` route, which had no UI at all.
+
+### Documented: one browser cannot be both admin console and kiosk
+PIN sign-in calls `Auth::login()` on the same session, so it replaces whoever
+is signed in — PIN in as an operator on your admin browser and the admin
+session is gone, and the idle drop then logs it out entirely. Not a bug, but
+sharp enough to warrant saying so in the modal and in `DEPLOYMENT.md` §7.
+
+### Noted, not changed
+- **`http://localhost` is a secure context**, so a PC kiosk registers the
+  service worker and can exercise the PWA and offline queue with no HTTPS
+  setup — the one thing a LAN-connected tablet cannot do. Now in the docs,
+  along with the `--kiosk` flags for Chrome and Edge.
+- **The `settings` table is dead data.** `SettingSeeder` writes
+  `kiosk.idle_timeout_seconds`, `kiosk.pin_max_attempts` and
+  `kiosk.pin_lockout_minutes`, but nothing reads the `Setting` model — every
+  one of those values actually comes from `config/checklists.php` via `.env`.
+  Changing a seeded setting has no effect. Belongs with the missing
+  Admin → Settings screen.
+- The kiosk `<main>` has no max-width, so content spans a wide monitor
+  edge to edge. Cosmetic.
+- The idle watchdog resets on `pointerdown`, `touchstart`, `keydown`, `wheel`
+  and `scroll` — correct for a tablet, but mouse movement alone does not count
+  as activity. Reading a long checklist without touching anything can still
+  time out.
+
 ## [0.11.0] — The QR deep link, and a way to set a tablet up
 
 ### Fixed: every machine on the kiosk opened the "unknown machine" screen

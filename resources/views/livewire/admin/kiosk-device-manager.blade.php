@@ -216,6 +216,28 @@
                     {{ __('app.kiosk_devices.enrol_warning', ['minutes' => \App\Livewire\Admin\KioskDeviceManager::LINK_TTL_MINUTES]) }}
                 </x-alert>
 
+                {{--
+                    The app is often served from the same machine somebody is
+                    sitting at — a laptop acting as its own kiosk. You cannot
+                    scan a QR code with the screen displaying it, so offer the
+                    direct route as well.
+                --}}
+                <div class="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                    <p class="text-base font-semibold text-slate-900">
+                        {{ __('app.kiosk_devices.enrol_here_title') }}
+                    </p>
+                    <p class="mt-1 text-sm text-slate-600">
+                        {{ __('app.kiosk_devices.enrol_here_hint') }}
+                    </p>
+                    <x-button
+                        variant="ghost"
+                        class="mt-3"
+                        :href="route('kiosk.enrol', ['device' => $this->enrollingDevice->id])"
+                    >
+                        {{ __('app.kiosk_devices.enrol_here') }}
+                    </x-button>
+                </div>
+
                 <div class="flex justify-end">
                     <x-button variant="ghost" x-on:click="show = false" wire:click="closeEnrolModal">
                         {{ __('app.actions.close') }}
