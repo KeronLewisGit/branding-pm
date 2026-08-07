@@ -28,6 +28,7 @@ use App\Livewire\Runs\ApprovalQueue;
 use App\Livewire\Runs\RunForm;
 use App\Livewire\Runs\RunIndex;
 use App\Livewire\Runs\RunReview;
+use App\Livewire\Runs\VerificationQueue;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -173,6 +174,15 @@ Route::middleware(['auth', 'kiosk.idle'])->group(function (): void {
         ->middleware('permission:run.approve')
         ->name('runs.approvals');
 
+    /*
+     * The QA queue. Declared BEFORE /runs/{run} for the same reason the
+     * approval queue is: registered after, "verifications" binds as a run id
+     * and 404s.
+     */
+    Route::get('/runs/verifications', VerificationQueue::class)
+        ->middleware('permission:run.verify')
+        ->name('runs.verifications');
+
     Route::get('/runs/{run}', RunForm::class)->name('runs.show');
 
     // The paper-form facsimile (milestone 7). Gated on the run's own view
@@ -180,8 +190,15 @@ Route::middleware(['auth', 'kiosk.idle'])->group(function (): void {
     // the same disclosure, and a supervisor signing off has to file it.
     Route::get('/runs/{run}/pdf', RunPdfController::class)->name('runs.pdf');
 
+    /*
+     * The review screen serves two audiences now: a supervisor deciding, and
+     * a Quality Assurance officer verifying afterwards. QA holds neither
+     * `run.approve` nor `run.reject`, so the gate is either permission —
+     * `|` is spatie's OR. The component re-checks in mount(), and every
+     * action re-checks its own policy.
+     */
     Route::get('/runs/{run}/review', RunReview::class)
-        ->middleware('permission:run.approve')
+        ->middleware('permission:run.approve|run.verify')
         ->name('runs.review');
 
     /*

@@ -3,6 +3,60 @@
 Versions track build milestones: `0.<milestone>.<patch>`. The project reaches
 `1.0.0` when all 8 milestones are complete and the paper forms are retired.
 
+## [0.17.0] — Quality Assurance: a third sign-off
+
+Operator signs, supervisor approves, **QA verifies**. Three people, three
+separate acts, and the last performed by somebody who did neither of the first
+two.
+
+### The role
+`quality_assurance` is **standalone — not a rung on the cumulative ladder**.
+It holds `run.view`, `run.verify`, `issue.view`, `machine.view`,
+`machine.view_all`, `template.view`, `report.view` and `export.data`. It does
+**not** hold `run.complete`, `run.approve` or `run.amend`, and there is a test
+asserting each of those.
+
+That separation is the whole point. An auditor asking "who checked the
+checker?" must not be told "the same person".
+
+`machine.view_all` is a new permission: QA is a plant-wide function and an
+officer restricted to one site could not do the job. Maintenance managers get
+the same reach through `machine.manage`.
+
+### Verifying
+`qa_verified_by`, `qa_verified_at` and `qa_comment` on `checklist_runs`,
+nullable throughout — nothing backfills, because inventing a verification
+nobody performed is exactly what these columns exist to prevent.
+
+Verification **does not change the run's status**. `approved` already means
+"the supervisor signed this off"; a fourth status would silently change what
+every existing compliance figure means. It is recorded alongside and reported
+separately.
+
+Refused when: the sheet is not approved, it has already been verified, or the
+verifier operated or approved it themselves. That last one only fires for
+somebody holding several roles — which is precisely when it matters.
+
+A finding is optional. Most verifications have nothing to say, and forcing a
+comment fills the record with "ok".
+
+### Where it shows
+- **QA Verification** queue — approved sheets nobody has verified, oldest
+  first, with failed-item counts on the row. The mirror of the approval queue,
+  one step along. A backlog nobody can see is a backlog nobody clears.
+- The review screen gained a QA panel, visible to everyone who can read the
+  sheet once verification has happened — "who checked the checker" is part of
+  the record, not a private note.
+- **Checks completed** gained a *QA verified by* column and a verified count.
+
+The review route previously required `run.approve`, which QA does not hold —
+it now accepts `run.approve|run.verify`. Worth noting the component tests
+passed throughout; only an HTTP test caught it, because Livewire component
+tests bypass route middleware.
+
+### Tests
+15 new (139 total, 441 assertions).
+
 ## [0.16.0] — The amendment path for approved runs
 
 The last item the specification asked for: *"Approved runs are immutable —

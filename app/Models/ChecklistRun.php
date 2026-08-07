@@ -42,6 +42,9 @@ class ChecklistRun extends Model
         'supervisor_signature_path',
         'supervisor_signed_at',
         'supervisor_comment',
+        'qa_verified_by',
+        'qa_verified_at',
+        'qa_comment',
         'notes',
         'downtime_minutes',
     ];
@@ -58,6 +61,7 @@ class ChecklistRun extends Model
             'status' => RunStatus::class,
             'started_at' => 'datetime',
             'submitted_at' => 'datetime',
+            'qa_verified_at' => 'datetime',
             'operator_signed_at' => 'datetime',
             'supervisor_signed_at' => 'datetime',
             'downtime_minutes' => 'integer',
@@ -108,6 +112,15 @@ class ChecklistRun extends Model
     public function operator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'operator_id');
+    }
+
+    /**
+     * The Quality Assurance officer who verified the completed work — a
+     * third, separate sign-off after the supervisor's approval.
+     */
+    public function qaVerifiedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'qa_verified_by');
     }
 
     public function supervisor(): BelongsTo

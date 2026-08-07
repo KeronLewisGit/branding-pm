@@ -34,7 +34,11 @@ class MachineScope
 {
     public static function for(User $user): Builder
     {
-        if ($user->can('machine.manage')) {
+        // `machine.view_all` is the plant-wide grant. A maintenance manager
+        // gets it through `machine.manage`; a Quality Assurance officer holds
+        // it on its own, because QA restricted to a single site could not do
+        // the job it exists for.
+        if ($user->can('machine.manage') || $user->can('machine.view_all')) {
             return Machine::query();
         }
 
@@ -95,7 +99,7 @@ class MachineScope
      */
     public static function forIssues(User $user): Builder
     {
-        if ($user->can('machine.manage')) {
+        if ($user->can('machine.manage') || $user->can('machine.view_all')) {
             return Machine::query();
         }
 

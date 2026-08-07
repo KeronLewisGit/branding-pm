@@ -87,6 +87,27 @@ class ChecklistRunPolicy
             && $run->status === RunStatus::Approved;
     }
 
+    /**
+     * Quality Assurance verification — the third sign-off.
+     *
+     * Only on an approved run, and only once: verifying twice would make
+     * "who verified this" ambiguous, and re-verifying is not a thing that
+     * happens on paper either.
+     *
+     * The two-person rule again, widened. A QA officer cannot verify work
+     * they operated or approved. In practice the role holds neither
+     * `run.complete` nor `run.approve`, so this only fires for somebody
+     * holding several roles — which is exactly when it matters.
+     */
+    public function verify(User $user, ChecklistRun $run): bool
+    {
+        return $user->can('run.verify')
+            && $run->status === RunStatus::Approved
+            && $run->qa_verified_at === null
+            && $user->id !== $run->operator_id
+            && $user->id !== $run->supervisor_id;
+    }
+
     private function machineInScope(User $user, ChecklistRun $run): bool
     {
         $machine = $run->loadMissing('machine')->machine;

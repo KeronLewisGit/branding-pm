@@ -53,6 +53,7 @@ final class ChecksCompletedReport implements Report
             'completed_at' => __('app.reports.column.completed_at'),
             'status' => __('app.common.status'),
             'approved_by' => __('app.reports.column.approved_by'),
+            'verified_by' => __('app.reports.column.verified_by'),
         ];
     }
 
@@ -70,6 +71,7 @@ final class ChecksCompletedReport implements Report
             ->with([
                 'operator:id,full_name,employee_number',
                 'supervisor:id,full_name',
+                'qaVerifiedBy:id,full_name',
                 'machine:id,name',
                 'template:id,name',
             ])
@@ -95,6 +97,11 @@ final class ChecksCompletedReport implements Report
             'completed_at' => $run->submitted_at?->timezone($tz)->format('d M Y, g:i A') ?? '—',
             'status' => $run->status->label(),
             'approved_by' => $run->supervisor?->full_name ?? '—',
+            // Quality Assurance is a separate act from approval, so it gets
+            // its own column rather than being folded into the status.
+            'verified_by' => $run->qa_verified_at !== null
+                ? ($run->qaVerifiedBy?->full_name ?? __('app.qa.verified'))
+                : '—',
         ])->values();
     }
 
@@ -106,6 +113,7 @@ final class ChecksCompletedReport implements Report
 
         $total = (clone $runs)->count();
         $approved = (clone $runs)->where('status', RunStatus::Approved)->count();
+        $verified = (clone $runs)->whereNotNull('qa_verified_at')->count();
 
         return [
             'operator' => __('app.reports.column.total_checks'),
@@ -117,6 +125,7 @@ final class ChecksCompletedReport implements Report
             'completed_at' => (string) $total,
             'status' => __('app.reports.checks.approved_count', ['count' => $approved]),
             'approved_by' => '',
+            'verified_by' => __('app.qa.verified_count', ['count' => $verified]),
         ];
     }
 }

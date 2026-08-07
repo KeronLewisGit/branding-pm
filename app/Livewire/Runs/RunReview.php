@@ -53,6 +53,7 @@ class RunReview extends Component
         'attachments',
         'operator',
         'supervisor',
+        'qaVerifiedBy',
         'issues.raisedBy',
     ];
 
@@ -68,7 +69,13 @@ class RunReview extends Component
         // Reviewing is a supervisor act even when the run turns out to be
         // one this user may not decide on (their own work — see the
         // two-person rule in ChecklistRunPolicy).
-        abort_unless((bool) Auth::user()?->can('run.approve'), 403);
+        //
+        // `run.verify` too: a Quality Assurance officer holds neither
+        // `run.approve` nor `run.reject`, and cannot verify a sheet they are
+        // not allowed to read.
+        $user = Auth::user();
+
+        abort_unless($user?->can('run.approve') === true || $user?->can('run.verify') === true, 403);
 
         $run->load(self::EAGER_LOADS);
 
@@ -443,5 +450,96 @@ class RunReview extends Component
     {
         $this->reset('amendTarget', 'amendTargetId', 'amendItemStatus', 'amendFailReason', 'amendNotes', 'amendQty', 'amendReason');
         $this->resetErrorBag();
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Quality Assurance verification — the third sign-off
+    |--------------------------------------------------------------------------
+    | Operator signs, supervisor approves, QA verifies. Three people, three
+    | separate acts, and the last one is performed by somebody who did neither
+    | of the first two.
+    |
+    | Verification does NOT change the run's status. `approved` already means
+    | "the supervisor signed this off"; adding a fourth status would make
+    | every existing compliance figure mean something different overnight.
+    | Verification is recorded alongside it and reported separately.
+    */
+
+    /** QA finding, optional — most verifications have nothing to say. */
+    public string $qaComment = '';
+
+    #[Computed]
+    public function canVerify(): bool
+    {
+        return Auth::user()?->can('verify', $this->run) === true;
+    }
+
+    /**
+     * Why the verify panel is absent, so a QA officer is never left guessing.
+     */
+    #[Computed]
+    public function verifyBlockedReason(): ?string
+    {
+        $user = Auth::user();
+
+        if ($user === null || ! $user->can('run.verify')) {
+            return null; // Not a QA officer — say nothing at all.
+        }
+
+        if ($this->run->qa_verified_at !== null) {
+            return __('app.qa.already_verified', [
+                'name' => $this->run->qaVerifiedBy?->full_name ?? __('app.common.none'),
+                'at' => $this->run->qa_verified_at
+                    ->timezone((string) config('app.display_timezone', 'UTC'))
+                    ->format('d M Y, g:i A'),
+            ]);
+        }
+
+        if ($this->run->status !== RunStatus::Approved) {
+            return __('app.qa.not_approved_yet');
+        }
+
+        if ($user->id === $this->run->operator_id || $user->id === $this->run->supervisor_id) {
+            return __('app.qa.self_verify_blocked');
+        }
+
+        return __('app.common.not_authorized');
+    }
+
+    /**
+     * Record the verification.
+     *
+     * Re-reads the run first: the policy requires it to still be approved and
+     * still unverified, and two QA officers can hold the same queue open.
+     */
+    public function verify(): void
+    {
+        $this->run->refresh();
+
+        $this->authorize('verify', $this->run);
+
+        $this->validate(['qaComment' => ['nullable', 'string', 'max:2000']]);
+
+        $comment = trim($this->qaComment);
+
+        DB::transaction(fn () => $this->run->forceFill([
+            'qa_verified_by' => Auth::id(),
+            // Server clock, like every other timestamp on this record.
+            'qa_verified_at' => now(),
+            'qa_comment' => $comment !== '' ? $comment : null,
+        ])->save());
+
+        activity('run')
+            ->causedBy(Auth::user())
+            ->performedOn($this->run)
+            ->withProperties(['comment' => $comment, 'ip' => request()->ip()])
+            ->log('run.qa_verified');
+
+        session()->flash('flash.success', __('app.qa.verified_message'));
+
+        $this->qaComment = '';
+        $this->run->refresh()->load(self::EAGER_LOADS);
+        unset($this->canVerify, $this->verifyBlockedReason);
     }
 }
