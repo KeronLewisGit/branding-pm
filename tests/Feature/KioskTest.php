@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Enums\KioskDeviceKind;
 use App\Http\Middleware\EnsureKioskDevice;
 use App\Livewire\Admin\KioskDeviceManager;
 use App\Models\KioskDevice;
@@ -360,6 +361,149 @@ it('gives the browser the same idle timeout the server enforces', function (): v
         ->get('/kiosk')
         ->assertOk()
         ->assertSee('idleRelease(600', escape: false);
+});
+
+/*
+|--------------------------------------------------------------------------
+| Device kinds — a kiosk is not always a tablet
+|--------------------------------------------------------------------------
+*/
+
+it('defaults a new device to a tablet and records the kind chosen', function (): void {
+    $this->seed(RolesAndPermissionsSeeder::class);
+
+    $admin = User::factory()->create();
+    $admin->assignRole('admin');
+
+    $component = Livewire::actingAs($admin)->test(KioskDeviceManager::class);
+
+    expect($component->get('kind'))->toBe('tablet');
+
+    $component->set('name', 'Bench laptop')
+        ->set('kind', 'laptop')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect(KioskDevice::query()->firstWhere('name', 'Bench laptop')->kind)
+        ->toBe(KioskDeviceKind::Laptop);
+});
+
+it('rejects a device kind that is not one of the offered options', function (): void {
+    $this->seed(RolesAndPermissionsSeeder::class);
+
+    $admin = User::factory()->create();
+    $admin->assignRole('admin');
+
+    Livewire::actingAs($admin)
+        ->test(KioskDeviceManager::class)
+        ->set('name', 'Something odd')
+        ->set('kind', 'toaster')
+        ->call('save')
+        ->assertHasErrors('kind');
+});
+
+it('leads with the enrolment method that suits the device', function (): void {
+    $this->seed(RolesAndPermissionsSeeder::class);
+
+    $admin = User::factory()->create();
+    $admin->assignRole('admin');
+
+    // A laptop cannot scan a code displayed on its own screen, so the
+    // browser route comes first — and the reverse for a tablet.
+    $laptop = kioskDevice(['name' => 'Bench laptop', 'kind' => 'laptop']);
+
+    Livewire::actingAs($admin)
+        ->test(KioskDeviceManager::class)
+        ->call('openEnrolModal', $laptop->id)
+        ->assertSeeInOrder([
+            __('app.kiosk_devices.enrol_browser_title_primary'),
+            __('app.kiosk_devices.enrol_scan_title_secondary'),
+        ]);
+
+    $tablet = kioskDevice(['name' => 'Floor tablet', 'kind' => 'tablet']);
+
+    Livewire::actingAs($admin)
+        ->test(KioskDeviceManager::class)
+        ->call('openEnrolModal', $tablet->id)
+        ->assertSeeInOrder([
+            __('app.kiosk_devices.enrol_scan_title_primary'),
+            __('app.kiosk_devices.enrol_browser_title_secondary'),
+        ]);
+});
+
+it('offers both enrolment methods whatever the kind', function (): void {
+    $this->seed(RolesAndPermissionsSeeder::class);
+
+    $admin = User::factory()->create();
+    $admin->assignRole('admin');
+
+    // Guessing the kind wrong must cost a scroll, not a dead end.
+    foreach (KioskDeviceKind::cases() as $kind) {
+        $device = kioskDevice(['name' => 'Device '.$kind->value, 'kind' => $kind->value]);
+
+        Livewire::actingAs($admin)
+            ->test(KioskDeviceManager::class)
+            ->call('openEnrolModal', $device->id)
+            ->assertSee(__('app.kiosk_devices.enrol_here'))
+            ->assertSee(__('app.kiosk_devices.enrol_url_label'));
+    }
+});
+
+it('records what the device actually is, and flags a mismatch', function (): void {
+    $device = kioskDevice(['kind' => 'tablet']);
+    aMachine();
+
+    $laptopUa = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36';
+
+    $this->withHeader('User-Agent', $laptopUa)
+        ->withCookies(kioskCookie($device))
+        ->get('/kiosk')
+        ->assertOk();
+
+    $device->refresh();
+
+    expect($device->last_user_agent)->toBe($laptopUa)
+        ->and($device->detectedType())->toBe(DeviceType::Computer)
+        // Declared a tablet, driven from a computer — worth showing an admin.
+        ->and($device->kindLooksWrong())->toBeTrue();
+});
+
+it('does not cry mismatch when the device is what it says it is', function (): void {
+    $device = kioskDevice(['kind' => 'laptop']);
+    aMachine();
+
+    expect($device->kindLooksWrong())->toBeFalse(); // never used yet
+
+    $this->withHeader('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Safari/537.36')
+        ->withCookies(kioskCookie($device))
+        ->get('/kiosk')
+        ->assertOk();
+
+    expect($device->fresh()->kindLooksWrong())->toBeFalse();
+});
+
+it('never accuses an unrecognised or unclassified device', function (): void {
+    expect(KioskDeviceKind::Other->matches(DeviceType::Computer))->toBeTrue()
+        ->and(KioskDeviceKind::Other->matches(DeviceType::Tablet))->toBeTrue()
+        ->and(KioskDeviceKind::Tablet->matches(DeviceType::Unknown))->toBeTrue()
+        ->and(KioskDeviceKind::Desktop->matches(DeviceType::Computer))->toBeTrue()
+        ->and(KioskDeviceKind::Tablet->matches(DeviceType::Computer))->toBeFalse();
+});
+
+it('filters the device list by kind', function (): void {
+    $this->seed(RolesAndPermissionsSeeder::class);
+
+    $admin = User::factory()->create();
+    $admin->assignRole('admin');
+
+    kioskDevice(['name' => 'Floor tablet', 'kind' => 'tablet']);
+    kioskDevice(['name' => 'Bench laptop', 'kind' => 'laptop']);
+
+    Livewire::actingAs($admin)
+        ->test(KioskDeviceManager::class)
+        ->set('kindFilter', 'laptop')
+        ->assertSee('Bench laptop')
+        ->assertDontSee('Floor tablet');
 });
 
 it('rotates the token when a tablet is un-enrolled', function (): void {

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Livewire\Admin;
 
+use App\Enums\KioskDeviceKind;
 use App\Models\KioskDevice;
 use App\Models\Location;
 use Illuminate\Contracts\View\View;
@@ -22,19 +23,30 @@ use Livewire\Component;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 /**
- * Kiosk tablet management (route `admin.kiosk`), gated on `kiosk.manage`.
+ * Kiosk device management (route `admin.kiosk`), gated on `kiosk.manage`.
  *
- * Before this screen existed a tablet could only be enrolled by creating a
+ * Before this screen existed a device could only be enrolled by creating a
  * `kiosk_devices` row by hand — through a seeder or tinker — and then
- * knowing to visit `/kiosk/enrol/{id}` on the tablet itself. Nothing in the
+ * knowing to visit `/kiosk/enrol/{id}` on the device itself. Nothing in the
  * UI said so, and a clean install has no devices at all, so `/kiosk` was a
  * flat 403 with no way forward.
  *
- * Enrolment here is by **temporary signed link**, shown as a QR code on the
- * admin's own screen. The alternative — logging in as an admin on the tablet
- * — means typing an admin password on a shared shop-floor device in front of
- * whoever is standing there. The old authenticated route still works and is
- * still registered; this is the path meant to be used.
+ * A kiosk is not necessarily a tablet. It may be a laptop on a bench, a panel
+ * PC bolted to a machine, or a phone in a pocket, and the two enrolment
+ * methods are not interchangeable between them:
+ *
+ *   - **Scan a QR code** — for anything carried to this screen. Leads for
+ *     tablets and phones.
+ *   - **Enrol this browser** — for the machine the administrator is sitting
+ *     at, which cannot scan a code displayed on its own screen. Leads for
+ *     laptops, desktops and anything unrecognised.
+ *
+ * `KioskDeviceKind` decides which is offered first; both stay available for
+ * every kind, so guessing wrong costs a scroll rather than a dead end.
+ *
+ * Enrolment is by **temporary signed link** either way. The alternative —
+ * logging in as an admin on the device — means typing an admin password on a
+ * shared shop-floor machine in front of whoever is standing there.
  */
 #[Layout('layouts::app')]
 class KioskDeviceManager extends Component
@@ -57,11 +69,17 @@ class KioskDeviceManager extends Component
     #[Url(as: 'q')]
     public string $search = '';
 
+    #[Url(as: 'kind')]
+    public string $kindFilter = '';
+
     // ── Create / edit form ───────────────────────────────────────────
 
     public ?int $editingId = null;
 
     public string $name = '';
+
+    /** App\Enums\KioskDeviceKind value — what the hardware actually is. */
+    public string $kind = 'tablet';
 
     public string $locationId = '';
 
@@ -166,6 +184,7 @@ class KioskDeviceManager extends Component
         $this->resetForm();
         $this->editingId = $device->id;
         $this->name = $device->name;
+        $this->kind = $device->kind->value;
         $this->locationId = (string) ($device->location_id ?? '');
         $this->isActive = $device->is_active;
 
@@ -182,6 +201,7 @@ class KioskDeviceManager extends Component
 
         $data = [
             'name' => trim($this->name),
+            'kind' => $this->kind,
             'location_id' => $this->locationId !== '' ? (int) $this->locationId : null,
             'is_active' => $this->isActive,
         ];
@@ -360,8 +380,9 @@ class KioskDeviceManager extends Component
 
                 $query->where('name', 'like', $term);
             })
-            // Never-seen devices first: those are the ones still needing a
-            // tablet walked over to them.
+            ->when($this->kindFilter !== '', fn (Builder $query) => $query->where('kind', $this->kindFilter))
+            // Never-seen devices first: those are the ones still waiting to be
+            // set up.
             ->orderByRaw('last_seen_at IS NULL DESC')
             ->orderByDesc('last_seen_at')
             ->orderBy('name')
@@ -369,6 +390,7 @@ class KioskDeviceManager extends Component
 
         return view('livewire.admin.kiosk-device-manager', [
             'devices' => $devices,
+            'kinds' => KioskDeviceKind::cases(),
             'onlineWindowMinutes' => self::ONLINE_WINDOW_MINUTES,
         ])->title(__('app.kiosk_devices.title'));
     }
@@ -387,6 +409,7 @@ class KioskDeviceManager extends Component
                 'max:120',
                 Rule::unique('kiosk_devices', 'name')->ignore($this->editingId),
             ],
+            'kind' => ['required', Rule::enum(KioskDeviceKind::class)],
             'locationId' => ['nullable', Rule::exists('locations', 'id')],
             'isActive' => ['boolean'],
         ];
@@ -399,13 +422,14 @@ class KioskDeviceManager extends Component
     {
         return [
             'name' => __('app.common.name'),
+            'kind' => __('app.kiosk_devices.kind_label'),
             'locationId' => __('app.kiosk_devices.location'),
         ];
     }
 
     private function resetForm(): void
     {
-        $this->reset('editingId', 'name', 'locationId', 'isActive');
+        $this->reset('editingId', 'name', 'kind', 'locationId', 'isActive');
         $this->resetValidation();
     }
 }

@@ -9,6 +9,7 @@ use App\Support\DeviceType;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -54,7 +55,7 @@ class EnsureKioskDevice
             ], Response::HTTP_FORBIDDEN);
         }
 
-        $this->touchLastSeen($device);
+        $this->touchLastSeen($device, $request);
 
         $request->attributes->set('kioskDevice', $device);
 
@@ -90,10 +91,17 @@ class EnsureKioskDevice
      * Cache::add only succeeds when the key is not already present, so the
      * write is skipped for the rest of the minute.
      */
-    private function touchLastSeen(KioskDevice $device): void
+    private function touchLastSeen(KioskDevice $device, Request $request): void
     {
         if (Cache::add('kiosk-device:'.$device->id.':last-seen', true, 60)) {
-            $device->forceFill(['last_seen_at' => now()])->saveQuietly();
+            $device->forceFill([
+                'last_seen_at' => now(),
+                // Recorded so the fleet list can show a device registered as
+                // a tablet that is in fact being driven from a laptop.
+                // Display only: client-supplied, and truncated to the column
+                // width because some User-Agents run to hundreds of bytes.
+                'last_user_agent' => Str::limit((string) $request->userAgent(), 250, ''),
+            ])->saveQuietly();
         }
     }
 }

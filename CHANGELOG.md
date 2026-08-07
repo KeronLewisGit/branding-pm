@@ -3,6 +3,55 @@
 Versions track build milestones: `0.<milestone>.<patch>`. The project reaches
 `1.0.0` when all 8 milestones are complete and the paper forms are retired.
 
+## [0.12.0] — A kiosk is not always a tablet
+
+The whole surface assumed tablets: the screen was "Kiosk Tablets", the actions
+said "Enrol a tablet", and enrolment offered exactly one method — carry the
+device to this screen and scan a QR code. That is useless for a laptop or a
+panel PC, which cannot scan a code displayed on their own screen, and 0.11.1
+had already bolted an "Enrol this browser" escape hatch into the modal for
+exactly that reason.
+
+### Device kinds
+`App\Enums\KioskDeviceKind` — tablet, laptop, desktop, phone, other — declared
+when the device is added, stored on `kiosk_devices.kind`. It decides which
+enrolment method is offered **first**:
+
+- **scan** for tablets and phones — something carried to this screen
+- **enrol this browser** for laptops, desktops and anything unrecognised — the
+  machine the administrator is already sitting at
+
+Both methods are always rendered, in an order chosen by the kind, so guessing
+wrong costs a scroll rather than a dead end.
+
+The screen, the nav entry and every string are now "device" rather than
+"tablet"; the list gained a Device type column and a filter.
+
+### Noticing when the kind is wrong
+`kiosk_devices.last_user_agent` records what actually used the device, and the
+list flags a device being driven from hardware that does not match what was
+recorded — a "tablet" used from a laptop usually means an enrolment link was
+opened on the wrong machine.
+
+That check reads a User-Agent, so it is a hint and never a block, and it is
+deliberately generous: `Other` matches anything, and an unrecognised
+User-Agent accuses nobody.
+
+`KioskDeviceKind` (declared, stored, drives the UI) is kept separate from
+`App\Support\DeviceType` (guessed per request, only ever picks a noun).
+Collapsing them would have made the mismatch check impossible to express.
+
+### Migration
+`2026_08_07_000100_add_kind_and_user_agent_to_kiosk_devices_table` — the first
+migration since the original 22. `kind` defaults to `tablet`, which is what
+every existing row implicitly was.
+
+### Tests
+8 new (65 total, 232 assertions): the kind defaulting and round-tripping,
+rejection of a kind outside the enum, the modal ordering for a laptop and for
+a tablet, both methods present for **every** kind, the User-Agent being
+recorded, a mismatch flagged, a matching device not flagged, and the filter.
+
 ## [0.11.2] — The not-enrolled screen says what it is looking at
 
 The 403 told everyone that "this **tablet** is not set up as a kiosk" and to
