@@ -3,6 +3,53 @@
 Versions track build milestones: `0.<milestone>.<patch>`. The project reaches
 `1.0.0` when all 8 milestones are complete and the paper forms are retired.
 
+## [0.16.0] — The amendment path for approved runs
+
+The last item the specification asked for: *"Approved runs are immutable —
+corrections happen by an admin-only amendment that is logged, never by silent
+edit."* `run.amend` and `ChecklistRunPolicy::amend()` had been in place since
+milestone 1 with nothing calling them, so a correction after sign-off had no
+route through the UI at all — which in practice means somebody eventually
+opens the database.
+
+On the run review screen, a holder of `run.amend` (maintenance manager and
+admin) can correct:
+
+- **an item's answer**, and its failure reason
+- **the operator's notes**
+- **a parts quantity**
+
+Every amendment **requires a written reason** and records the field, the old
+value, the new value, the reason, the actor and the IP to the activity log.
+
+### What it deliberately cannot do
+Signatures, timestamps and the status are untouched, and there is a test for
+it. Those are the attestation itself — a correction is not a re-approval, and
+re-signing on somebody else's behalf is precisely what the two-person rule
+exists to prevent. A sheet that needs a different signature needs a different
+sheet.
+
+An amendment where nothing actually changed is refused rather than logged: a
+reason recorded against a change that never happened reads as though something
+was corrected.
+
+### Visible to the reader, not just the amender
+The amendment history renders on the review screen from the activity log
+itself — for **everyone who can read the sheet**, including supervisors who
+cannot amend. A correction only the corrector can see is the silent edit the
+specification forbids.
+
+One consequence worth stating: amending changes the run's verification hash,
+so a sheet printed before the amendment stops matching. That is the tamper
+check working, not breaking — and the amendment history is what explains the
+difference.
+
+### Tests
+12 new (124 total, 403 assertions): who may amend, refusal on a run that is
+not approved, all three targets recording both values with the reason and
+actor, the reason requirement, the no-op refusal, signatures and status left
+alone, and the history being visible to a supervisor.
+
 ## [0.15.0] — Machine profile, and a sidebar that fits the role
 
 ### Machine profile

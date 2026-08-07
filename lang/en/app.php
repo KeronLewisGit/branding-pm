@@ -252,6 +252,22 @@ return [
         'cannot_remove_last_admin' => 'This is the last active administrator. Give somebody else the administrator role first, or nobody will be able to manage the system.',
     ],
 
+    // Amendment of an approved run. SPEC: "corrections happen by an
+    // admin-only amendment that is logged, never by silent edit."
+    'amend' => [
+        'amend' => 'Amend',
+        'title' => 'Amend this sheet',
+        'save' => 'Save amendment',
+        'reason' => 'Reason',
+        'reason_hint' => 'Required, and kept forever. Say what was wrong and how you know — this is what an auditor reads next to the change.',
+        'warning' => 'This sheet has been signed off. The correction and your reason are recorded permanently against it, and anyone who can read the sheet can see them. Signatures and timestamps are never changed.',
+        'nothing_changed' => 'Nothing was changed, so there is nothing to record.',
+        'saved' => 'Amendment recorded.',
+        'history' => 'Amendments',
+        'history_hint' => 'Corrections made after this sheet was signed off.',
+        'field_item' => 'Item :number — :description',
+    ],
+
     'machines' => [
         'title' => 'Machines',
         'machine' => 'Machine',

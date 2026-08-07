@@ -4,17 +4,21 @@ declare(strict_types=1);
 
 namespace App\Livewire\Runs;
 
+use App\Enums\RunItemStatus;
 use App\Enums\RunStatus;
 use App\Models\ChecklistRun;
 use App\Models\User;
 use App\Support\SignatureImage;
 use Illuminate\Contracts\View\View;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
+use Spatie\Activitylog\Models\Activity;
 
 /**
  * Supervisor review and sign-off (milestone 5) — route `runs.review`.
@@ -202,5 +206,242 @@ class RunReview extends Component
         ]));
 
         $this->redirectRoute('runs.approvals');
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Amendment (SPEC §Supervisor sign-off)
+    |--------------------------------------------------------------------------
+    | "Approved runs are immutable — corrections happen by an admin-only
+    | amendment that is logged, never by silent edit."
+    |
+    | An approved sheet is a signed record, and sometimes a signed record is
+    | wrong: an item ticked on the wrong row, a quantity fat-fingered, a note
+    | that says the opposite of what happened. The choice is between letting a
+    | holder of `run.amend` correct it in the open, or watching somebody do it
+    | in the database where nothing is recorded.
+    |
+    | So an amendment:
+    |   - needs `run.amend` AND a status of `approved` (ChecklistRunPolicy)
+    |   - requires a written reason, always
+    |   - records the old value, the new value, the reason and the actor in
+    |     the activity log, and shows that history on this screen
+    |   - leaves the run `approved` and both signatures untouched. It is a
+    |     correction to the record, not a re-approval, and re-signing on
+    |     somebody else's behalf is exactly what the two-person rule forbids.
+    |
+    | It deliberately CANNOT touch signatures, timestamps, or the status. Those
+    | are the attestation itself; a sheet that needs those changed needs a new
+    | sheet.
+    */
+
+    /** `item` | `notes` | `part` — which kind of thing is being corrected. */
+    public ?string $amendTarget = null;
+
+    public ?int $amendTargetId = null;
+
+    public string $amendItemStatus = '';
+
+    public string $amendFailReason = '';
+
+    public string $amendNotes = '';
+
+    public string $amendQty = '';
+
+    public string $amendReason = '';
+
+    /** May this user amend this run, right now? */
+    #[Computed]
+    public function canAmend(): bool
+    {
+        return Auth::user()?->can('amend', $this->run) === true;
+    }
+
+    /**
+     * Every amendment made to this run, newest first.
+     *
+     * Rendered from the activity log itself rather than a column on the run,
+     * so the audit trail and what the screen shows cannot drift apart — the
+     * same reasoning as the issue history.
+     *
+     * @return Collection<int, Activity>
+     */
+    #[Computed]
+    public function amendments(): Collection
+    {
+        return Activity::query()
+            ->where('log_name', 'run')
+            ->where('description', 'run.amended')
+            ->where('subject_type', $this->run->getMorphClass())
+            ->where('subject_id', $this->run->getKey())
+            ->with('causer')
+            ->latest('id')
+            ->get();
+    }
+
+    public function openAmendItem(int $itemId): void
+    {
+        $this->authorize('amend', $this->run);
+
+        $item = $this->run->items()->findOrFail($itemId);
+
+        $this->resetAmendForm();
+        $this->amendTarget = 'item';
+        $this->amendTargetId = $item->id;
+        $this->amendItemStatus = $item->status->value;
+        $this->amendFailReason = (string) ($item->fail_reason ?? '');
+
+        $this->dispatch('open-modal', name: 'run-amend');
+    }
+
+    public function openAmendNotes(): void
+    {
+        $this->authorize('amend', $this->run);
+
+        $this->resetAmendForm();
+        $this->amendTarget = 'notes';
+        $this->amendNotes = (string) ($this->run->notes ?? '');
+
+        $this->dispatch('open-modal', name: 'run-amend');
+    }
+
+    public function openAmendPart(int $runPartId): void
+    {
+        $this->authorize('amend', $this->run);
+
+        $part = $this->run->runParts()->findOrFail($runPartId);
+
+        $this->resetAmendForm();
+        $this->amendTarget = 'part';
+        $this->amendTargetId = $part->id;
+        $this->amendQty = (string) $part->qty_used;
+
+        $this->dispatch('open-modal', name: 'run-amend');
+    }
+
+    /**
+     * Apply the correction and write it to the audit trail.
+     *
+     * Re-reads the run first: `amend` requires the status to still be
+     * `approved`, and a modal can sit open while somebody else acts.
+     */
+    public function saveAmendment(): void
+    {
+        $this->run->refresh();
+
+        $this->authorize('amend', $this->run);
+
+        $rules = ['amendReason' => ['required', 'string', 'min:5', 'max:2000']];
+
+        $rules += match ($this->amendTarget) {
+            'item' => [
+                'amendItemStatus' => ['required', Rule::enum(RunItemStatus::class)],
+                'amendFailReason' => ['nullable', 'string', 'max:500'],
+            ],
+            'notes' => ['amendNotes' => ['nullable', 'string', 'max:5000']],
+            'part' => ['amendQty' => ['required', 'numeric', 'min:0', 'max:999999']],
+            default => [],
+        };
+
+        $this->validate($rules);
+
+        [$field, $before, $after] = match ($this->amendTarget) {
+            'item' => $this->applyItemAmendment(),
+            'notes' => $this->applyNotesAmendment(),
+            'part' => $this->applyPartAmendment(),
+            default => [null, null, null],
+        };
+
+        if ($field === null) {
+            return;
+        }
+
+        // Unchanged is not an amendment. Logging one would put a reason in
+        // the record for a correction that never happened.
+        if ($before === $after) {
+            $this->addError('amendReason', __('app.amend.nothing_changed'));
+
+            return;
+        }
+
+        activity('run')
+            ->causedBy(Auth::user())
+            ->performedOn($this->run)
+            ->withProperties([
+                'field' => $field,
+                'old' => $before,
+                'new' => $after,
+                'reason' => trim($this->amendReason),
+                'ip' => request()->ip(),
+            ])
+            ->log('run.amended');
+
+        session()->flash('flash.success', __('app.amend.saved'));
+
+        $this->dispatch('close-modal', name: 'run-amend');
+        $this->resetAmendForm();
+
+        $this->run->refresh()->load(self::EAGER_LOADS);
+        unset($this->amendments);
+    }
+
+    /**
+     * @return array{0: string, 1: string, 2: string}
+     */
+    private function applyItemAmendment(): array
+    {
+        $item = $this->run->items()->findOrFail($this->amendTargetId);
+
+        $status = RunItemStatus::from($this->amendItemStatus);
+
+        // A reason only belongs on a failure; carrying one onto a passing
+        // item would leave the sheet contradicting itself.
+        $failReason = $status === RunItemStatus::Failed
+            ? (trim($this->amendFailReason) !== '' ? trim($this->amendFailReason) : null)
+            : null;
+
+        $before = $item->status->label().($item->fail_reason ? ' — '.$item->fail_reason : '');
+        $after = $status->label().($failReason ? ' — '.$failReason : '');
+
+        DB::transaction(fn () => $item->forceFill([
+            'status' => $status,
+            'fail_reason' => $failReason,
+        ])->save());
+
+        return [__('app.amend.field_item', ['number' => $item->sort_order, 'description' => $item->description]), $before, $after];
+    }
+
+    /**
+     * @return array{0: string, 1: string, 2: string}
+     */
+    private function applyNotesAmendment(): array
+    {
+        $before = (string) ($this->run->notes ?? '');
+        $after = trim($this->amendNotes);
+
+        DB::transaction(fn () => $this->run->forceFill(['notes' => $after !== '' ? $after : null])->save());
+
+        return [__('app.runs.notes'), $before, $after];
+    }
+
+    /**
+     * @return array{0: string, 1: string, 2: string}
+     */
+    private function applyPartAmendment(): array
+    {
+        $part = $this->run->runParts()->findOrFail($this->amendTargetId);
+
+        $before = (string) $part->qty_used;
+        $after = number_format((float) $this->amendQty, 2, '.', '');
+
+        DB::transaction(fn () => $part->forceFill(['qty_used' => $after])->save());
+
+        return [$part->part_name_snapshot, $before, $after];
+    }
+
+    private function resetAmendForm(): void
+    {
+        $this->reset('amendTarget', 'amendTargetId', 'amendItemStatus', 'amendFailReason', 'amendNotes', 'amendQty', 'amendReason');
+        $this->resetErrorBag();
     }
 }

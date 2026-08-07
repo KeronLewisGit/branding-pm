@@ -148,6 +148,12 @@
                                 <p class="mt-1 text-base font-medium text-rose-700">{{ $item->fail_reason }}</p>
                             @endif
 
+                            @if ($this->canAmend)
+                                <x-button variant="ghost" class="mt-2" wire:click="openAmendItem({{ $item->id }})">
+                                    {{ __('app.amend.amend') }}
+                                </x-button>
+                            @endif
+
                             <p class="mt-1 text-sm text-slate-500">
                                 @if ($item->completedBy)
                                     {{ __('app.runs.answered_by', ['name' => $item->completedBy->full_name]) }}
@@ -208,6 +214,13 @@
                             <td class="py-2 text-slate-500">{{ $part->part_code_snapshot }}</td>
                             <td class="py-2 text-slate-800">{{ $part->part_name_snapshot }}</td>
                             <td class="py-2 text-right font-semibold tabular-nums text-slate-900">{{ $part->qty_used }}</td>
+                            @if ($this->canAmend)
+                                <td class="py-2 text-right">
+                                    <x-button variant="ghost" wire:click="openAmendPart({{ $part->id }})">
+                                        {{ __('app.amend.amend') }}
+                                    </x-button>
+                                </td>
+                            @endif
                         </tr>
                     @endforeach
                 </tbody>
@@ -217,7 +230,12 @@
 
     {{-- Operator notes and whole-run photos --}}
     <x-card class="mt-6">
-        <h2 class="text-xl font-bold text-slate-900">{{ __('app.runs.notes') }}</h2>
+        <div class="flex flex-wrap items-center justify-between gap-3">
+            <h2 class="text-xl font-bold text-slate-900">{{ __('app.runs.notes') }}</h2>
+            @if ($this->canAmend)
+                <x-button variant="ghost" wire:click="openAmendNotes">{{ __('app.amend.amend') }}</x-button>
+            @endif
+        </div>
         <p class="mt-2 whitespace-pre-line text-base text-slate-700">{{ $run->notes ?: __('app.common.none') }}</p>
 
         @if ($run->attachments->isNotEmpty())
@@ -296,4 +314,96 @@
             <p class="mt-3 text-base text-slate-500">{{ __('app.approvals.immutable_hint') }}</p>
         @endif
     </x-card>
+
+    {{--
+        Amendment history. Rendered from the activity log itself, so the audit
+        trail and what this screen shows cannot drift apart — and shown to
+        everyone who can read the sheet, not only to whoever may amend it. A
+        correction the reader cannot see is the silent edit the spec forbids.
+    --}}
+    @if ($this->amendments->isNotEmpty())
+        <x-card class="mt-6">
+            <h2 class="text-xl font-bold text-slate-900">{{ __('app.amend.history') }}</h2>
+            <p class="mt-1 text-base text-slate-600">{{ __('app.amend.history_hint') }}</p>
+
+            <ol class="mt-4 divide-y divide-slate-100">
+                @foreach ($this->amendments as $entry)
+                    <li wire:key="amendment-{{ $entry->id }}" class="py-3">
+                        <p class="text-base font-semibold text-slate-900">
+                            {{ $entry->properties['field'] ?? __('app.common.updated') }}
+                        </p>
+
+                        <p class="mt-1 text-base text-slate-700">
+                            <span class="text-slate-500 line-through">{{ $entry->properties['old'] ?: __('app.common.none') }}</span>
+                            <span aria-hidden="true" class="px-1">&rarr;</span>
+                            <span class="font-medium">{{ $entry->properties['new'] ?: __('app.common.none') }}</span>
+                        </p>
+
+                        <p class="mt-1 text-base text-slate-700">
+                            <span class="font-semibold">{{ __('app.amend.reason') }}:</span>
+                            {{ $entry->properties['reason'] ?? '—' }}
+                        </p>
+
+                        <p class="mt-1 text-sm text-slate-500">
+                            {{ $entry->causer?->full_name ?? __('app.common.none') }}
+                            · {{ $entry->created_at->timezone(config('app.display_timezone'))->format('d M Y, g:i A') }}
+                        </p>
+                    </li>
+                @endforeach
+            </ol>
+        </x-card>
+    @endif
+
+    {{-- Amendment form --}}
+    <x-modal name="run-amend" :title="__('app.amend.title')">
+        @if ($amendTarget)
+            <form wire:submit="saveAmendment" class="space-y-4">
+                <x-alert type="warning">{{ __('app.amend.warning') }}</x-alert>
+
+                @if ($amendTarget === 'item')
+                    <div>
+                        <label for="amend-status" class="mb-1 block text-base font-semibold">{{ __('app.common.status') }}</label>
+                        <x-select id="amend-status" wire:model.live="amendItemStatus" class="w-full">
+                            @foreach (\App\Enums\RunItemStatus::cases() as $case)
+                                <option value="{{ $case->value }}">{{ $case->label() }}</option>
+                            @endforeach
+                        </x-select>
+                        @error('amendItemStatus') <p class="mt-1 text-sm text-rose-600">{{ $message }}</p> @enderror
+                    </div>
+
+                    @if ($amendItemStatus === \App\Enums\RunItemStatus::Failed->value)
+                        <div>
+                            <label for="amend-fail" class="mb-1 block text-base font-semibold">{{ __('app.runs.fail_reason') }}</label>
+                            <x-textarea id="amend-fail" wire:model="amendFailReason" rows="2" maxlength="500" class="w-full" />
+                            @error('amendFailReason') <p class="mt-1 text-sm text-rose-600">{{ $message }}</p> @enderror
+                        </div>
+                    @endif
+                @elseif ($amendTarget === 'notes')
+                    <div>
+                        <label for="amend-notes" class="mb-1 block text-base font-semibold">{{ __('app.runs.notes') }}</label>
+                        <x-textarea id="amend-notes" wire:model="amendNotes" rows="4" maxlength="5000" class="w-full" />
+                        @error('amendNotes') <p class="mt-1 text-sm text-rose-600">{{ $message }}</p> @enderror
+                    </div>
+                @elseif ($amendTarget === 'part')
+                    <div>
+                        <label for="amend-qty" class="mb-1 block text-base font-semibold">{{ __('app.runs.qty_used') }}</label>
+                        <x-input id="amend-qty" type="number" step="0.01" min="0" wire:model="amendQty" class="w-full" />
+                        @error('amendQty') <p class="mt-1 text-sm text-rose-600">{{ $message }}</p> @enderror
+                    </div>
+                @endif
+
+                <div>
+                    <label for="amend-reason" class="mb-1 block text-base font-semibold">{{ __('app.amend.reason') }}</label>
+                    <x-textarea id="amend-reason" wire:model="amendReason" rows="3" maxlength="2000" class="w-full" />
+                    <p class="mt-1 text-sm text-slate-500">{{ __('app.amend.reason_hint') }}</p>
+                    @error('amendReason') <p class="mt-1 text-sm text-rose-600">{{ $message }}</p> @enderror
+                </div>
+
+                <div class="flex flex-wrap justify-end gap-3 pt-2">
+                    <x-button variant="ghost" x-on:click="show = false">{{ __('app.actions.cancel') }}</x-button>
+                    <x-button type="submit">{{ __('app.amend.save') }}</x-button>
+                </div>
+            </form>
+        @endif
+    </x-modal>
 </div>
