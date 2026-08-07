@@ -567,6 +567,14 @@ return [
     ],
 
     // Admin → Kiosk Tablets. Enrolling a tablet, and taking one away again.
+    // Nouns for App\Support\DeviceType, used only in user-facing copy.
+    'device_type' => [
+        'tablet' => 'tablet',
+        'phone' => 'phone',
+        'computer' => 'computer',
+        'unknown' => 'device',
+    ],
+
     'kiosk_devices' => [
         'title' => 'Kiosk Tablets',
         'description' => 'A tablet must be enrolled once before it can be used on the shop floor. After that it stays enrolled and operators sign in with a PIN only.',
@@ -639,6 +647,37 @@ return [
         'idle_warning' => 'Still there? This session will end in :seconds seconds.',
         'idle_released' => 'Session ended after inactivity.',
         'device_not_registered' => 'This device is not registered as a kiosk. Contact your administrator.',
+
+        /*
+         * The "not set up as a kiosk" screen, worded for whatever is asking.
+         * Keyed by App\Support\DeviceType. Telling somebody at a laptop that
+         * "this tablet" needs enrolling reads as a broken message and sends
+         * them looking for a tablet.
+         *
+         * The help line differs by more than the noun: at a computer the
+         * person reading this can very often fix it themselves, whereas on
+         * the floor the honest advice is to go and find someone.
+         */
+        'not_enrolled' => [
+            'title' => [
+                'tablet' => 'This tablet is not set up as a kiosk',
+                'phone' => 'This phone is not set up as a kiosk',
+                'computer' => 'This computer is not set up as a kiosk',
+                'unknown' => 'This device is not set up as a kiosk',
+            ],
+            'body' => [
+                'tablet' => 'This tablet is not registered, so it cannot open the checklists.',
+                'phone' => 'This phone is not registered, so it cannot open the checklists.',
+                'computer' => 'This browser is not registered, so it cannot open the checklists.',
+                'unknown' => 'This device is not registered, so it cannot open the checklists.',
+            ],
+            'help' => [
+                'tablet' => 'Ask your supervisor or IT to enrol this tablet before using it on the floor. Nothing is wrong with the machine or the checklist.',
+                'phone' => 'The kiosk runs on the tablets on the floor, not on a personal phone. If this phone is meant to be a kiosk, ask your supervisor or IT to enrol it.',
+                'computer' => 'If you manage this system, sign in and go to Admin → Kiosk Tablets to enrol this browser. Otherwise ask IT. Nothing is wrong with the machine or the checklist.',
+                'unknown' => 'Ask your supervisor or IT to enrol this device before using it on the floor. Nothing is wrong with the machine or the checklist.',
+            ],
+        ],
         'scan_hint' => 'Scan the QR sticker on the machine, or pick it from the grid.',
         // Machine tile status for today (picker grid) — always shown with a
         // text label, never colour alone.
