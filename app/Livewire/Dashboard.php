@@ -132,7 +132,10 @@ class Dashboard extends Component
     private function openIssuesBySeverity($user): Collection
     {
         $counts = Issue::query()
-            ->whereIn('machine_id', MachineScope::for($user)->select('machines.id'))
+            // The issue scope, matching the register this tile links into —
+            // a count that does not agree with the list behind it is worse
+            // than no count.
+            ->whereIn('machine_id', MachineScope::forIssues($user)->select('machines.id'))
             ->open()
             ->toBase()
             ->selectRaw('severity, COUNT(*) as total')

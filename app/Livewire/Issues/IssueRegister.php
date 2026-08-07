@@ -121,7 +121,7 @@ class IssueRegister extends Component
                 Rule::exists('machines', 'id')->where(
                     fn ($query) => $query->whereIn(
                         'id',
-                        MachineScope::for(Auth::user())->select('machines.id'),
+                        MachineScope::forIssues(Auth::user())->select('machines.id'),
                     ),
                 ),
             ],
@@ -169,7 +169,7 @@ class IssueRegister extends Component
     private function scopedQuery(): Builder
     {
         return Issue::query()
-            ->whereIn('machine_id', MachineScope::for(Auth::user())->select('machines.id'))
+            ->whereIn('machine_id', MachineScope::forIssues(Auth::user())->select('machines.id'))
             ->when($this->machine !== '', fn (Builder $q) => $q->where('machine_id', (int) $this->machine))
             ->when($this->location !== '', fn (Builder $q) => $q->whereHas(
                 'machine',
@@ -182,7 +182,7 @@ class IssueRegister extends Component
         $user = Auth::user();
         $displayTz = (string) config('app.display_timezone', 'UTC');
 
-        $machines = MachineScope::for($user)
+        $machines = MachineScope::forIssues($user)
             ->orderBy('machines.name')
             ->get(['machines.id', 'machines.name', 'machines.location_id']);
 
@@ -275,7 +275,16 @@ class IssueRegister extends Component
     }
 
     /**
-     * Machines for the "raise an issue" picker — scoped, active only.
+     * Machines for the "raise an issue" picker.
+     *
+     * Uses the wider run scope, NOT `forIssues()`, on purpose: reporting a
+     * fault must never be harder than walking past one. An operator who
+     * notices a bearing screaming on a machine they are not assigned to
+     * should be able to say so, and the register is filtered for reading, not
+     * for reporting.
+     *
+     * Consequence, accepted: they may raise a fault that then does not appear
+     * in their own register. The alternative is an unreported fault.
      *
      * @return Collection<int, Machine>
      */

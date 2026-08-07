@@ -24,7 +24,9 @@ class IssuePolicy
     }
 
     /**
-     * Visibility follows the machine scope, like runs.
+     * Visibility follows the **issue** scope, which is narrower than the run
+     * scope: an assignment filters somebody's worklist down to the machines
+     * they run, while runs stay site-wide so shifts can be covered.
      */
     public function view(User $user, Issue $issue): bool
     {
@@ -34,7 +36,7 @@ class IssuePolicy
 
         $machine = $issue->loadMissing('machine')->machine;
 
-        return $machine !== null && MachineScope::allows($user, $machine);
+        return $machine !== null && MachineScope::allowsIssue($user, $machine);
     }
 
     public function create(User $user): bool
