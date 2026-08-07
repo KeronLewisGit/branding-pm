@@ -64,10 +64,16 @@ Not yet built, and outstanding against [`docs/SPEC.md`](docs/SPEC.md):
 
 Two things to know before you run it:
 
-1. **This code has never been executed.** It was authored on a machine with no
-   PHP, Composer or MySQL installed. It is written to be correct by inspection,
-   but the first `composer install && php artisan migrate --seed` is also the
-   first time any of it runs. Expect to fix something.
+1. **It runs.** Authored on a machine with no PHP, Composer or MySQL, so for
+   most of its life this was "correct by inspection" only. It has now been
+   brought up under the shipped `docker-compose.yml` and exercised: all 22
+   migrations apply, the seeders load, **all 34 Pest tests pass**,
+   `checklists:generate` produced 12 runs and then correctly created 0 on a
+   second pass, and the login, dashboard, kiosk enrolment and machine grid all
+   serve. Nothing needed fixing to get there.
+
+   Still unexercised by anything automated: the signature canvas, the service
+   worker and the offline queue. All three need a real touch device.
 2. **The 13 source PDFs were not available.** Every checklist item was
    transcribed from the written specification instead. Before the paper forms
    are retired, someone must compare the seeded templates against the printed

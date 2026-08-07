@@ -3,6 +3,34 @@
 Versions track build milestones: `0.<milestone>.<patch>`. The project reaches
 `1.0.0` when all 8 milestones are complete and the paper forms are retired.
 
+## [0.10.1] — First execution
+
+Ran the application for the first time, under the shipped `docker-compose.yml`.
+Recorded here because the README had warned since milestone 1 to "expect to fix
+something" on first boot. Nothing needed fixing.
+
+- 22 migrations apply; seeders load (5 users, 11 machines, 13 templates, 82
+  items, 347 demo runs, 9 issues).
+- **All 34 Pest tests pass**, 135 assertions, 62s.
+- `checklists:generate` created 12 runs for today, then 0 on a second pass —
+  `runs_template_date_shift_unique` doing its job.
+- `/login`, `/dashboard`, `/kiosk`, `/m/{code}`, `/offline.html`,
+  `/manifest.webmanifest` and `/sw.js` all serve; unauthenticated app routes
+  302 to login; `/kiosk` returns the not-enrolled page until the device cookie
+  is set, then the machine grid.
+
+Two things needed doing that a fresh install will also need, and neither is a
+code defect:
+
+- **No kiosk device is seeded**, so `/kiosk` is a 403 on a clean database until
+  someone creates a `kiosk_devices` row. Nothing in the docs said so; the
+  deployment guide now has to.
+- **`DemoSeeder` history stops at the day it was seeded**, so on any later day
+  the kiosk is empty until `checklists:generate` runs.
+
+`APP_URL` set to the LAN IP rather than `localhost` so a tablet on the same
+network gets working absolute URLs.
+
 ## [0.10.0] — Remaining documentation deliverables
 
 No application code changed. This closes the two `docs/` deliverables the spec
@@ -319,6 +347,8 @@ Remaining before `1.0.0`:
 - The machine profile screen (SPEC screen 5)
 - The admin amendment path for approved runs
 
-**Never executed.** Authored without PHP, Composer or MySQL available. The first
-`composer install && php artisan migrate --seed` is still the first time any of
-this runs.
+**First execution — 2026-08-07.** Brought up under the shipped
+`docker-compose.yml`. All 22 migrations apply, seeders load, **all 34 Pest tests
+pass (135 assertions)**, `checklists:generate` created 12 runs and then 0 on a
+second pass, and login, dashboard, kiosk enrolment and the machine grid serve.
+No code changes were needed to get there.
