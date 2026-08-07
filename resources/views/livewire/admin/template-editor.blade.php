@@ -182,51 +182,39 @@
                                     @endif
                                 </div>
 
-                                <div class="flex items-center gap-2">
-                                    <button
-                                        type="button"
-                                        class="flex h-14 w-14 items-center justify-center rounded-xl text-slate-600 hover:bg-slate-100 active:bg-slate-200 disabled:opacity-30"
+                                {{-- Same icon vocabulary as every other action column. --}}
+                                <div class="flex items-center gap-1">
+                                    <x-icon-button
+                                        icon="move_up"
+                                        :label="__('app.actions.move_up')"
+                                        class="disabled:opacity-30"
                                         wire:click="moveItemUp({{ $item->id }})"
                                         wire:loading.attr="disabled"
                                         @disabled($loop->first)
-                                        aria-label="{{ __('app.actions.move_up') }}"
-                                        title="{{ __('app.actions.move_up') }}"
-                                    >
-                                        <svg class="h-7 w-7" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 15.75 7.5-7.5 7.5 7.5" />
-                                        </svg>
-                                    </button>
+                                    />
 
-                                    <button
-                                        type="button"
-                                        class="flex h-14 w-14 items-center justify-center rounded-xl text-slate-600 hover:bg-slate-100 active:bg-slate-200 disabled:opacity-30"
+                                    <x-icon-button
+                                        icon="move_down"
+                                        :label="__('app.actions.move_down')"
+                                        class="disabled:opacity-30"
                                         wire:click="moveItemDown({{ $item->id }})"
                                         wire:loading.attr="disabled"
                                         @disabled($loop->last)
-                                        aria-label="{{ __('app.actions.move_down') }}"
-                                        title="{{ __('app.actions.move_down') }}"
-                                    >
-                                        <svg class="h-7 w-7" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-                                        </svg>
-                                    </button>
+                                    />
 
-                                    <x-button variant="ghost" wire:click="startEditItem({{ $item->id }})">
-                                        {{ __('app.actions.edit') }}
-                                    </x-button>
+                                    <x-icon-button icon="edit" :label="__('app.actions.edit')"
+                                        wire:click="startEditItem({{ $item->id }})" />
 
                                     @if ($item->is_active)
-                                        <x-button
-                                            variant="ghost"
+                                        <x-icon-button
+                                            icon="deactivate"
+                                            :label="__('app.actions.deactivate')"
                                             wire:click="toggleItemActive({{ $item->id }})"
                                             wire:confirm="{{ __('app.templates.confirm_deactivate_item') }}"
-                                        >
-                                            {{ __('app.actions.deactivate') }}
-                                        </x-button>
+                                        />
                                     @else
-                                        <x-button variant="ghost" wire:click="toggleItemActive({{ $item->id }})">
-                                            {{ __('app.actions.activate') }}
-                                        </x-button>
+                                        <x-icon-button icon="activate" :label="__('app.actions.activate')"
+                                            wire:click="toggleItemActive({{ $item->id }})" />
                                     @endif
                                 </div>
                             </div>
@@ -302,42 +290,32 @@
                                 <td class="px-4 py-3">{{ $templatePart->part->name }}</td>
                                 <td class="px-4 py-3">{{ $templatePart->part->unit ?? '—' }}</td>
                                 <td class="px-4 py-3">
-                                    <div class="flex items-center justify-end gap-2">
-                                        <button
-                                            type="button"
-                                            class="flex h-14 w-14 items-center justify-center rounded-xl text-slate-600 hover:bg-slate-100 active:bg-slate-200 disabled:opacity-30"
+                                    <div class="flex items-center justify-end gap-1">
+                                        <x-icon-button
+                                            icon="move_up"
+                                            :label="__('app.actions.move_up')"
+                                            class="disabled:opacity-30"
                                             wire:click="movePartUp({{ $templatePart->id }})"
                                             wire:loading.attr="disabled"
                                             @disabled($loop->first)
-                                            aria-label="{{ __('app.actions.move_up') }}"
-                                            title="{{ __('app.actions.move_up') }}"
-                                        >
-                                            <svg class="h-7 w-7" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 15.75 7.5-7.5 7.5 7.5" />
-                                            </svg>
-                                        </button>
+                                        />
 
-                                        <button
-                                            type="button"
-                                            class="flex h-14 w-14 items-center justify-center rounded-xl text-slate-600 hover:bg-slate-100 active:bg-slate-200 disabled:opacity-30"
+                                        <x-icon-button
+                                            icon="move_down"
+                                            :label="__('app.actions.move_down')"
+                                            class="disabled:opacity-30"
                                             wire:click="movePartDown({{ $templatePart->id }})"
                                             wire:loading.attr="disabled"
                                             @disabled($loop->last)
-                                            aria-label="{{ __('app.actions.move_down') }}"
-                                            title="{{ __('app.actions.move_down') }}"
-                                        >
-                                            <svg class="h-7 w-7" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true">
-                                                <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-                                            </svg>
-                                        </button>
+                                        />
 
-                                        <x-button
+                                        <x-icon-button
+                                            icon="delete"
                                             variant="danger"
+                                            :label="__('app.actions.delete')"
                                             wire:click="detachPart({{ $templatePart->id }})"
                                             wire:confirm="{{ __('app.templates.confirm_detach_part') }}"
-                                        >
-                                            {{ __('app.actions.delete') }}
-                                        </x-button>
+                                        />
                                     </div>
                                 </td>
                             </tr>

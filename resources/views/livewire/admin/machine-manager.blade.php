@@ -138,25 +138,25 @@
                                     @endif
                                 </td>
                                 <td class="px-4 py-3">
-                                    <div class="flex flex-wrap items-center justify-end gap-2">
-                                        <x-button variant="ghost" :href="route('machines.show', ['machine' => $machine->code])">
-                                            {{ __('app.machines.profile') }}
-                                        </x-button>
+                                    {{-- Icons, not words: five word-buttons wrapped onto three
+                                         lines. Each carries its label as aria-label and title. --}}
+                                    <div class="flex items-center justify-end gap-1">
+                                        <x-icon-button
+                                            icon="profile"
+                                            :label="__('app.machines.profile')"
+                                            :href="route('machines.show', ['machine' => $machine->code])"
+                                        />
                                         @can('update', $machine)
-                                            <x-button variant="ghost" wire:click="openEditModal({{ $machine->id }})">
-                                                {{ __('app.actions.edit') }}
-                                            </x-button>
-                                            <x-button variant="ghost" wire:click="openPartsModal({{ $machine->id }})">
-                                                {{ __('app.machines.manage_parts') }}
-                                            </x-button>
-                                            <x-button variant="ghost" wire:click="openOperatorsModal({{ $machine->id }})">
-                                                {{ __('app.machines.manage_operators') }}
-                                            </x-button>
+                                            <x-icon-button icon="edit" :label="__('app.actions.edit')"
+                                                wire:click="openEditModal({{ $machine->id }})" />
+                                            <x-icon-button icon="parts" :label="__('app.machines.manage_parts')"
+                                                wire:click="openPartsModal({{ $machine->id }})" />
+                                            <x-icon-button icon="operators" :label="__('app.machines.manage_operators')"
+                                                wire:click="openOperatorsModal({{ $machine->id }})" />
                                         @endcan
                                         @can('delete', $machine)
-                                            <x-button variant="danger" wire:click="confirmDelete({{ $machine->id }})">
-                                                {{ __('app.actions.delete') }}
-                                            </x-button>
+                                            <x-icon-button icon="delete" variant="danger" :label="__('app.actions.delete')"
+                                                wire:click="confirmDelete({{ $machine->id }})" />
                                         @endcan
                                     </div>
                                 </td>
@@ -275,39 +275,27 @@
                                 <span class="block truncate font-semibold">{{ $part->name }}</span>
                                 <span class="block font-mono text-sm text-slate-500">{{ $part->part_code }}</span>
                             </span>
-                            <x-button
-                                variant="ghost"
-                                class="h-14 w-14 !px-0"
+                            <x-icon-button
+                                icon="move_up"
+                                :label="__('app.actions.move_up')"
+                                class="disabled:opacity-30"
                                 wire:click="movePartUp({{ $part->id }})"
                                 :disabled="$loop->first"
-                                aria-label="{{ __('app.actions.move_up') }}"
-                            >
-                                <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 15.75 7.5-7.5 7.5 7.5" />
-                                </svg>
-                            </x-button>
-                            <x-button
-                                variant="ghost"
-                                class="h-14 w-14 !px-0"
+                            />
+                            <x-icon-button
+                                icon="move_down"
+                                :label="__('app.actions.move_down')"
+                                class="disabled:opacity-30"
                                 wire:click="movePartDown({{ $part->id }})"
                                 :disabled="$loop->last"
-                                aria-label="{{ __('app.actions.move_down') }}"
-                            >
-                                <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-                                </svg>
-                            </x-button>
-                            <x-button
+                            />
+                            <x-icon-button
+                                icon="delete"
                                 variant="danger"
-                                class="h-14 w-14 !px-0"
+                                :label="__('app.actions.delete')"
                                 wire:click="detachPart({{ $part->id }})"
                                 wire:confirm="{{ __('app.machines.detach_confirm') }}"
-                                aria-label="{{ __('app.actions.delete') }}"
-                            >
-                                <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
-                                </svg>
-                            </x-button>
+                            />
                         </li>
                     @endforeach
                 </ul>
@@ -353,9 +341,8 @@
                                     <p class="truncate font-semibold text-slate-900">{{ $operator->full_name }}</p>
                                     <p class="text-sm text-slate-500">#{{ $operator->employee_number }}</p>
                                 </div>
-                                <x-button variant="ghost" wire:click="detachOperator({{ $operator->id }})">
-                                    {{ __('app.actions.delete') }}
-                                </x-button>
+                                <x-icon-button icon="delete" variant="danger" :label="__('app.actions.delete')"
+                                    wire:click="detachOperator({{ $operator->id }})" />
                             </li>
                         @endforeach
                     </ul>

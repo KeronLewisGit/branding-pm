@@ -107,24 +107,23 @@
                                 </td>
 
                                 <td class="px-4 py-3">
-                                    <div class="flex flex-wrap items-center justify-end gap-2">
-                                        <x-button variant="ghost" wire:click="openEditModal({{ $user->id }})">
-                                            {{ __('app.actions.edit') }}
-                                        </x-button>
+                                    <div class="flex items-center justify-end gap-1">
+                                        <x-icon-button icon="edit" :label="__('app.actions.edit')"
+                                            wire:click="openEditModal({{ $user->id }})" />
 
                                         @if ($user->pin)
-                                            <x-button variant="ghost" wire:click="clearPin({{ $user->id }})">
-                                                {{ __('app.users.clear_pin') }}
-                                            </x-button>
+                                            <x-icon-button icon="pin" :label="__('app.users.clear_pin')"
+                                                wire:click="clearPin({{ $user->id }})" />
                                         @endif
 
                                         @if ($user->id !== auth()->id())
-                                            <x-button variant="ghost" wire:click="toggleActive({{ $user->id }})">
-                                                {{ $user->is_active ? __('app.actions.deactivate') : __('app.actions.activate') }}
-                                            </x-button>
-                                            <x-button variant="danger" wire:click="confirmDelete({{ $user->id }})">
-                                                {{ __('app.actions.delete') }}
-                                            </x-button>
+                                            <x-icon-button
+                                                :icon="$user->is_active ? 'deactivate' : 'activate'"
+                                                :label="$user->is_active ? __('app.actions.deactivate') : __('app.actions.activate')"
+                                                wire:click="toggleActive({{ $user->id }})"
+                                            />
+                                            <x-icon-button icon="delete" variant="danger" :label="__('app.actions.delete')"
+                                                wire:click="confirmDelete({{ $user->id }})" />
                                         @endif
                                     </div>
                                 </td>

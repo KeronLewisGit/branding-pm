@@ -104,14 +104,12 @@
                                     @endif
                                 </td>
                                 <td class="px-4 py-3">
-                                    <div class="flex flex-wrap items-center justify-end gap-2">
+                                    <div class="flex items-center justify-end gap-1">
                                         @can('holiday.manage')
-                                            <x-button variant="ghost" wire:click="openEditModal({{ $holiday->id }})">
-                                                {{ __('app.actions.edit') }}
-                                            </x-button>
-                                            <x-button variant="danger" wire:click="confirmDelete({{ $holiday->id }})">
-                                                {{ __('app.actions.delete') }}
-                                            </x-button>
+                                            <x-icon-button icon="edit" :label="__('app.actions.edit')"
+                                                wire:click="openEditModal({{ $holiday->id }})" />
+                                            <x-icon-button icon="delete" variant="danger" :label="__('app.actions.delete')"
+                                                wire:click="confirmDelete({{ $holiday->id }})" />
                                         @endcan
                                     </div>
                                 </td>

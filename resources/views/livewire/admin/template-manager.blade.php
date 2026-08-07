@@ -149,49 +149,45 @@
                                     : '—' }}
                             </td>
                             <td class="px-4 py-3">
-                                <div class="flex flex-wrap items-center justify-end gap-2">
+                                <div class="flex items-center justify-end gap-1">
                                     @can('update', $template)
-                                        <x-button variant="ghost" href="{{ route('admin.templates.edit', $template) }}">
-                                            {{ __('app.actions.edit') }}
-                                        </x-button>
+                                        <x-icon-button icon="edit" :label="__('app.actions.edit')"
+                                            :href="route('admin.templates.edit', $template)" />
                                     @endcan
 
                                     @can('create', App\Models\ChecklistTemplate::class)
-                                        <x-button
-                                            variant="ghost"
+                                        <x-icon-button
+                                            icon="duplicate"
+                                            :label="__('app.templates.duplicate')"
                                             wire:click="duplicateTemplate({{ $template->id }})"
                                             wire:loading.attr="disabled"
-                                        >
-                                            {{ __('app.templates.duplicate') }}
-                                        </x-button>
+                                        />
                                     @endcan
 
                                     @can('update', $template)
                                         @if ($template->is_active)
-                                            <x-button
-                                                variant="ghost"
+                                            <x-icon-button
+                                                icon="deactivate"
+                                                :label="__('app.actions.deactivate')"
                                                 wire:click="toggleActive({{ $template->id }})"
                                                 wire:confirm="{{ __('app.templates.confirm_deactivate', ['name' => $template->name]) }}"
-                                            >
-                                                {{ __('app.actions.deactivate') }}
-                                            </x-button>
+                                            />
                                         @else
-                                            <x-button variant="ghost" wire:click="toggleActive({{ $template->id }})">
-                                                {{ __('app.actions.activate') }}
-                                            </x-button>
+                                            <x-icon-button icon="activate" :label="__('app.actions.activate')"
+                                                wire:click="toggleActive({{ $template->id }})" />
                                         @endif
                                     @endcan
 
                                     @can('delete', $template)
                                         {{-- Always rendered: when runs exist the component refuses and
                                              explains that the run history blocks deletion. --}}
-                                        <x-button
+                                        <x-icon-button
+                                            icon="delete"
                                             variant="danger"
+                                            :label="__('app.actions.delete')"
                                             wire:click="deleteTemplate({{ $template->id }})"
                                             wire:confirm="{{ __('app.templates.confirm_delete') }}"
-                                        >
-                                            {{ __('app.actions.delete') }}
-                                        </x-button>
+                                        />
                                     @endcan
                                 </div>
                             </td>
