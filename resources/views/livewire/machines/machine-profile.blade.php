@@ -46,19 +46,19 @@
     {{-- Counts --}}
     @php($stats = $this->runStats)
     <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div class="card p-4">
+        <div class="stat-tile">
             <p class="text-sm font-semibold uppercase tracking-wider text-slate-500">{{ __('app.reports.column.completed') }}</p>
             <p class="mt-1 text-3xl font-bold tabular-nums text-slate-900">{{ $stats['completed'] }}</p>
         </div>
-        <div class="card p-4">
+        <div class="stat-tile">
             <p class="text-sm font-semibold uppercase tracking-wider text-slate-500">{{ __('app.reports.column.missed') }}</p>
             <p class="mt-1 text-3xl font-bold tabular-nums text-slate-900">{{ $stats['missed'] }}</p>
         </div>
-        <div class="card p-4">
+        <div class="stat-tile">
             <p class="text-sm font-semibold uppercase tracking-wider text-slate-500">{{ __('app.reports.column.outstanding') }}</p>
             <p class="mt-1 text-3xl font-bold tabular-nums text-slate-900">{{ $stats['outstanding'] }}</p>
         </div>
-        <div class="card p-4">
+        <div class="stat-tile">
             <p class="text-sm font-semibold uppercase tracking-wider text-slate-500">{{ __('app.reports.column.compliance') }}</p>
             <p class="mt-1 text-3xl font-bold tabular-nums text-slate-900">
                 {{-- No percentage at all when nothing was due — 0% and 100% both lie. --}}
@@ -70,7 +70,7 @@
     <div class="mt-6 grid gap-6 lg:grid-cols-3">
         {{-- Left: details + QR --}}
         <div class="space-y-6">
-            <div class="card p-5">
+            <div class="card card-body">
                 <h2 class="text-lg font-bold text-slate-900">{{ __('app.machines.details') }}</h2>
                 <dl class="mt-3 space-y-2 text-base">
                     <div class="flex justify-between gap-4">
@@ -92,14 +92,14 @@
                 @endif
             </div>
 
-            <div class="card p-5 text-center">
+            <div class="card card-body text-center">
                 <h2 class="text-lg font-bold text-slate-900">{{ __('app.qr.title') }}</h2>
                 <div class="mt-3 flex justify-center">{!! $this->qrSvg() !!}</div>
                 {{-- The code in plain text, for when the sticker is over-sprayed. --}}
                 <p class="mt-2 font-mono text-sm text-slate-600">{{ $machine->code }}</p>
             </div>
 
-            <div class="card p-5">
+            <div class="card card-body">
                 <h2 class="text-lg font-bold text-slate-900">{{ __('app.machines.assigned_operators') }}</h2>
                 @if ($this->operators->isEmpty())
                     <p class="mt-2 text-base text-slate-500">{{ __('app.machines.no_operators') }}</p>
@@ -119,7 +119,7 @@
 
         {{-- Right: checklists, runs, issues, parts --}}
         <div class="space-y-6 lg:col-span-2">
-            <div class="card p-5">
+            <div class="card card-body">
                 <h2 class="text-lg font-bold text-slate-900">{{ __('app.machines.checklists') }}</h2>
                 @if ($this->templates->isEmpty())
                     <p class="mt-2 text-base text-slate-500">{{ __('app.machines.no_checklists') }}</p>
@@ -144,34 +144,34 @@
                 @endif
             </div>
 
-            <div class="card p-5">
+            <div class="card card-body">
                 <h2 class="text-lg font-bold text-slate-900">{{ __('app.machines.run_history') }}</h2>
                 @if ($this->recentRuns->isEmpty())
                     <p class="mt-2 text-base text-slate-500">{{ __('app.machines.no_runs') }}</p>
                 @else
                     <div class="mt-3 overflow-x-auto">
-                        <table class="min-w-full divide-y divide-slate-200 text-base">
-                            <thead class="text-left text-sm font-semibold uppercase tracking-wider text-slate-500">
+                        <table class="data-table">
+                            <thead>
                                 <tr>
-                                    <th scope="col" class="py-2 pr-4">{{ __('app.reports.column.scheduled_for') }}</th>
-                                    <th scope="col" class="py-2 pr-4">{{ __('app.runs.template') }}</th>
-                                    <th scope="col" class="py-2 pr-4">{{ __('app.runs.operator') }}</th>
-                                    <th scope="col" class="py-2">{{ __('app.common.status') }}</th>
+                                    <th scope="col">{{ __('app.reports.column.scheduled_for') }}</th>
+                                    <th scope="col">{{ __('app.runs.template') }}</th>
+                                    <th scope="col">{{ __('app.runs.operator') }}</th>
+                                    <th scope="col">{{ __('app.common.status') }}</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-slate-100">
+                            <tbody>
                                 @foreach ($this->recentRuns as $run)
                                     <tr wire:key="run-{{ $run->id }}">
                                         {{-- A calendar date: never timezone-converted. --}}
-                                        <td class="py-2 pr-4 tabular-nums">{{ $run->scheduled_for->format('d M Y') }}</td>
-                                        <td class="py-2 pr-4">
+                                        <td class="tabular-nums">{{ $run->scheduled_for->format('d M Y') }}</td>
+                                        <td>
                                             <a href="{{ route('runs.show', $run) }}" class="font-medium text-slate-900 underline decoration-slate-300 underline-offset-2 hover:decoration-slate-900">
                                                 {{ $run->template?->name ?? '—' }}
                                             </a>
                                         </td>
-                                        <td class="py-2 pr-4">{{ $run->operator?->full_name ?? '—' }}</td>
+                                        <td>{{ $run->operator?->full_name ?? '—' }}</td>
                                         {{-- x-status-dot renders the dot AND the label. --}}
-                                        <td class="py-2"><x-status-dot :status="$run->status" /></td>
+                                        <td><x-status-dot :status="$run->status" /></td>
                                     </tr>
                                 @endforeach
                             </tbody>
@@ -180,7 +180,7 @@
                 @endif
             </div>
 
-            <div class="card p-5">
+            <div class="card card-body">
                 <h2 class="text-lg font-bold text-slate-900">{{ __('app.machines.issue_history') }}</h2>
                 @if ($this->issues->isEmpty())
                     <p class="mt-2 text-base text-slate-500">{{ __('app.machines.no_issues') }}</p>
@@ -207,18 +207,18 @@
                 @endif
             </div>
 
-            <div class="card p-5">
+            <div class="card card-body">
                 <h2 class="text-lg font-bold text-slate-900">{{ __('app.machines.parts_consumed') }}</h2>
                 @if ($this->partsUsed->isEmpty())
                     <p class="mt-2 text-base text-slate-500">{{ __('app.machines.no_parts_used') }}</p>
                 @else
-                    <table class="mt-3 min-w-full divide-y divide-slate-200 text-base">
-                        <tbody class="divide-y divide-slate-100">
+                    <table class="data-table data-table-bare mt-3">
+                        <tbody>
                             @foreach ($this->partsUsed as $part)
                                 <tr>
-                                    <td class="py-2 pr-4 font-mono text-sm text-slate-500">{{ $part->part_code }}</td>
-                                    <td class="py-2 pr-4">{{ $part->part_name }}</td>
-                                    <td class="py-2 text-right font-semibold tabular-nums">{{ rtrim(rtrim(number_format((float) $part->qty, 2), '0'), '.') }}</td>
+                                    <td class="font-mono text-sm text-slate-500">{{ $part->part_code }}</td>
+                                    <td>{{ $part->part_name }}</td>
+                                    <td class="text-right font-semibold tabular-nums">{{ rtrim(rtrim(number_format((float) $part->qty, 2), '0'), '.') }}</td>
                                 </tr>
                             @endforeach
                         </tbody>

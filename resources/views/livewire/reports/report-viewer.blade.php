@@ -79,19 +79,19 @@
         <x-empty-state :title="__('app.reports.no_rows')" :description="__('app.reports.no_rows_hint')" />
     @else
         <div class="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-            <table class="min-w-full divide-y divide-slate-200 text-base">
-                <thead class="bg-slate-50 text-left text-sm font-semibold uppercase tracking-wide text-slate-600">
+            <table class="data-table">
+                <thead>
                     <tr>
                         @foreach ($columns as $key => $header)
-                            <th class="px-4 py-3" wire:key="head-{{ $key }}">{{ $header }}</th>
+                            <th wire:key="head-{{ $key }}">{{ $header }}</th>
                         @endforeach
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-100">
+                <tbody>
                     @foreach ($rows as $index => $row)
                         <tr wire:key="row-{{ $index }}" class="hover:bg-slate-50">
                             @foreach ($columns as $key => $header)
-                                <td class="px-4 py-3 text-slate-800 {{ is_numeric($row[$key] ?? null) ? 'tabular-nums' : '' }}">
+                                <td class="text-slate-800 {{ is_numeric($row[$key] ?? null) ? 'tabular-nums' : '' }}">
                                     {{ $row[$key] ?? '' }}
                                 </td>
                             @endforeach
@@ -102,7 +102,7 @@
                     <tfoot class="bg-slate-100 font-semibold text-slate-900">
                         <tr>
                             @foreach ($columns as $key => $header)
-                                <td class="px-4 py-3" wire:key="total-{{ $key }}">{{ $totals[$key] ?? '' }}</td>
+                                <td wire:key="total-{{ $key }}">{{ $totals[$key] ?? '' }}</td>
                             @endforeach
                         </tr>
                     </tfoot>

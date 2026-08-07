@@ -63,6 +63,85 @@
         @apply rounded-2xl border border-slate-200 bg-white text-slate-900 shadow-sm;
     }
 
+    /*
+     * Card padding, by what the card is for.
+     *
+     * p-4, p-5 and p-6 had all three grown up across the screens with no rule
+     * behind which was which. Three names, one value each:
+     */
+
+    /* A content card — the default. */
+    .card-body {
+        @apply p-5;
+    }
+
+    /* The filter row that sits between a page header and its list. `mt-6` is
+       baked in: one screen had left it off, which is the kind of thing nobody
+       reports but everybody notices. */
+    .filter-bar {
+        @apply card mt-6 p-4;
+    }
+
+    /* A compact metric tile in a row of them. */
+    .stat-tile {
+        @apply card p-4;
+    }
+
+    /*
+     * Tables.
+     *
+     * Four different <thead> class strings and four <table> ones had grown up
+     * across the screens — tracking-wide against tracking-wider, slate-500
+     * against slate-600, some with a header fill and some without. Nobody
+     * chose that; it is what happens when the next screen copies whichever
+     * one was open at the time. Defined once here so every list matches.
+     *
+     *     <div class="table-wrap">
+     *         <div class="table-scroll">
+     *             <table class="data-table"> … </table>
+     *
+     * `table-scroll` is separate because a table that overflows must scroll
+     * inside its own card, never take the page with it.
+     */
+    .table-wrap {
+        @apply card overflow-hidden;
+    }
+
+    .table-scroll {
+        @apply overflow-x-auto;
+    }
+
+    .data-table {
+        @apply min-w-full divide-y divide-slate-200 text-base;
+    }
+
+    .data-table thead {
+        @apply bg-slate-50 text-left text-sm font-semibold uppercase tracking-wider text-slate-500;
+    }
+
+    .data-table th {
+        @apply px-4 py-3 font-semibold;
+    }
+
+    .data-table tbody {
+        @apply divide-y divide-slate-100;
+    }
+
+    .data-table td {
+        @apply px-4 py-3 align-middle;
+    }
+
+    /* A table sitting inside a card that already has padding — the profile
+       and review screens — wants no second frame around it. */
+    .data-table-bare thead {
+        @apply bg-transparent;
+    }
+
+    .data-table-bare th,
+    .data-table-bare td {
+        @apply px-0 py-2 pr-4;
+    }
+
     /* Form primitives — label + control + error stack. */
     .field {
         @apply space-y-1.5;

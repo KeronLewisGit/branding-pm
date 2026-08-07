@@ -7,7 +7,7 @@
         <x-alert type="success" class="mt-6">{{ session('flash.success') }}</x-alert>
     @endif
 
-    <div class="card mt-6 p-4">
+    <div class="filter-bar">
         <div class="flex flex-col gap-3 md:flex-row md:items-center">
             <x-select wire:model.live="locationFilter" aria-label="{{ __('app.locations.location') }}" class="w-full md:w-64">
                 <option value="">{{ __('app.machines.all_locations') }}</option>
@@ -33,24 +33,24 @@
             :description="__('app.qa.empty_description')"
         />
     @else
-        <div class="card mt-6 overflow-hidden">
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-slate-200 text-base">
-                    <thead class="bg-slate-50 text-left text-sm font-semibold uppercase tracking-wider text-slate-500">
+        <div class="table-wrap mt-6">
+            <div class="table-scroll">
+                <table class="data-table">
+                    <thead>
                         <tr>
-                            <th scope="col" class="px-4 py-3">{{ __('app.machines.machine') }}</th>
-                            <th scope="col" class="px-4 py-3">{{ __('app.runs.template') }}</th>
-                            <th scope="col" class="px-4 py-3">{{ __('app.reports.column.scheduled_for') }}</th>
-                            <th scope="col" class="px-4 py-3">{{ __('app.runs.operator') }}</th>
-                            <th scope="col" class="px-4 py-3">{{ __('app.runs.supervisor') }}</th>
-                            <th scope="col" class="px-4 py-3">{{ __('app.qa.verified') }}</th>
-                            <th scope="col" class="px-4 py-3 text-right">{{ __('app.common.actions') }}</th>
+                            <th scope="col">{{ __('app.machines.machine') }}</th>
+                            <th scope="col">{{ __('app.runs.template') }}</th>
+                            <th scope="col">{{ __('app.reports.column.scheduled_for') }}</th>
+                            <th scope="col">{{ __('app.runs.operator') }}</th>
+                            <th scope="col">{{ __('app.runs.supervisor') }}</th>
+                            <th scope="col">{{ __('app.qa.verified') }}</th>
+                            <th scope="col" class="text-right">{{ __('app.common.actions') }}</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-slate-100">
+                    <tbody>
                         @foreach ($runs as $run)
                             <tr wire:key="verify-run-{{ $run->id }}">
-                                <td class="px-4 py-3">
+                                <td>
                                     <p class="font-semibold text-slate-900">{{ $run->machine->name }}</p>
 
                                     {{-- Failures on the row: the sheets worth opening first. --}}
@@ -60,12 +60,12 @@
                                         </p>
                                     @endif
                                 </td>
-                                <td class="px-4 py-3">{{ $run->template?->name ?? '—' }}</td>
+                                <td>{{ $run->template?->name ?? '—' }}</td>
                                 {{-- A calendar date: never timezone-converted. --}}
-                                <td class="px-4 py-3 tabular-nums">{{ $run->scheduled_for->format('d M Y') }}</td>
-                                <td class="px-4 py-3">{{ $run->operator?->full_name ?? '—' }}</td>
-                                <td class="px-4 py-3">{{ $run->supervisor?->full_name ?? '—' }}</td>
-                                <td class="px-4 py-3">
+                                <td class="tabular-nums">{{ $run->scheduled_for->format('d M Y') }}</td>
+                                <td>{{ $run->operator?->full_name ?? '—' }}</td>
+                                <td>{{ $run->supervisor?->full_name ?? '—' }}</td>
+                                <td>
                                     @if ($run->qa_verified_at)
                                         <span class="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-800">
                                             <span class="h-2 w-2 rounded-full bg-emerald-500" aria-hidden="true"></span>
@@ -78,7 +78,7 @@
                                         </span>
                                     @endif
                                 </td>
-                                <td class="px-4 py-3">
+                                <td>
                                     <div class="flex items-center justify-end gap-1">
                                         <x-icon-button
                                             :icon="$run->qa_verified_at ? 'view' : 'verify'"

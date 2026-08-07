@@ -15,7 +15,7 @@
     @endif
 
     {{-- Filters --}}
-    <div class="card mt-6 p-4">
+    <div class="filter-bar">
         <div class="flex flex-col gap-3 md:flex-row md:items-center">
             <x-input
                 type="search"
@@ -49,32 +49,32 @@
             </x-slot:action>
         </x-empty-state>
     @else
-        <div class="card mt-6 overflow-hidden">
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-slate-200 text-base">
-                    <thead class="bg-slate-50 text-left text-sm font-semibold uppercase tracking-wider text-slate-500">
+        <div class="table-wrap mt-6">
+            <div class="table-scroll">
+                <table class="data-table">
+                    <thead>
                         <tr>
-                            <th scope="col" class="px-4 py-3">{{ __('app.users.full_name') }}</th>
-                            <th scope="col" class="px-4 py-3">{{ __('app.users.employee_number') }}</th>
-                            <th scope="col" class="px-4 py-3">{{ __('app.users.email') }}</th>
-                            <th scope="col" class="px-4 py-3">{{ __('app.users.role') }}</th>
-                            <th scope="col" class="px-4 py-3">{{ __('app.users.signs_in_with') }}</th>
-                            <th scope="col" class="px-4 py-3">{{ __('app.common.status') }}</th>
-                            <th scope="col" class="px-4 py-3 text-right">{{ __('app.common.actions') }}</th>
+                            <th scope="col">{{ __('app.users.full_name') }}</th>
+                            <th scope="col">{{ __('app.users.employee_number') }}</th>
+                            <th scope="col">{{ __('app.users.email') }}</th>
+                            <th scope="col">{{ __('app.users.role') }}</th>
+                            <th scope="col">{{ __('app.users.signs_in_with') }}</th>
+                            <th scope="col">{{ __('app.common.status') }}</th>
+                            <th scope="col" class="text-right">{{ __('app.common.actions') }}</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-slate-100">
+                    <tbody>
                         @foreach ($users as $user)
                             <tr wire:key="user-{{ $user->id }}">
-                                <td class="px-4 py-3 font-semibold">
+                                <td class="font-semibold">
                                     {{ $user->full_name }}
                                     @if ($user->id === auth()->id())
                                         <span class="ml-1 text-sm font-normal text-slate-500">({{ __('app.users.you') }})</span>
                                     @endif
                                 </td>
-                                <td class="px-4 py-3 tabular-nums">{{ $user->employee_number }}</td>
-                                <td class="px-4 py-3">{{ $user->email ?? '—' }}</td>
-                                <td class="px-4 py-3">
+                                <td class="tabular-nums">{{ $user->employee_number }}</td>
+                                <td>{{ $user->email ?? '—' }}</td>
+                                <td>
                                     @foreach ($user->roles as $role)
                                         <x-badge>{{ __('app.roles.'.$role->name) }}</x-badge>
                                     @endforeach
@@ -85,14 +85,14 @@
                                     no email and no password can only use the kiosk pad, and
                                     that is the single most common support question.
                                 --}}
-                                <td class="px-4 py-3 text-sm text-slate-600">
+                                <td class="text-sm text-slate-600">
                                     @php($methods = [])
                                     @if ($user->password) @php($methods[] = __('app.users.method_password')) @endif
                                     @if ($user->pin) @php($methods[] = __('app.users.method_pin')) @endif
                                     {{ $methods === [] ? __('app.users.method_none') : implode(' · ', $methods) }}
                                 </td>
 
-                                <td class="px-4 py-3">
+                                <td>
                                     @if ($user->is_active)
                                         <span class="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-800">
                                             <span class="h-2 w-2 rounded-full bg-emerald-500" aria-hidden="true"></span>
@@ -106,7 +106,7 @@
                                     @endif
                                 </td>
 
-                                <td class="px-4 py-3">
+                                <td>
                                     <div class="flex items-center justify-end gap-1">
                                         <x-icon-button icon="edit" :label="__('app.actions.edit')"
                                             wire:click="openEditModal({{ $user->id }})" />

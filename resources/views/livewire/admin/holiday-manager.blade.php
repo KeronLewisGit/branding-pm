@@ -27,7 +27,7 @@
     <x-alert type="info" class="mt-6">{{ __('app.holidays.movable_note') }}</x-alert>
 
     {{-- Year switcher --}}
-    <div class="card mt-6 p-4">
+    <div class="filter-bar">
         <div class="flex flex-wrap items-center gap-3">
             <x-button variant="ghost" wire:click="previousYear" aria-label="{{ __('app.holidays.previous_year') }}">
                 <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true">
@@ -67,29 +67,29 @@
             @endcan
         </x-empty-state>
     @else
-        <div class="card mt-6 overflow-hidden">
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-slate-200 text-base">
-                    <thead class="bg-slate-50 text-left text-sm font-semibold uppercase tracking-wider text-slate-500">
+        <div class="table-wrap mt-6">
+            <div class="table-scroll">
+                <table class="data-table">
+                    <thead>
                         <tr>
-                            <th scope="col" class="px-4 py-3">{{ __('app.holidays.date') }}</th>
-                            <th scope="col" class="px-4 py-3">{{ __('app.common.name') }}</th>
-                            <th scope="col" class="px-4 py-3">{{ __('app.holidays.applies_to') }}</th>
-                            <th scope="col" class="px-4 py-3">{{ __('app.holidays.type') }}</th>
-                            <th scope="col" class="px-4 py-3 text-right">{{ __('app.common.actions') }}</th>
+                            <th scope="col">{{ __('app.holidays.date') }}</th>
+                            <th scope="col">{{ __('app.common.name') }}</th>
+                            <th scope="col">{{ __('app.holidays.applies_to') }}</th>
+                            <th scope="col">{{ __('app.holidays.type') }}</th>
+                            <th scope="col" class="text-right">{{ __('app.common.actions') }}</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-slate-100">
+                    <tbody>
                         @foreach ($holidays as $holiday)
                             <tr wire:key="holiday-{{ $holiday->id }}">
-                                <td class="whitespace-nowrap px-4 py-3 font-semibold tabular-nums">
+                                <td class="whitespace-nowrap font-semibold tabular-nums">
                                     {{ $holiday->date->format('D, j M Y') }}
                                 </td>
-                                <td class="px-4 py-3">{{ $holiday->name }}</td>
-                                <td class="px-4 py-3">
+                                <td>{{ $holiday->name }}</td>
+                                <td>
                                     {{ $holiday->site?->name ?? __('app.holidays.all_sites') }}
                                 </td>
-                                <td class="px-4 py-3">
+                                <td>
                                     @if ($holiday->is_recurring)
                                         <span class="inline-flex items-center gap-1 rounded-full bg-sky-100 px-3 py-1 text-sm font-semibold text-sky-800">
                                             <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" aria-hidden="true">
@@ -103,7 +103,7 @@
                                         </span>
                                     @endif
                                 </td>
-                                <td class="px-4 py-3">
+                                <td>
                                     <div class="flex items-center justify-end gap-1">
                                         @can('holiday.manage')
                                             <x-icon-button icon="edit" :label="__('app.actions.edit')"

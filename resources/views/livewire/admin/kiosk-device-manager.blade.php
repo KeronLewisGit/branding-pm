@@ -18,7 +18,7 @@
 
     {{-- Filters --}}
     @if ($devices->isNotEmpty() || $search !== '' || $kindFilter !== '')
-        <div class="card mt-6 p-4">
+        <div class="filter-bar">
             <div class="flex flex-col gap-3 md:flex-row md:items-center">
                 <x-input
                     type="search"
@@ -60,25 +60,25 @@
             </x-slot:action>
         </x-empty-state>
     @else
-        <div class="card mt-6 overflow-hidden">
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-slate-200 text-base">
-                    <thead class="bg-slate-50 text-left text-sm font-semibold uppercase tracking-wider text-slate-500">
+        <div class="table-wrap mt-6">
+            <div class="table-scroll">
+                <table class="data-table">
+                    <thead>
                         <tr>
-                            <th scope="col" class="px-4 py-3">{{ __('app.common.name') }}</th>
-                            <th scope="col" class="px-4 py-3">{{ __('app.kiosk_devices.kind_label') }}</th>
-                            <th scope="col" class="px-4 py-3">{{ __('app.kiosk_devices.location') }}</th>
-                            <th scope="col" class="px-4 py-3">{{ __('app.kiosk_devices.status') }}</th>
-                            <th scope="col" class="px-4 py-3">{{ __('app.kiosk_devices.last_seen') }}</th>
-                            <th scope="col" class="px-4 py-3 text-right">{{ __('app.common.actions') }}</th>
+                            <th scope="col">{{ __('app.common.name') }}</th>
+                            <th scope="col">{{ __('app.kiosk_devices.kind_label') }}</th>
+                            <th scope="col">{{ __('app.kiosk_devices.location') }}</th>
+                            <th scope="col">{{ __('app.kiosk_devices.status') }}</th>
+                            <th scope="col">{{ __('app.kiosk_devices.last_seen') }}</th>
+                            <th scope="col" class="text-right">{{ __('app.common.actions') }}</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-slate-100">
+                    <tbody>
                         @foreach ($devices as $device)
                             <tr wire:key="kiosk-device-{{ $device->id }}">
-                                <td class="px-4 py-3 font-semibold">{{ $device->name }}</td>
+                                <td class="font-semibold">{{ $device->name }}</td>
 
-                                <td class="px-4 py-3">
+                                <td>
                                     {{--
                                         Deliberately uncoloured. The status column beside it
                                         already uses colour to mean something, and a second
@@ -99,10 +99,10 @@
                                     @endif
                                 </td>
 
-                                <td class="px-4 py-3">{{ $device->location?->name ?? __('app.kiosk_devices.any_location') }}</td>
+                                <td>{{ $device->location?->name ?? __('app.kiosk_devices.any_location') }}</td>
 
                                 {{-- Status is never carried by colour alone (contract §8). --}}
-                                <td class="px-4 py-3">
+                                <td>
                                     @if (! $device->is_active)
                                         <span class="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-sm font-semibold text-slate-700">
                                             <span class="h-2 w-2 rounded-full bg-slate-400" aria-hidden="true"></span>
@@ -126,7 +126,7 @@
                                     @endif
                                 </td>
 
-                                <td class="px-4 py-3 text-slate-600">
+                                <td class="text-slate-600">
                                     @if ($device->last_seen_at)
                                         <span title="{{ $device->last_seen_at->timezone(config('app.display_timezone'))->format('D j M Y, g:i A') }}">
                                             {{ $device->last_seen_at->diffForHumans() }}
@@ -136,7 +136,7 @@
                                     @endif
                                 </td>
 
-                                <td class="px-4 py-3">
+                                <td>
                                     <div class="flex items-center justify-end gap-1">
                                         @if ($device->is_active)
                                             <x-icon-button icon="setup" variant="primary" :label="__('app.kiosk_devices.set_up')"

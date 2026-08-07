@@ -71,7 +71,7 @@
 
     {{-- ── Header block — mirrors the paper form ───────────────── --}}
 
-    <section class="card p-5">
+    <section class="card card-body">
         <div class="flex flex-wrap items-start justify-between gap-4">
             <div class="min-w-0">
                 <h1 class="text-2xl font-extrabold leading-tight">{{ $run->template->name }}</h1>

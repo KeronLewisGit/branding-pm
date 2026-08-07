@@ -17,7 +17,7 @@
     @endif
 
     {{-- Filters --}}
-    <div class="card mt-6 p-4">
+    <div class="filter-bar">
         <div class="flex flex-col gap-3 md:flex-row md:items-center">
             <x-input
                 type="search"
@@ -68,26 +68,26 @@
             </x-empty-state>
         @endif
     @else
-        <div class="card mt-6 overflow-hidden">
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-slate-200 text-base">
-                    <thead class="bg-slate-50 text-left text-sm font-semibold uppercase tracking-wider text-slate-500">
+        <div class="table-wrap mt-6">
+            <div class="table-scroll">
+                <table class="data-table">
+                    <thead>
                         <tr>
-                            <th scope="col" class="px-4 py-3">{{ __('app.common.name') }}</th>
-                            <th scope="col" class="px-4 py-3">{{ __('app.locations.site') }}</th>
-                            <th scope="col" class="px-4 py-3">{{ __('app.locations.floor') }}</th>
-                            <th scope="col" class="px-4 py-3 text-right">{{ __('app.locations.machines_count') }}</th>
-                            <th scope="col" class="px-4 py-3 text-right">{{ __('app.common.actions') }}</th>
+                            <th scope="col">{{ __('app.common.name') }}</th>
+                            <th scope="col">{{ __('app.locations.site') }}</th>
+                            <th scope="col">{{ __('app.locations.floor') }}</th>
+                            <th scope="col" class="text-right">{{ __('app.locations.machines_count') }}</th>
+                            <th scope="col" class="text-right">{{ __('app.common.actions') }}</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-slate-100">
+                    <tbody>
                         @foreach ($locations as $location)
                             <tr wire:key="location-{{ $location->id }}">
-                                <td class="px-4 py-3 font-semibold">{{ $location->name }}</td>
-                                <td class="px-4 py-3">{{ $location->site?->name }}</td>
-                                <td class="px-4 py-3">{{ $location->floor ?? '—' }}</td>
-                                <td class="px-4 py-3 text-right tabular-nums">{{ $location->machines_count }}</td>
-                                <td class="px-4 py-3">
+                                <td class="font-semibold">{{ $location->name }}</td>
+                                <td>{{ $location->site?->name }}</td>
+                                <td>{{ $location->floor ?? '—' }}</td>
+                                <td class="text-right tabular-nums">{{ $location->machines_count }}</td>
+                                <td>
                                     <div class="flex items-center justify-end gap-1">
                                         @can('machine.manage')
                                             <x-icon-button icon="edit" :label="__('app.actions.edit')"

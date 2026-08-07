@@ -19,7 +19,7 @@
     @endif
 
     {{-- Filters — mirrored into the URL by the component, so the view is shareable --}}
-    <div class="card p-4">
+    <div class="filter-bar">
         <div class="grid gap-3 md:grid-cols-3 xl:grid-cols-6">
             <div class="xl:col-span-2">
                 <label for="template-search" class="sr-only">{{ __('app.actions.search') }}</label>
@@ -91,18 +91,18 @@
         </x-empty-state>
     @else
         <div class="card overflow-x-auto">
-            <table class="min-w-full divide-y divide-slate-200 text-base">
+            <table class="data-table">
                 <thead>
                     <tr class="text-left text-sm font-semibold uppercase tracking-wider text-slate-500">
-                        <th scope="col" class="px-4 py-3">{{ __('app.common.name') }}</th>
-                        <th scope="col" class="px-4 py-3">{{ __('app.templates.work_category') }}</th>
-                        <th scope="col" class="px-4 py-3">{{ __('app.templates.frequency') }}</th>
-                        <th scope="col" class="px-4 py-3">{{ __('app.templates.per_shift_short') }}</th>
-                        <th scope="col" class="px-4 py-3 text-right">{{ __('app.templates.item_count') }}</th>
-                        <th scope="col" class="px-4 py-3 text-right">{{ __('app.templates.version') }}</th>
-                        <th scope="col" class="px-4 py-3">{{ __('app.common.status') }}</th>
-                        <th scope="col" class="px-4 py-3">{{ __('app.templates.last_run') }}</th>
-                        <th scope="col" class="px-4 py-3 text-right">{{ __('app.common.actions') }}</th>
+                        <th scope="col">{{ __('app.common.name') }}</th>
+                        <th scope="col">{{ __('app.templates.work_category') }}</th>
+                        <th scope="col">{{ __('app.templates.frequency') }}</th>
+                        <th scope="col">{{ __('app.templates.per_shift_short') }}</th>
+                        <th scope="col" class="text-right">{{ __('app.templates.item_count') }}</th>
+                        <th scope="col" class="text-right">{{ __('app.templates.version') }}</th>
+                        <th scope="col">{{ __('app.common.status') }}</th>
+                        <th scope="col">{{ __('app.templates.last_run') }}</th>
+                        <th scope="col" class="text-right">{{ __('app.common.actions') }}</th>
                     </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-200">
@@ -112,14 +112,14 @@
                         @if ($template->machine_id !== $currentMachineId)
                             @php($currentMachineId = $template->machine_id)
                             <tr wire:key="machine-group-{{ $template->machine_id }}" class="bg-slate-100">
-                                <th scope="colgroup" colspan="9" class="px-4 py-3 text-left text-lg font-bold text-slate-800">
+                                <th scope="colgroup" colspan="9" class="text-left text-lg font-bold text-slate-800">
                                     {{ $template->machine->name }}
                                 </th>
                             </tr>
                         @endif
 
                         <tr wire:key="template-{{ $template->id }}" @class(['opacity-60' => ! $template->is_active])>
-                            <td class="px-4 py-3">
+                            <td>
                                 <a
                                     href="{{ route('admin.templates.edit', $template) }}"
                                     class="inline-flex min-h-14 items-center font-semibold text-sky-700 underline-offset-2 hover:underline"
@@ -127,28 +127,28 @@
                                     {{ $template->name }}
                                 </a>
                             </td>
-                            <td class="px-4 py-3">
+                            <td>
                                 <x-badge>{{ $template->work_category->label() }}</x-badge>
                             </td>
-                            <td class="px-4 py-3">{{ $template->frequency->label() }}</td>
-                            <td class="px-4 py-3">
+                            <td>{{ $template->frequency->label() }}</td>
+                            <td>
                                 {{ $template->per_shift ? __('app.actions.yes') : '—' }}
                             </td>
-                            <td class="px-4 py-3 text-right tabular-nums">{{ $template->active_items_count }}</td>
-                            <td class="px-4 py-3 text-right tabular-nums">v{{ $template->version }}</td>
-                            <td class="px-4 py-3">
+                            <td class="text-right tabular-nums">{{ $template->active_items_count }}</td>
+                            <td class="text-right tabular-nums">v{{ $template->version }}</td>
+                            <td>
                                 @if ($template->is_active)
                                     <x-badge color="emerald">{{ __('app.common.active') }}</x-badge>
                                 @else
                                     <x-badge>{{ __('app.common.inactive') }}</x-badge>
                                 @endif
                             </td>
-                            <td class="px-4 py-3 whitespace-nowrap">
+                            <td class="whitespace-nowrap">
                                 {{ $template->runs_max_scheduled_for
                                     ? \Illuminate\Support\Carbon::parse($template->runs_max_scheduled_for)->format('d M Y')
                                     : '—' }}
                             </td>
-                            <td class="px-4 py-3">
+                            <td>
                                 <div class="flex items-center justify-end gap-1">
                                     @can('update', $template)
                                         <x-icon-button icon="edit" :label="__('app.actions.edit')"

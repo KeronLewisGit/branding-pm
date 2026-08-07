@@ -3,6 +3,42 @@
 Versions track build milestones: `0.<milestone>.<patch>`. The project reaches
 `1.0.0` when all 8 milestones are complete and the paper forms are retired.
 
+## [0.18.0] — UI standardisation
+
+A consistency pass over every screen. No behaviour changed; 139 tests pass
+unchanged and all 23 pages were re-checked by hand.
+
+### Tables
+Four different `<thead>` class strings and four `<table>` ones had grown up
+across the screens — `tracking-wide` against `tracking-wider`, `slate-500`
+against `slate-600`, some with a header fill and some without. Nobody chose
+that; it is what happens when the next screen copies whichever one was open at
+the time.
+
+Now one definition in `app.css`: `.table-wrap`, `.table-scroll`, `.data-table`
+and a `.data-table-bare` variant for tables that sit inside an already-padded
+card. Every `<th>`/`<td>`/`<tbody>` shed its per-cell padding classes, since
+the table now supplies them — the markup for a list is materially shorter and
+a new screen cannot invent a fifth style.
+
+`.table-scroll` is deliberately separate: a wide table must scroll inside its
+own card, never take the page with it.
+
+### Cards
+`p-4`, `p-5` and `p-6` were all in use with no rule behind which was which,
+and `<x-card>` added a fourth inset at `p-6` sitting next to raw `p-5` cards
+on the same screen. Three names, one value each: **`.card-body`** for a
+content card, **`.filter-bar`** for the filter row above a list, and
+**`.stat-tile`** for a compact metric. `<x-card>` now uses `.card-body` too,
+with `px-5` headers and footers so all three line up.
+
+`mt-6` is baked into `.filter-bar` because one screen had left it off — the
+kind of thing nobody reports and everybody notices.
+
+### Counts
+Table styles 4 → 1. Header styles 4 → 1. Card paddings 4 → 3, each with a name
+that says when to use it.
+
 ## [0.17.1] — Icon actions in every list
 
 The machines list carried five word-buttons — Profile, Edit, Parts, Operators,

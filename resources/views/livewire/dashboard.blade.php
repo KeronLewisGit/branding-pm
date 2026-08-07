@@ -147,7 +147,7 @@
             <p class="mt-3 text-base text-slate-500">{{ __('app.reports.no_rows') }}</p>
         @else
             <div class="mt-4 overflow-x-auto">
-                <table class="min-w-full text-sm">
+                <table class="data-table">
                     <thead>
                         <tr>
                             <th class="px-2 py-1 text-left font-semibold text-slate-600">{{ __('app.runs.machine') }}</th>
@@ -189,22 +189,22 @@
                 </a>
             </div>
 
-            <table class="mt-3 min-w-full text-base">
-                <thead class="text-left text-sm font-semibold uppercase tracking-wide text-slate-500">
+            <table class="data-table data-table-bare mt-3">
+                <thead>
                     <tr>
-                        <th class="py-2">{{ __('app.runs.machine') }}</th>
-                        <th class="py-2 text-right">{{ __('app.reports.column.due') }}</th>
-                        <th class="py-2 text-right">{{ __('app.reports.column.missed') }}</th>
-                        <th class="py-2 text-right">{{ __('app.reports.column.compliance') }}</th>
+                        <th>{{ __('app.runs.machine') }}</th>
+                        <th class="text-right">{{ __('app.reports.column.due') }}</th>
+                        <th class="text-right">{{ __('app.reports.column.missed') }}</th>
+                        <th class="text-right">{{ __('app.reports.column.compliance') }}</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-100">
+                <tbody>
                     @foreach ($byMachine->take(10) as $row)
                         <tr wire:key="machine-row-{{ $loop->index }}">
-                            <td class="py-2 text-slate-800">{{ $row['machine'] }}</td>
-                            <td class="py-2 text-right tabular-nums text-slate-600">{{ $row['due'] }}</td>
+                            <td class="text-slate-800">{{ $row['machine'] }}</td>
+                            <td class="text-right tabular-nums text-slate-600">{{ $row['due'] }}</td>
                             <td class="py-2 text-right tabular-nums {{ $row['missed'] > 0 ? 'font-semibold text-red-700' : 'text-slate-600' }}">{{ $row['missed'] }}</td>
-                            <td class="py-2 text-right font-semibold tabular-nums text-slate-900">{{ $row['compliance'] }}</td>
+                            <td class="text-right font-semibold tabular-nums text-slate-900">{{ $row['compliance'] }}</td>
                         </tr>
                     @endforeach
                 </tbody>
@@ -223,20 +223,20 @@
             @if ($partsThisMonth->isEmpty())
                 <p class="mt-3 text-base text-slate-500">{{ __('app.dashboard.no_parts_used') }}</p>
             @else
-                <table class="mt-3 min-w-full text-base">
-                    <thead class="text-left text-sm font-semibold uppercase tracking-wide text-slate-500">
+                <table class="data-table data-table-bare mt-3">
+                    <thead>
                         <tr>
-                            <th class="py-2">{{ __('app.parts.part_code') }}</th>
-                            <th class="py-2">{{ __('app.parts.part') }}</th>
-                            <th class="py-2 text-right">{{ __('app.runs.qty_used') }}</th>
+                            <th>{{ __('app.parts.part_code') }}</th>
+                            <th>{{ __('app.parts.part') }}</th>
+                            <th class="text-right">{{ __('app.runs.qty_used') }}</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-slate-100">
+                    <tbody>
                         @foreach ($partsThisMonth as $part)
                             <tr wire:key="part-{{ $part['part_code'] }}">
-                                <td class="py-2 font-mono text-sm text-slate-500">{{ $part['part_code'] }}</td>
-                                <td class="py-2 text-slate-800">{{ $part['part_name'] }}</td>
-                                <td class="py-2 text-right font-semibold tabular-nums text-slate-900">{{ $part['qty_used'] }}</td>
+                                <td class="font-mono text-sm text-slate-500">{{ $part['part_code'] }}</td>
+                                <td class="text-slate-800">{{ $part['part_name'] }}</td>
+                                <td class="text-right font-semibold tabular-nums text-slate-900">{{ $part['qty_used'] }}</td>
                             </tr>
                         @endforeach
                     </tbody>
