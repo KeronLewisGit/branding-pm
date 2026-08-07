@@ -3,6 +3,63 @@
 Versions track build milestones: `0.<milestone>.<patch>`. The project reaches
 `1.0.0` when all 8 milestones are complete and the paper forms are retired.
 
+## [0.15.0] — Machine profile, and a sidebar that fits the role
+
+### Machine profile
+`/machines/{machine}` — SPEC screen 5, the last screen the specification
+asked for. Details, the machine's own QR, its checklists with item counts and
+template version, recent checks, faults, parts consumed, and who is assigned
+to it. Over a 30 / 90 / 365-day window.
+
+All of it was reachable before, but only by visiting the runs list and
+filtering, then the issues register and filtering again, then a report. "What
+is going on with the MATAN?" had no single answer.
+
+Gated on `MachinePolicy::view` — `machine.view` plus the machine scope — so it
+is **not** admin-only. The people who need a machine's history are the ones
+standing next to it. Reached from the machines admin, and from the machine
+name in the runs list and the issues register, which is what makes it useful
+to a supervisor who has no admin menu at all.
+
+Compliance on this screen follows the same rule as everywhere else: a window
+with nothing due shows a dash, because 0% and 100% would both be lies. Parts
+group on the snapshot name, matching the parts usage report. `scheduled_for`
+is printed without timezone conversion — it is a calendar date.
+
+Unlike the kiosk's `/m/{code}`, an unknown code is a plain 404: an office
+screen reached from a list has no peeling sticker to account for.
+
+### The sidebar
+**Fixed: an operator was shown a Dashboard link that bounced them.** It was
+gated on `run.view`, which operators hold, but the Dashboard component
+redirects anyone without `report.view` straight to `/runs` — so the one link
+an operator was most likely to try sent them back where they already were. Now
+gated on `report.view`.
+
+Regrouped into **work** (no heading — for an operator that is the whole menu),
+**Plant**, and **System**. The admin heading previously appeared only for
+`machine.manage`, `part.manage`, `template.manage` or `holiday.manage`, so a
+holder of `kiosk.manage` or `user.manage` alone got those links with no
+heading above them.
+
+**QR sticker sheet left the sidebar.** It is a task you perform on machines,
+not a section of the system, and it now sits in the machines screen header and
+on each machine's profile — one fewer permanent entry, found where you would
+look for it.
+
+Icons throughout, decorative and `aria-hidden` since every entry is named in
+text beside it. Labels truncate rather than wrap, so a long entry cannot push
+the sidebar around.
+
+What each role now sees: operator **2** entries, supervisor **5**, maintenance
+manager **10**, administrator **12**.
+
+### Tests
+13 new (112 total, 373 assertions): the profile reachable by all four roles,
+refused across sites, 404 on an unknown code, panels gathering the right
+records, the window whitelist rejecting a hand-edited value, the no-percentage
+rule, and one test per role pinning exactly what the sidebar offers.
+
 ## [0.14.0] — User administration
 
 **Admin → Users**, gated on `user.manage` — a permission only the `admin`

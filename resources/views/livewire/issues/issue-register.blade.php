@@ -124,7 +124,14 @@
                                 <x-badge :color="$issue->severity->color()">{{ $issue->severity->label() }}</x-badge>
                             </td>
                             <td class="px-4 py-3">
-                                <p class="font-semibold text-slate-900">{{ $issue->machine->name }}</p>
+                                <p class="font-semibold text-slate-900">
+                                    @can('view', $issue->machine)
+                                        <a href="{{ route('machines.show', ['machine' => $issue->machine->code]) }}"
+                                           class="underline decoration-slate-300 underline-offset-2 hover:decoration-slate-900">{{ $issue->machine->name }}</a>
+                                    @else
+                                        {{ $issue->machine->name }}
+                                    @endcan
+                                </p>
                                 <p class="text-sm text-slate-500">{{ $issue->machine->location->name }}</p>
                             </td>
                             <td class="max-w-md px-4 py-3">

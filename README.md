@@ -55,10 +55,6 @@ Not yet built, and outstanding against [`docs/SPEC.md`](docs/SPEC.md):
   every value it holds actually comes from `config/checklists.php` via `.env`,
   so editing a seeded setting has no effect. Either give it a screen and read
   from it, or drop the table.
-- **The machine profile screen** (spec screen 5) — details, run history, issue
-  history and parts consumption on one page per machine. The data is all
-  reachable today, but through the runs, issues and reports screens rather than
-  from the machine.
 - **The admin amendment path** for correcting an approved run. `run.amend` and
   `ChecklistRunPolicy::amend()` are in place, but nothing calls them, so a
   correction after approval currently has no route through the UI at all.

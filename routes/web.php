@@ -22,6 +22,7 @@ use App\Livewire\Issues\IssueRegister;
 use App\Livewire\Kiosk\MachinePicker;
 use App\Livewire\Kiosk\MachineRuns;
 use App\Livewire\Kiosk\OperatorPicker;
+use App\Livewire\Machines\MachineProfile;
 use App\Livewire\Reports\ReportViewer;
 use App\Livewire\Runs\ApprovalQueue;
 use App\Livewire\Runs\RunForm;
@@ -146,6 +147,19 @@ Route::middleware(['auth', 'kiosk.idle'])->group(function (): void {
         Route::get('/reports/{report}/csv', [ReportExportController::class, 'csv'])->name('reports.csv');
         Route::get('/reports/{report}/pdf', [ReportExportController::class, 'pdf'])->name('reports.pdf');
     });
+
+    /*
+     * Machine profile (SPEC screen 5). Not under /admin: the people who need
+     * a machine's history are the ones standing next to it, so this is gated
+     * on MachinePolicy::view — `machine.view` plus the machine scope — rather
+     * than on `machine.manage`.
+     *
+     * Machine::getRouteKeyName() is `code`, so the URI carries the same slug
+     * the QR sticker does. Binding to the model here IS wanted, unlike the
+     * kiosk's /m/{code}: an unknown code on an office screen reached from a
+     * list is a plain 404, not a peeling sticker needing an explanation.
+     */
+    Route::get('/machines/{machine}', MachineProfile::class)->name('machines.show');
 
     Route::get('/runs', RunIndex::class)->name('runs.index');
 
