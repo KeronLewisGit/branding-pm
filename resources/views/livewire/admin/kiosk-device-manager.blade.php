@@ -16,16 +16,31 @@
         <x-alert type="error" class="mt-6">{{ session('flash.error') }}</x-alert>
     @endif
 
-    {{-- Filter --}}
-    @if ($devices->isNotEmpty())
+    {{-- Filters --}}
+    @if ($devices->isNotEmpty() || $search !== '' || $kindFilter !== '')
         <div class="card mt-6 p-4">
-            <x-input
-                type="search"
-                wire:model.live.debounce.300ms="search"
-                placeholder="{{ __('app.kiosk_devices.search_placeholder') }}"
-                aria-label="{{ __('app.actions.search') }}"
-                class="w-full md:max-w-xs"
-            />
+            <div class="flex flex-col gap-3 md:flex-row md:items-center">
+                <x-input
+                    type="search"
+                    wire:model.live.debounce.300ms="search"
+                    placeholder="{{ __('app.kiosk_devices.search_placeholder') }}"
+                    aria-label="{{ __('app.actions.search') }}"
+                    class="w-full md:max-w-xs"
+                />
+
+                <x-select wire:model.live="kindFilter" aria-label="{{ __('app.kiosk_devices.kind_label') }}" class="w-full md:w-56">
+                    <option value="">{{ __('app.kiosk_devices.all_kinds') }}</option>
+                    @foreach ($kinds as $kindOption)
+                        <option value="{{ $kindOption->value }}">{{ $kindOption->label() }}</option>
+                    @endforeach
+                </x-select>
+
+                @if ($search !== '' || $kindFilter !== '')
+                    <x-button variant="ghost" wire:click="$set('search', ''); $set('kindFilter', '')">
+                        {{ __('app.actions.clear') }}
+                    </x-button>
+                @endif
+            </div>
         </div>
     @endif
 
@@ -33,12 +48,12 @@
     @if ($devices->isEmpty())
         <x-empty-state
             class="mt-6"
-            :title="$search !== '' ? __('app.kiosk_devices.empty_filtered_title') : __('app.kiosk_devices.empty_title')"
-            :description="$search !== '' ? __('app.kiosk_devices.empty_filtered_description') : __('app.kiosk_devices.empty_description')"
+            :title="($search !== '' || $kindFilter !== '') ? __('app.kiosk_devices.empty_filtered_title') : __('app.kiosk_devices.empty_title')"
+            :description="($search !== '' || $kindFilter !== '') ? __('app.kiosk_devices.empty_filtered_description') : __('app.kiosk_devices.empty_description')"
         >
             <x-slot:action>
-                @if ($search !== '')
-                    <x-button variant="ghost" wire:click="$set('search', '')">{{ __('app.actions.clear') }}</x-button>
+                @if ($search !== '' || $kindFilter !== '')
+                    <x-button variant="ghost" wire:click="$set('search', ''); $set('kindFilter', '')">{{ __('app.actions.clear') }}</x-button>
                 @else
                     <x-button wire:click="openCreateModal">{{ __('app.kiosk_devices.add_device') }}</x-button>
                 @endif
@@ -51,6 +66,7 @@
                     <thead class="bg-slate-50 text-left text-sm font-semibold uppercase tracking-wider text-slate-500">
                         <tr>
                             <th scope="col" class="px-4 py-3">{{ __('app.common.name') }}</th>
+                            <th scope="col" class="px-4 py-3">{{ __('app.kiosk_devices.kind_label') }}</th>
                             <th scope="col" class="px-4 py-3">{{ __('app.kiosk_devices.location') }}</th>
                             <th scope="col" class="px-4 py-3">{{ __('app.kiosk_devices.status') }}</th>
                             <th scope="col" class="px-4 py-3">{{ __('app.kiosk_devices.last_seen') }}</th>
@@ -61,6 +77,28 @@
                         @foreach ($devices as $device)
                             <tr wire:key="kiosk-device-{{ $device->id }}">
                                 <td class="px-4 py-3 font-semibold">{{ $device->name }}</td>
+
+                                <td class="px-4 py-3">
+                                    {{--
+                                        Deliberately uncoloured. The status column beside it
+                                        already uses colour to mean something, and a second
+                                        palette in the same row would compete with it.
+                                    --}}
+                                    <x-badge>{{ $device->kind->label() }}</x-badge>
+
+                                    {{--
+                                        Recorded as one thing, used from another — usually an
+                                        enrolment link opened on the wrong machine. Worth
+                                        surfacing; never worth blocking on, since the evidence
+                                        is a client-supplied User-Agent.
+                                    --}}
+                                    @if ($device->kindLooksWrong())
+                                        <p class="mt-1 text-xs font-medium text-amber-700">
+                                            {{ __('app.kiosk_devices.kind_mismatch', ['detected' => $device->detectedType()->label()]) }}
+                                        </p>
+                                    @endif
+                                </td>
+
                                 <td class="px-4 py-3">{{ $device->location?->name ?? __('app.kiosk_devices.any_location') }}</td>
 
                                 {{-- Status is never carried by colour alone (contract §8). --}}
@@ -102,7 +140,7 @@
                                     <div class="flex flex-wrap items-center justify-end gap-2">
                                         @if ($device->is_active)
                                             <x-button wire:click="openEnrolModal({{ $device->id }})">
-                                                {{ __('app.kiosk_devices.enrol_a_tablet') }}
+                                                {{ __('app.kiosk_devices.set_up') }}
                                             </x-button>
                                         @endif
 
@@ -148,6 +186,17 @@
             </div>
 
             <div>
+                <label for="kiosk-kind" class="mb-1 block text-base font-semibold">{{ __('app.kiosk_devices.kind_label') }}</label>
+                <x-select id="kiosk-kind" wire:model.live="kind" class="w-full">
+                    @foreach ($kinds as $kindOption)
+                        <option value="{{ $kindOption->value }}">{{ $kindOption->label() }}</option>
+                    @endforeach
+                </x-select>
+                <p class="mt-1 text-sm text-slate-500">{{ __('app.kiosk_devices.kind_hint') }}</p>
+                @error('kind') <p class="mt-1 text-sm text-rose-600">{{ $message }}</p> @enderror
+            </div>
+
+            <div>
                 <label for="kiosk-location" class="mb-1 block text-base font-semibold">
                     {{ __('app.kiosk_devices.location') }}
                     <span class="font-normal text-slate-500">({{ __('app.common.optional') }})</span>
@@ -176,67 +225,80 @@
         </form>
     </x-modal>
 
-    {{-- Enrolment: QR + link --}}
+    {{-- Enrolment --}}
     <x-modal name="kiosk-device-enrol" :title="__('app.kiosk_devices.enrol_title')">
         @if ($this->enrollingDevice && $enrolUrl !== '')
+            @php($device = $this->enrollingDevice)
+            @php($leadsWithBrowser = $device->kind->enrolmentMethod() === 'browser')
+
             <div class="space-y-5">
                 <div>
-                    <p class="text-base font-semibold text-slate-900">{{ $this->enrollingDevice->name }}</p>
+                    <p class="text-base font-semibold text-slate-900">{{ $device->name }}</p>
                     <p class="text-sm text-slate-500">
-                        {{ $this->enrollingDevice->location?->name ?? __('app.kiosk_devices.any_location') }}
+                        {{ $device->kind->label() }}
+                        · {{ $device->location?->name ?? __('app.kiosk_devices.any_location') }}
                     </p>
                 </div>
 
-                <ol class="list-decimal space-y-1 pl-5 text-base text-slate-700">
-                    <li>{{ __('app.kiosk_devices.enrol_step_1') }}</li>
-                    <li>{{ __('app.kiosk_devices.enrol_step_2') }}</li>
-                    <li>{{ __('app.kiosk_devices.enrol_step_3') }}</li>
-                </ol>
+                {{--
+                    Both methods are always present. Which one comes first is
+                    decided by KioskDeviceKind::enrolmentMethod(), because you
+                    cannot scan a QR code with the screen displaying it — and a
+                    tablet carried to the office cannot use "this browser".
+                --}}
+                @php($browserBlock = 'browser')
+                @php($scanBlock = 'scan')
 
-                <div class="flex justify-center rounded-lg border border-slate-200 bg-white p-4">
-                    {!! $this->enrolSvg() !!}
-                </div>
+                @foreach ($leadsWithBrowser ? [$browserBlock, $scanBlock] : [$scanBlock, $browserBlock] as $block)
+                    @if ($block === 'browser')
+                        <div class="rounded-lg border {{ $leadsWithBrowser ? 'border-slate-300 bg-white' : 'border-slate-200 bg-slate-50' }} p-4">
+                            <p class="text-base font-semibold text-slate-900">
+                                {{ $leadsWithBrowser ? __('app.kiosk_devices.enrol_browser_title_primary') : __('app.kiosk_devices.enrol_browser_title_secondary') }}
+                            </p>
+                            <p class="mt-1 text-sm text-slate-600">{{ __('app.kiosk_devices.enrol_browser_hint') }}</p>
+                            <x-button
+                                :variant="$leadsWithBrowser ? 'primary' : 'ghost'"
+                                class="mt-3"
+                                :href="route('kiosk.enrol', ['device' => $device->id])"
+                            >
+                                {{ __('app.kiosk_devices.enrol_here') }}
+                            </x-button>
+                        </div>
+                    @else
+                        <div class="rounded-lg border {{ $leadsWithBrowser ? 'border-slate-200 bg-slate-50' : 'border-slate-300 bg-white' }} p-4">
+                            <p class="text-base font-semibold text-slate-900">
+                                {{ $leadsWithBrowser ? __('app.kiosk_devices.enrol_scan_title_secondary') : __('app.kiosk_devices.enrol_scan_title_primary') }}
+                            </p>
 
-                <div>
-                    <label for="kiosk-enrol-url" class="mb-1 block text-sm font-semibold text-slate-700">
-                        {{ __('app.kiosk_devices.enrol_url_label') }}
-                    </label>
-                    {{-- Selectable so it can be typed or copied if the camera will not focus. --}}
-                    <input
-                        id="kiosk-enrol-url"
-                        type="text"
-                        readonly
-                        value="{{ $enrolUrl }}"
-                        onfocus="this.select()"
-                        class="w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 font-mono text-xs text-slate-700"
-                    />
-                </div>
+                            <ol class="mt-2 list-decimal space-y-1 pl-5 text-sm text-slate-600">
+                                <li>{{ __('app.kiosk_devices.enrol_step_1') }}</li>
+                                <li>{{ __('app.kiosk_devices.enrol_step_2') }}</li>
+                                <li>{{ __('app.kiosk_devices.enrol_step_3') }}</li>
+                            </ol>
+
+                            <div class="mt-3 flex justify-center rounded-lg border border-slate-200 bg-white p-4">
+                                {!! $this->enrolSvg() !!}
+                            </div>
+
+                            <label for="kiosk-enrol-url" class="mt-3 block text-sm font-semibold text-slate-700">
+                                {{ __('app.kiosk_devices.enrol_url_label') }}
+                            </label>
+                            {{-- Selectable so it can be typed or copied if the camera will not focus. --}}
+                            <input
+                                id="kiosk-enrol-url"
+                                type="text"
+                                readonly
+                                value="{{ $enrolUrl }}"
+                                onfocus="this.select()"
+                                class="mt-1 w-full rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 font-mono text-xs text-slate-700"
+                            />
+                        </div>
+                    @endif
+                @endforeach
 
                 <x-alert type="warning">
                     {{ __('app.kiosk_devices.enrol_warning', ['minutes' => \App\Livewire\Admin\KioskDeviceManager::LINK_TTL_MINUTES]) }}
                 </x-alert>
-
-                {{--
-                    The app is often served from the same machine somebody is
-                    sitting at — a laptop acting as its own kiosk. You cannot
-                    scan a QR code with the screen displaying it, so offer the
-                    direct route as well.
-                --}}
-                <div class="rounded-lg border border-slate-200 bg-slate-50 p-4">
-                    <p class="text-base font-semibold text-slate-900">
-                        {{ __('app.kiosk_devices.enrol_here_title') }}
-                    </p>
-                    <p class="mt-1 text-sm text-slate-600">
-                        {{ __('app.kiosk_devices.enrol_here_hint') }}
-                    </p>
-                    <x-button
-                        variant="ghost"
-                        class="mt-3"
-                        :href="route('kiosk.enrol', ['device' => $this->enrollingDevice->id])"
-                    >
-                        {{ __('app.kiosk_devices.enrol_here') }}
-                    </x-button>
-                </div>
 
                 <div class="flex justify-end">
                     <x-button variant="ghost" x-on:click="show = false" wire:click="closeEnrolModal">

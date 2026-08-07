@@ -442,19 +442,38 @@ narrows what they see — and it narrows their exports too.
 
 ## The kiosk tablets
 
-**Admin → Kiosk Tablets.**
+**Admin → Kiosk Devices.**
 
-Each tablet is **enrolled once**. After that it sits on the machine grid and
-operators sign in with a PIN only. A tablet that has not been enrolled shows
-"this tablet is not set up as a kiosk" and nothing else — so this is the first
-thing to do on a new install, and the answer when someone says a new tablet
+Each device is **set up once**. After that it sits on the machine grid and
+operators sign in with a PIN only. A device that has not been set up shows
+"this … is not set up as a kiosk" and nothing else — so this is the first thing
+to do on a new install, and the answer when someone says a new device
 "doesn't work".
 
-To set one up: **Add a tablet**, name it something you could find on a shelf,
-then **Enrol a tablet**. You get a QR code. Walk to the tablet, scan it with
-the camera, and it is done. You do not log in on the tablet, and you should
-not — that would mean typing an admin password on a device that sits unattended
-on a shop floor all shift.
+**A kiosk does not have to be a tablet.** It can be a laptop on a bench, a PC
+bolted next to a machine, or a phone. Say which when you add it, because it
+changes how you set it up:
+
+| Device type | How you set it up |
+|---|---|
+| Tablet, phone | **Scan the QR code** shown on your screen with the device's camera |
+| Laptop, desktop, other | **Enrol this browser** — turns the browser you are looking at into the kiosk |
+
+The reason for the split is simple: you cannot scan a code with the screen
+that is showing it. Both options always appear, so if you pick the wrong type
+you just scroll to the other one — nothing is lost.
+
+To set one up: **Add a device**, name it something you could find on a shelf,
+choose the type, then **Set up**.
+
+For a tablet or phone, you do not log in on the device, and you should not —
+that would mean typing an admin password on something that sits unattended on
+a shop floor all shift.
+
+If the list later says a device was **last used from** something different to
+what you recorded — a "tablet" used from a laptop — someone probably opened
+the setup link on the wrong machine. It is a hint, not an error; nothing stops
+working.
 
 The code expires in 15 minutes. Anyone who scans it in that window turns their
 own phone into that kiosk. That is not as bad as it sounds — they would still

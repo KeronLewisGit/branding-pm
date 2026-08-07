@@ -19,7 +19,7 @@ return [
         'runs' => 'Checklist Runs',
         'approvals' => 'Approvals',
         'kiosk' => 'Kiosk',
-        'kiosk_devices' => 'Kiosk Tablets',
+        'kiosk_devices' => 'Kiosk Devices',
         'machines' => 'Machines',
         'locations' => 'Locations',
         'parts' => 'Parts',
@@ -566,7 +566,7 @@ return [
         'immutable_hint' => 'Once approved, a checklist can no longer be edited. Corrections are made by a logged amendment.',
     ],
 
-    // Admin → Kiosk Tablets. Enrolling a tablet, and taking one away again.
+    // Admin → Kiosk Devices. Setting a device up, and taking one away again.
     // Nouns for App\Support\DeviceType, used only in user-facing copy.
     'device_type' => [
         'tablet' => 'tablet',
@@ -575,56 +575,76 @@ return [
         'unknown' => 'device',
     ],
 
+    // Admin -> Kiosk Devices. A kiosk is not always a tablet: it may be a
+    // laptop on a bench, a panel PC bolted to a machine, or a phone. The two
+    // enrolment methods are not interchangeable, so the wording never assumes
+    // which one applies.
     'kiosk_devices' => [
-        'title' => 'Kiosk Tablets',
-        'description' => 'A tablet must be enrolled once before it can be used on the shop floor. After that it stays enrolled and operators sign in with a PIN only.',
-        'add_device' => 'Add a tablet',
-        'edit_device' => 'Edit tablet',
-        'delete_device' => 'Remove tablet',
+        'title' => 'Kiosk Devices',
+        'description' => 'A device must be set up once before it can run the checklists. After that it stays enrolled and operators sign in with a PIN only. Tablets, laptops, desktops and phones can all be kiosks.',
+        'add_device' => 'Add a device',
+        'edit_device' => 'Edit device',
+        'delete_device' => 'Remove device',
         'search_placeholder' => 'Search by name…',
+
+        'kind_label' => 'Device type',
+        'all_kinds' => 'All device types',
+        'kind_hint' => 'Decides how this device is set up. A tablet or phone is enrolled by scanning a code; a laptop or desktop enrols the browser it is already showing. You can use either method whatever you pick.',
+        'kind' => [
+            'tablet' => 'Tablet',
+            'laptop' => 'Laptop',
+            'desktop' => 'Desktop',
+            'phone' => 'Phone',
+            'other' => 'Other',
+        ],
+        'kind_mismatch' => 'Last used from a :detected',
+
         'location' => 'Location',
         'any_location' => 'Any location',
-        'location_hint' => 'Only used to label the tablet. It does not restrict which machines the tablet can show.',
+        'location_hint' => 'Only used to label the device. It does not restrict which machines the device can show.',
         'name_hint' => 'Something a person can find, e.g. “Digital Print — wall tablet”.',
         'is_active' => 'Active',
-        'is_active_hint' => 'Turning this off locks the tablet out on its very next tap.',
+        'is_active_hint' => 'Turning this off locks the device out on its very next tap.',
         'status' => 'Status',
         'status_online' => 'In use',
         'status_idle' => 'Enrolled',
         'status_inactive' => 'Deactivated',
-        'status_never_enrolled' => 'Not enrolled yet',
+        'status_never_enrolled' => 'Not set up yet',
         'last_seen' => 'Last used',
-        'online_hint' => 'A tablet is shown as in use if it has been tapped in the last :minutes minutes.',
+        'online_hint' => 'A device is shown as in use if it has been used in the last :minutes minutes.',
 
-        'empty_title' => 'No tablets yet',
-        'empty_description' => 'Add a tablet here, then scan the enrolment code with it. Until a tablet is enrolled, the kiosk screen will refuse to open on it.',
-        'empty_filtered_title' => 'No tablets match',
-        'empty_filtered_description' => 'No tablet matches that search.',
+        'empty_title' => 'No devices yet',
+        'empty_description' => 'Add a device here, then set it up. Until a device is enrolled, the kiosk screen will refuse to open on it.',
+        'empty_filtered_title' => 'No devices match',
+        'empty_filtered_description' => 'No device matches that search.',
 
-        'enrol_a_tablet' => 'Enrol a tablet',
-        'enrol_title' => 'Enrol a tablet',
-        'enrol_step_1' => 'Take the tablet to this screen, or take this screen to the tablet.',
-        'enrol_step_2' => 'Open the camera on the tablet and scan the code below.',
-        'enrol_step_3' => 'The tablet opens the kiosk and stays enrolled. You will not have to do this again.',
-        'enrol_url_label' => 'Or type this address into the tablet',
+        'set_up' => 'Set up',
+        'enrol_title' => 'Set up this device',
+        'enrol_step_1' => 'Take the device to this screen, or take this screen to the device.',
+        'enrol_step_2' => 'Open the camera on the device and scan the code below.',
+        'enrol_step_3' => 'The device opens the kiosk and stays enrolled. You will not have to do this again.',
+        'enrol_url_label' => 'Or type this address into the device',
         'enrol_warning' => 'This code stops working in :minutes minutes. Anyone who uses it before then turns their own device into this kiosk — they would still need an operator PIN to record anything. Generate a new one rather than saving this.',
-        'enrol_blocked_inactive' => '“:name” is deactivated. Activate it before enrolling a tablet.',
+        'enrol_blocked_inactive' => '“:name” is deactivated. Activate it before setting it up.',
 
-        'enrol_here_title' => 'Using this computer as the kiosk?',
-        'enrol_here_hint' => 'If the screen you are reading this on IS the kiosk — a laptop on the floor, for example — you cannot scan its own code. Enrol this browser directly instead. Use a separate browser or browser profile for admin work: signing in with an operator PIN replaces whoever is logged in here.',
+        'enrol_scan_title_primary' => 'Scan this code with the device',
+        'enrol_scan_title_secondary' => 'Or scan this code from another device',
+        'enrol_browser_title_primary' => 'Set up this computer',
+        'enrol_browser_title_secondary' => 'Or set up the computer you are using now',
+        'enrol_browser_hint' => 'Turns the browser you are reading this in into the kiosk. Use a separate browser or browser profile for admin work: signing in with an operator PIN replaces whoever is logged in here.',
         'enrol_here' => 'Enrol this browser',
 
         'revoke' => 'Un-enrol',
-        'revoke_title' => 'Un-enrol this tablet',
-        'revoke_confirm' => 'Sign “:name” out everywhere. Any tablet currently enrolled as this one drops back to the “not enrolled” screen on its next tap. Use this when a tablet is lost, stolen or being replaced. The tablet’s name and history are kept, so you can enrol its replacement under the same entry.',
-        'revoked_message' => '“:name” has been un-enrolled. Any tablet using it has been signed out.',
+        'revoke_title' => 'Un-enrol this device',
+        'revoke_confirm' => 'Sign “:name” out everywhere. Any device currently enrolled as this one drops back to the “not set up” screen on its next tap. Use this when a device is lost, stolen or being replaced. The device’s name and history are kept, so you can enrol its replacement under the same entry.',
+        'revoked_message' => '“:name” has been un-enrolled. Any device using it has been signed out.',
 
-        'created_message' => '“:name” added. Use “Enrol a tablet” to set up the device itself.',
+        'created_message' => '“:name” added. Use “Set up” to enrol the device itself.',
         'updated_message' => '“:name” updated.',
         'deleted_message' => '“:name” removed.',
         'activated_message' => '“:name” is active again.',
         'deactivated_message' => '“:name” has been deactivated and can no longer open the kiosk.',
-        'delete_confirm' => 'Remove “:name” completely? Any tablet enrolled as this one stops working immediately. If you only want to sign a tablet out, use Un-enrol instead — that keeps the entry and its history.',
+        'delete_confirm' => 'Remove “:name” completely? Any device enrolled as this one stops working immediately. If you only want to sign a device out, use Un-enrol instead — that keeps the entry and its history.',
     ],
 
     'kiosk' => [
@@ -674,7 +694,7 @@ return [
             'help' => [
                 'tablet' => 'Ask your supervisor or IT to enrol this tablet before using it on the floor. Nothing is wrong with the machine or the checklist.',
                 'phone' => 'The kiosk runs on the tablets on the floor, not on a personal phone. If this phone is meant to be a kiosk, ask your supervisor or IT to enrol it.',
-                'computer' => 'If you manage this system, sign in and go to Admin → Kiosk Tablets to enrol this browser. Otherwise ask IT. Nothing is wrong with the machine or the checklist.',
+                'computer' => 'If you manage this system, sign in and go to Admin → Kiosk Devices to enrol this browser. Otherwise ask IT. Nothing is wrong with the machine or the checklist.',
                 'unknown' => 'Ask your supervisor or IT to enrol this device before using it on the floor. Nothing is wrong with the machine or the checklist.',
             ],
         ],

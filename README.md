@@ -45,7 +45,9 @@ auditable history behind it.
 
 The database schema covered the **whole** domain from milestone 1 — including
 issues, attachments and signatures — so milestones 5–8 added screens, not
-migrations. There has been no migration since the original 22.
+migrations. Exactly one migration has been added since the original 22
+(`kiosk_devices.kind` and `last_user_agent`, so a kiosk can be a laptop or a
+panel PC rather than only a tablet).
 
 Not yet built, and outstanding against [`docs/SPEC.md`](docs/SPEC.md):
 

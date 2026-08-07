@@ -175,13 +175,28 @@ A tablet must be enrolled **once** before the kiosk will open on it. Until it
 is, `/kiosk` returns the "not enrolled" screen — and a clean install has no
 devices at all, so this is the first thing to do after seeding.
 
-1. **Admin → Kiosk Tablets → Add a tablet.** Give it a name somebody can find
-   on a shelf ("Digital Print — wall tablet"). The token is generated for you
-   and never displayed; it is the shared secret between this row and the
-   tablet's cookie.
-2. **Enrol a tablet.** This shows a QR code and a link, both good for 15
-   minutes. Scan it with the tablet's camera. The tablet opens the kiosk and
-   stays enrolled — the cookie lasts about five years.
+1. **Admin → Kiosk Devices → Add a device.** Give it a name somebody can find
+   on a shelf ("Digital Print — wall tablet") and pick the **device type**:
+   tablet, laptop, desktop, phone or other. The token is generated for you and
+   never displayed; it is the shared secret between this row and the device's
+   cookie.
+2. **Set up.** The device type decides which method is offered first, because
+   the two are not interchangeable:
+
+   - **Tablet or phone** → a QR code and a link, both good for 15 minutes.
+     Scan it with the device's camera.
+   - **Laptop, desktop or other** → **Enrol this browser**, which turns the
+     browser you are reading in into the kiosk. You cannot scan a QR code with
+     the screen displaying it.
+
+   Both methods are always shown, so picking the wrong type costs a scroll and
+   not a dead end. Either way the device opens the kiosk and stays enrolled —
+   the cookie lasts about five years.
+
+   The list flags a device being used from hardware that does not match what
+   was recorded — a "tablet" driven from a laptop usually means an enrolment
+   link was opened on the wrong machine. It is read from a User-Agent, so it
+   is a hint, never a block.
 
    The link carries its own signature and needs **no login**, which is the
    point: the alternative is typing an admin password into a shared shop-floor
