@@ -23,7 +23,14 @@
 </head>
 <body
     class="kiosk flex min-h-full flex-col bg-slate-950 font-sans text-lg text-slate-100 antialiased"
-    x-data="idleRelease(120, '{{ route('kiosk.release') }}')"
+    {{--
+        Must be the SAME value the server enforces (EnforceKioskIdleTimeout
+        reads the same key). Hardcoding it here meant raising
+        CHECKLISTS_KIOSK_IDLE_SECONDS moved the server's deadline while the
+        browser went on dropping the operator at 120s — a setting that looked
+        broken rather than ignored.
+    --}}
+    x-data="idleRelease({{ (int) config('checklists.kiosk_idle_seconds', 120) }}, '{{ route('kiosk.release') }}')"
 >
     {{-- Persistent header: machine/location context (header slot) + clock --}}
     <header data-nav-chrome class="sticky top-0 z-40 border-b border-slate-800 bg-slate-900">

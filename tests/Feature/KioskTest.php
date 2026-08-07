@@ -226,7 +226,10 @@ it('shows a working enrolment link and renders its QR', function (): void {
 
     $component = Livewire::actingAs($admin)
         ->test(KioskDeviceManager::class)
-        ->call('openEnrolModal', $device->id);
+        ->call('openEnrolModal', $device->id)
+        // The laptop-is-its-own-kiosk escape hatch: you cannot scan a QR
+        // with the screen showing it.
+        ->assertSee(__('app.kiosk_devices.enrol_here'));
 
     $url = $component->get('enrolUrl');
 
@@ -252,6 +255,42 @@ it('refuses to hand out an enrolment link for a deactivated tablet', function ()
         ->call('openEnrolModal', $device->id);
 
     expect($component->get('enrolUrl'))->toBe('');
+});
+
+it('enrols the current browser directly, for a laptop acting as its own kiosk', function (): void {
+    $this->seed(RolesAndPermissionsSeeder::class);
+
+    $device = kioskDevice();
+    aMachine();
+
+    $operator = User::factory()->create();
+    $operator->assignRole('operator');
+
+    // Turning a browser into a kiosk is an admin act, not an operator one.
+    $this->actingAs($operator)->get(route('kiosk.enrol', ['device' => $device->id]))
+        ->assertForbidden();
+
+    $admin = User::factory()->create();
+    $admin->assignRole('admin');
+
+    $this->actingAs($admin)->get(route('kiosk.enrol', ['device' => $device->id]))
+        ->assertRedirect(route('kiosk.home'))
+        ->assertCookie(EnsureKioskDevice::COOKIE, $device->token);
+});
+
+it('gives the browser the same idle timeout the server enforces', function (): void {
+    $device = kioskDevice();
+    aMachine();
+
+    // The layout used to hardcode 120, so raising this moved the server's
+    // deadline while the browser went on dropping the operator at two
+    // minutes. Same number in both halves or the setting is a lie.
+    config(['checklists.kiosk_idle_seconds' => 600]);
+
+    $this->withCookies(kioskCookie($device))
+        ->get('/kiosk')
+        ->assertOk()
+        ->assertSee('idleRelease(600', escape: false);
 });
 
 it('rotates the token when a tablet is un-enrolled', function (): void {

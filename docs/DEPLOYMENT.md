@@ -211,6 +211,41 @@ enrolled on, and the PWA `start_url` is absolute. A DHCP lease that moves will
 strand every tablet. Give the host a DHCP reservation or a DNS name before
 enrolling anything.
 
+### Running the kiosk on a laptop or desktop
+
+The kiosk is built for a 10" tablet but is usable on a PC, and during a pilot
+that is often a laptop serving the app to itself. Three things to know.
+
+**Enrolling.** You cannot scan a QR code with the screen displaying it. The
+enrolment modal has **Enrol this browser** for exactly this — it turns the
+current browser into that kiosk directly.
+
+**Use a separate browser profile for admin work.** This one bites. Signing in
+with an operator PIN calls `Auth::login()` on the same session, so it
+*replaces* whoever is logged in — PIN in as an operator and your admin session
+is gone; the two-minute idle drop then logs that session out entirely. One
+browser cannot be both the admin console and the kiosk. A second browser
+profile, or a different browser, keeps them apart.
+
+**`http://localhost` is a secure context.** This is the one advantage a PC
+kiosk has over a tablet on the LAN: browsing to `http://localhost:8088/kiosk`
+registers the service worker, so the PWA installs and the offline queue works
+without any HTTPS setup. Over a LAN IP — `http://192.168.x.x` — it does not,
+on any browser. If you want to exercise offline behaviour before you have
+certificates, do it on the machine running the app.
+
+To run it fullscreen with no browser chrome:
+
+```
+chrome.exe --kiosk --app=http://localhost:8088/kiosk
+msedge.exe --kiosk --app=http://localhost:8088/kiosk
+```
+
+**Idle timeout.** Two minutes suits a shared tablet on a shop floor; on a
+laptop being used for a pilot it is usually too short. Set
+`CHECKLISTS_KIOSK_IDLE_SECONDS` in `.env` — both the browser countdown and the
+server check read it.
+
 Offline behaviour is scoped deliberately (SPEC §Non-Functional): a run that is
 **already open** stays completable, queuing answers in IndexedDB and syncing
 on reconnect, with a badge showing the queue depth. Master data is not synced

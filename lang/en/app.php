@@ -602,6 +602,10 @@ return [
         'enrol_warning' => 'This code stops working in :minutes minutes. Anyone who uses it before then turns their own device into this kiosk — they would still need an operator PIN to record anything. Generate a new one rather than saving this.',
         'enrol_blocked_inactive' => '“:name” is deactivated. Activate it before enrolling a tablet.',
 
+        'enrol_here_title' => 'Using this computer as the kiosk?',
+        'enrol_here_hint' => 'If the screen you are reading this on IS the kiosk — a laptop on the floor, for example — you cannot scan its own code. Enrol this browser directly instead. Use a separate browser or browser profile for admin work: signing in with an operator PIN replaces whoever is logged in here.',
+        'enrol_here' => 'Enrol this browser',
+
         'revoke' => 'Un-enrol',
         'revoke_title' => 'Un-enrol this tablet',
         'revoke_confirm' => 'Sign “:name” out everywhere. Any tablet currently enrolled as this one drops back to the “not enrolled” screen on its next tap. Use this when a tablet is lost, stolen or being replaced. The tablet’s name and history are kept, so you can enrol its replacement under the same entry.',
