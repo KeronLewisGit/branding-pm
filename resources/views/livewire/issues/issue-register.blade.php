@@ -105,25 +105,25 @@
             :description="__('app.issues.empty_description')" />
     @else
         <div class="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-            <table class="min-w-full divide-y divide-slate-200 text-base">
-                <thead class="bg-slate-50 text-left text-sm font-semibold uppercase tracking-wide text-slate-600">
+            <table class="data-table">
+                <thead>
                     <tr>
-                        <th class="px-4 py-3">{{ __('app.issues.severity') }}</th>
-                        <th class="px-4 py-3">{{ __('app.runs.machine') }}</th>
-                        <th class="px-4 py-3">{{ __('app.common.description') }}</th>
-                        <th class="px-4 py-3">{{ __('app.common.status') }}</th>
-                        <th class="px-4 py-3">{{ __('app.issues.assigned_to') }}</th>
-                        <th class="px-4 py-3">{{ __('app.issues.raised') }}</th>
-                        <th class="px-4 py-3"><span class="sr-only">{{ __('app.common.actions') }}</span></th>
+                        <th>{{ __('app.issues.severity') }}</th>
+                        <th>{{ __('app.runs.machine') }}</th>
+                        <th>{{ __('app.common.description') }}</th>
+                        <th>{{ __('app.common.status') }}</th>
+                        <th>{{ __('app.issues.assigned_to') }}</th>
+                        <th>{{ __('app.issues.raised') }}</th>
+                        <th><span class="sr-only">{{ __('app.common.actions') }}</span></th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-100">
+                <tbody>
                     @foreach ($issues as $issue)
                         <tr wire:key="issue-{{ $issue->id }}" class="hover:bg-slate-50">
-                            <td class="px-4 py-3">
+                            <td>
                                 <x-badge :color="$issue->severity->color()">{{ $issue->severity->label() }}</x-badge>
                             </td>
-                            <td class="px-4 py-3">
+                            <td>
                                 <p class="font-semibold text-slate-900">
                                     @can('view', $issue->machine)
                                         <a href="{{ route('machines.show', ['machine' => $issue->machine->code]) }}"
@@ -134,23 +134,23 @@
                                 </p>
                                 <p class="text-sm text-slate-500">{{ $issue->machine->location->name }}</p>
                             </td>
-                            <td class="max-w-md px-4 py-3">
+                            <td class="max-w-md">
                                 <a href="{{ route('issues.show', $issue) }}"
                                    class="line-clamp-2 text-slate-800 underline-offset-2 hover:underline">
                                     {{ $issue->description }}
                                 </a>
                             </td>
-                            <td class="px-4 py-3">
+                            <td>
                                 <x-badge :color="$issue->status->color()">{{ $issue->status->label() }}</x-badge>
                             </td>
-                            <td class="px-4 py-3 text-slate-700">
+                            <td class="text-slate-700">
                                 {{ $issue->assignedTo?->full_name ?? __('app.issues.unassigned') }}
                             </td>
-                            <td class="px-4 py-3 text-slate-700">
+                            <td class="text-slate-700">
                                 <p class="tabular-nums">{{ $issue->created_at?->timezone($displayTz)->format('j M Y') }}</p>
                                 <p class="text-sm text-slate-500">{{ $issue->raisedBy?->full_name ?? '—' }}</p>
                             </td>
-                            <td class="px-4 py-3 text-right">
+                            <td class="text-right">
                                 <a href="{{ route('issues.show', $issue) }}"
                                    class="inline-flex min-h-14 items-center rounded-lg px-4 font-semibold text-sky-700 hover:bg-sky-50">
                                     {{ __('app.actions.view') }}

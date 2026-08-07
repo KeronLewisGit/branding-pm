@@ -200,22 +200,22 @@
         @if ($run->runParts->isEmpty())
             <p class="mt-3 text-base text-slate-500">{{ __('app.parts.no_parts') }}</p>
         @else
-            <table class="mt-3 min-w-full divide-y divide-slate-200 text-base">
-                <thead class="text-left text-sm font-semibold uppercase tracking-wide text-slate-500">
+            <table class="data-table data-table-bare mt-3">
+                <thead>
                     <tr>
-                        <th class="py-2">{{ __('app.parts.part_code') }}</th>
-                        <th class="py-2">{{ __('app.parts.part') }}</th>
-                        <th class="py-2 text-right">{{ __('app.runs.qty_used') }}</th>
+                        <th>{{ __('app.parts.part_code') }}</th>
+                        <th>{{ __('app.parts.part') }}</th>
+                        <th class="text-right">{{ __('app.runs.qty_used') }}</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-slate-100">
+                <tbody>
                     @foreach ($run->runParts as $part)
                         <tr wire:key="review-part-{{ $part->id }}">
-                            <td class="py-2 text-slate-500">{{ $part->part_code_snapshot }}</td>
-                            <td class="py-2 text-slate-800">{{ $part->part_name_snapshot }}</td>
-                            <td class="py-2 text-right font-semibold tabular-nums text-slate-900">{{ $part->qty_used }}</td>
+                            <td class="text-slate-500">{{ $part->part_code_snapshot }}</td>
+                            <td class="text-slate-800">{{ $part->part_name_snapshot }}</td>
+                            <td class="text-right font-semibold tabular-nums text-slate-900">{{ $part->qty_used }}</td>
                             @if ($this->canAmend)
-                                <td class="py-2 text-right">
+                                <td class="text-right">
                                     <x-button variant="ghost" wire:click="openAmendPart({{ $part->id }})">
                                         {{ __('app.amend.amend') }}
                                     </x-button>

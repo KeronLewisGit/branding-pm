@@ -17,7 +17,7 @@
     @endif
 
     {{-- Filters --}}
-    <div class="card mt-6 p-4">
+    <div class="filter-bar">
         <div class="flex flex-col gap-3 md:flex-row md:items-center">
             <x-input
                 type="search"
@@ -72,33 +72,33 @@
             </x-empty-state>
         @endif
     @else
-        <div class="card mt-6 overflow-hidden">
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-slate-200 text-base">
-                    <thead class="bg-slate-50 text-left text-sm font-semibold uppercase tracking-wider text-slate-500">
+        <div class="table-wrap mt-6">
+            <div class="table-scroll">
+                <table class="data-table">
+                    <thead>
                         <tr>
-                            <th scope="col" class="px-4 py-3">{{ __('app.parts.part_code') }}</th>
-                            <th scope="col" class="px-4 py-3">{{ __('app.common.name') }}</th>
-                            <th scope="col" class="px-4 py-3">{{ __('app.parts.unit') }}</th>
-                            <th scope="col" class="px-4 py-3">{{ __('app.parts.used_on') }}</th>
-                            <th scope="col" class="px-4 py-3">{{ __('app.common.status') }}</th>
-                            <th scope="col" class="px-4 py-3 text-right">{{ __('app.common.actions') }}</th>
+                            <th scope="col">{{ __('app.parts.part_code') }}</th>
+                            <th scope="col">{{ __('app.common.name') }}</th>
+                            <th scope="col">{{ __('app.parts.unit') }}</th>
+                            <th scope="col">{{ __('app.parts.used_on') }}</th>
+                            <th scope="col">{{ __('app.common.status') }}</th>
+                            <th scope="col" class="text-right">{{ __('app.common.actions') }}</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-slate-100">
+                    <tbody>
                         @foreach ($parts as $part)
                             <tr wire:key="part-{{ $part->id }}">
-                                <td class="px-4 py-3 font-mono text-sm">{{ $part->part_code }}</td>
-                                <td class="px-4 py-3 font-semibold">{{ $part->name }}</td>
-                                <td class="px-4 py-3">{{ $part->unit ?? '—' }}</td>
-                                <td class="max-w-xs px-4 py-3">
+                                <td class="font-mono text-sm">{{ $part->part_code }}</td>
+                                <td class="font-semibold">{{ $part->name }}</td>
+                                <td>{{ $part->unit ?? '—' }}</td>
+                                <td class="max-w-xs">
                                     @if ($part->machines->isEmpty())
                                         <span class="text-slate-500">{{ __('app.parts.not_used') }}</span>
                                     @else
                                         {{ $part->machines->pluck('name')->implode(', ') }}
                                     @endif
                                 </td>
-                                <td class="px-4 py-3">
+                                <td>
                                     @if ($part->is_active)
                                         <span class="inline-flex items-center rounded-full bg-emerald-100 px-3 py-1 text-sm font-semibold text-emerald-800">
                                             {{ __('app.common.active') }}
@@ -109,7 +109,7 @@
                                         </span>
                                     @endif
                                 </td>
-                                <td class="px-4 py-3">
+                                <td>
                                     <div class="flex items-center justify-end gap-1">
                                         @can('part.manage')
                                             <x-icon-button icon="edit" :label="__('app.actions.edit')"

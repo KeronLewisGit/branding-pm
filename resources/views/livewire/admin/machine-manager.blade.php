@@ -28,7 +28,7 @@
     @endif
 
     {{-- Filters --}}
-    <div class="card mt-6 p-4">
+    <div class="filter-bar">
         <div class="flex flex-col gap-3 md:flex-row md:items-center">
             <x-input
                 type="search"
@@ -85,24 +85,24 @@
             </x-empty-state>
         @endif
     @else
-        <div class="card mt-6 overflow-hidden">
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-slate-200 text-base">
-                    <thead class="bg-slate-50 text-left text-sm font-semibold uppercase tracking-wider text-slate-500">
+        <div class="table-wrap mt-6">
+            <div class="table-scroll">
+                <table class="data-table">
+                    <thead>
                         <tr>
-                            <th scope="col" class="px-4 py-3">{{ __('app.common.name') }}</th>
-                            <th scope="col" class="px-4 py-3">{{ __('app.common.code') }}</th>
-                            <th scope="col" class="px-4 py-3">{{ __('app.machines.location') }}</th>
-                            <th scope="col" class="px-4 py-3">{{ __('app.machines.asset_tag') }}</th>
-                            <th scope="col" class="px-4 py-3 text-right">{{ __('app.machines.parts_count') }}</th>
-                            <th scope="col" class="px-4 py-3">{{ __('app.common.status') }}</th>
-                            <th scope="col" class="px-4 py-3 text-right">{{ __('app.common.actions') }}</th>
+                            <th scope="col">{{ __('app.common.name') }}</th>
+                            <th scope="col">{{ __('app.common.code') }}</th>
+                            <th scope="col">{{ __('app.machines.location') }}</th>
+                            <th scope="col">{{ __('app.machines.asset_tag') }}</th>
+                            <th scope="col" class="text-right">{{ __('app.machines.parts_count') }}</th>
+                            <th scope="col">{{ __('app.common.status') }}</th>
+                            <th scope="col" class="text-right">{{ __('app.common.actions') }}</th>
                         </tr>
                     </thead>
-                    <tbody class="divide-y divide-slate-100">
+                    <tbody>
                         @foreach ($machines as $machine)
                             <tr wire:key="machine-{{ $machine->id }}">
-                                <td class="px-4 py-3 font-semibold">
+                                <td class="font-semibold">
                                     {{ $machine->name }}
                                     @if ($machine->manufacturer || $machine->model)
                                         <span class="block text-sm font-normal text-slate-500">
@@ -120,13 +120,13 @@
                                         @endcan
                                     @endif
                                 </td>
-                                <td class="px-4 py-3 font-mono text-sm">{{ $machine->code }}</td>
-                                <td class="px-4 py-3">
+                                <td class="font-mono text-sm">{{ $machine->code }}</td>
+                                <td>
                                     {{ $machine->location?->site?->name }} — {{ $machine->location?->name }}
                                 </td>
-                                <td class="px-4 py-3">{{ $machine->asset_tag ?? '—' }}</td>
-                                <td class="px-4 py-3 text-right tabular-nums">{{ $machine->parts_count }}</td>
-                                <td class="px-4 py-3">
+                                <td>{{ $machine->asset_tag ?? '—' }}</td>
+                                <td class="text-right tabular-nums">{{ $machine->parts_count }}</td>
+                                <td>
                                     @if ($machine->is_active)
                                         <span class="inline-flex items-center rounded-full bg-emerald-100 px-3 py-1 text-sm font-semibold text-emerald-800">
                                             {{ __('app.common.active') }}
@@ -137,7 +137,7 @@
                                         </span>
                                     @endif
                                 </td>
-                                <td class="px-4 py-3">
+                                <td>
                                     {{-- Icons, not words: five word-buttons wrapped onto three
                                          lines. Each carries its label as aria-label and title. --}}
                                     <div class="flex items-center justify-end gap-1">

@@ -44,7 +44,7 @@
     @endif
 
     {{-- ─── Section a: template settings ──────────────────────────── --}}
-    <section class="card p-6" aria-labelledby="settings-heading">
+    <section class="card card-body" aria-labelledby="settings-heading">
         <h2 id="settings-heading" class="text-xl font-bold">{{ __('app.templates.settings') }}</h2>
         <p class="mt-1 text-base text-slate-600">{{ __('app.templates.settings_hint') }}</p>
 
@@ -125,7 +125,7 @@
     </section>
 
     {{-- ─── Section b: item builder ────────────────────────────────── --}}
-    <section class="card p-6" aria-labelledby="items-heading">
+    <section class="card card-body" aria-labelledby="items-heading">
         <div class="flex flex-wrap items-center justify-between gap-3">
             <h2 id="items-heading" class="text-xl font-bold">{{ __('app.templates.items') }}</h2>
 
@@ -232,7 +232,7 @@
     </section>
 
     {{-- ─── Section c: Used Parts list ─────────────────────────────── --}}
-    <section class="card p-6" aria-labelledby="parts-heading">
+    <section class="card card-body" aria-labelledby="parts-heading">
         <h2 id="parts-heading" class="text-xl font-bold">{{ __('app.templates.used_parts') }}</h2>
         <p class="mt-1 text-base text-slate-600">{{ __('app.templates.parts_order_note') }}</p>
 
@@ -272,24 +272,24 @@
             <p class="mt-4 text-base text-slate-600">{{ __('app.parts.no_parts') }}</p>
         @else
             <div class="mt-4 overflow-x-auto">
-                <table class="min-w-full divide-y divide-slate-200 text-base">
+                <table class="data-table">
                     <thead>
                         <tr class="text-left text-sm font-semibold uppercase tracking-wider text-slate-500">
-                            <th scope="col" class="px-4 py-3">{{ __('app.templates.print_order') }}</th>
-                            <th scope="col" class="px-4 py-3">{{ __('app.parts.part_code') }}</th>
-                            <th scope="col" class="px-4 py-3">{{ __('app.common.name') }}</th>
-                            <th scope="col" class="px-4 py-3">{{ __('app.parts.unit') }}</th>
-                            <th scope="col" class="px-4 py-3 text-right">{{ __('app.common.actions') }}</th>
+                            <th scope="col">{{ __('app.templates.print_order') }}</th>
+                            <th scope="col">{{ __('app.parts.part_code') }}</th>
+                            <th scope="col">{{ __('app.common.name') }}</th>
+                            <th scope="col">{{ __('app.parts.unit') }}</th>
+                            <th scope="col" class="text-right">{{ __('app.common.actions') }}</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-200">
                         @foreach ($templateParts as $templatePart)
                             <tr wire:key="template-part-{{ $templatePart->id }}">
-                                <td class="px-4 py-3 tabular-nums">{{ $templatePart->sort_order }}</td>
-                                <td class="px-4 py-3 font-mono font-semibold">{{ $templatePart->part->part_code }}</td>
-                                <td class="px-4 py-3">{{ $templatePart->part->name }}</td>
-                                <td class="px-4 py-3">{{ $templatePart->part->unit ?? '—' }}</td>
-                                <td class="px-4 py-3">
+                                <td class="tabular-nums">{{ $templatePart->sort_order }}</td>
+                                <td class="font-mono font-semibold">{{ $templatePart->part->part_code }}</td>
+                                <td>{{ $templatePart->part->name }}</td>
+                                <td>{{ $templatePart->part->unit ?? '—' }}</td>
+                                <td>
                                     <div class="flex items-center justify-end gap-1">
                                         <x-icon-button
                                             icon="move_up"
