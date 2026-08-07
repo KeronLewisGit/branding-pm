@@ -10,6 +10,7 @@ use App\Models\Location;
 use App\Models\Machine;
 use App\Models\Part;
 use App\Models\Site;
+use App\Models\User;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -95,6 +96,18 @@ class MachineManager extends Component
     public ?int $partsMachineId = null;
 
     public string $attachPartId = '';
+
+    // ── Operators modal ──────────────────────────────────────────────
+    //
+    // `user_machine` existed from milestone 1 and had no screen at all, so
+    // an operator could only be attached to a machine through a seeder or
+    // tinker. Assignment is a convenience, never a gate: MachineScope shows
+    // an operator every machine at their site regardless, and this list only
+    // decides what is surfaced as theirs.
+
+    public ?int $operatorsMachineId = null;
+
+    public string $attachOperatorId = '';
 
     // ── Lifecycle ────────────────────────────────────────────────────
 
@@ -186,6 +199,40 @@ class MachineManager extends Component
             ->whereNotIn('id', $attachedIds)
             ->orderBy('name')
             ->get(['id', 'part_code', 'name', 'unit']);
+    }
+
+    /**
+     * The machine whose operators are being managed.
+     */
+    #[Computed]
+    public function operatorsMachine(): ?Machine
+    {
+        if ($this->operatorsMachineId === null) {
+            return null;
+        }
+
+        return Machine::query()->with('operators')->find($this->operatorsMachineId);
+    }
+
+    /**
+     * Active users who could be assigned but are not yet.
+     *
+     * Not restricted to the operator role: supervisors and managers cover
+     * shifts and complete sheets themselves, and an assignment list that
+     * could not name them would be wrong about who works a machine.
+     *
+     * @return Collection<int, User>
+     */
+    #[Computed]
+    public function availableOperators(): Collection
+    {
+        $attachedIds = $this->operatorsMachine?->operators->pluck('id') ?? collect();
+
+        return User::query()
+            ->where('is_active', true)
+            ->whereNotIn('id', $attachedIds)
+            ->orderBy('full_name')
+            ->get(['id', 'full_name', 'employee_number']);
     }
 
     /**
@@ -383,6 +430,71 @@ class MachineManager extends Component
         unset($this->partsMachine, $this->availableParts);
 
         session()->flash('flash.success', __('app.machines.part_attached'));
+    }
+
+    public function openOperatorsModal(int $machineId): void
+    {
+        $machine = Machine::query()->findOrFail($machineId);
+
+        $this->authorize('update', $machine);
+
+        $this->resetValidation();
+        $this->operatorsMachineId = $machine->id;
+        $this->attachOperatorId = '';
+        unset($this->operatorsMachine, $this->availableOperators);
+
+        $this->dispatch('open-modal', name: 'machine-operators');
+    }
+
+    public function attachOperator(): void
+    {
+        $machine = Machine::query()->with('operators')->findOrFail((int) $this->operatorsMachineId);
+
+        $this->authorize('update', $machine);
+
+        // The id comes from the browser, so it is checked against the list of
+        // active users rather than trusted.
+        $this->validate([
+            'attachOperatorId' => ['required', Rule::exists('users', 'id')->where('is_active', true)],
+        ]);
+
+        $userId = (int) $this->attachOperatorId;
+
+        // syncWithoutDetaching, not attach: the unique (user_id, machine_id)
+        // index would otherwise throw on a double-submit.
+        DB::transaction(fn () => $machine->operators()->syncWithoutDetaching([$userId]));
+
+        activity('machine')
+            ->causedBy(auth()->user())
+            ->performedOn($machine)
+            ->withProperties(['user_id' => $userId])
+            ->log('machine.operator_assigned');
+
+        $this->attachOperatorId = '';
+        unset($this->operatorsMachine, $this->availableOperators);
+
+        session()->flash('flash.success', __('app.machines.operator_attached'));
+    }
+
+    public function detachOperator(int $userId): void
+    {
+        $machine = Machine::query()->with('operators')->findOrFail((int) $this->operatorsMachineId);
+
+        $this->authorize('update', $machine);
+
+        DB::transaction(fn () => $machine->operators()->detach($userId));
+
+        activity('machine')
+            ->causedBy(auth()->user())
+            ->performedOn($machine)
+            ->withProperties(['user_id' => $userId])
+            ->log('machine.operator_unassigned');
+
+        unset($this->operatorsMachine, $this->availableOperators);
+
+        // Removing an assignment does not remove access — say so, or somebody
+        // will use this button expecting it to lock a machine down.
+        session()->flash('flash.success', __('app.machines.operator_detached'));
     }
 
     public function detachPart(int $partId): void

@@ -386,6 +386,7 @@ question 4](seed-notes.md).
 
 | Report | Use it for |
 |---|---|
+| **Checks completed** | **Who did what, and when.** One line per sheet: the operator, the machine, the day it was due, the moment they signed it, and who signed it off. This is the one to hand an auditor asking about a particular day |
 | Compliance by machine | Which machines are being skipped. Worst first |
 | Missed checks | What was skipped and when. Includes sheets still open past their date, not only ones already flagged |
 | Parts usage | What is being consumed. Reads the snapshot names, so a part renamed last month still reports under the name it was consumed as |
@@ -416,6 +417,31 @@ database. It does not prove who signed.
 > The hash is keyed with the application key (`APP_KEY`). **If you lose
 > `APP_KEY`, every previously printed hash stops verifying.** Back it up with
 > the database — see [`DEPLOYMENT.md`](DEPLOYMENT.md) §9.
+
+## Who does which checks
+
+Nobody hands a checklist out. An operator walks to a machine, signs in with
+their PIN, and **the first tap makes the sheet theirs** — their name is on it
+from that moment, and they are the one who signs it.
+
+**If somebody else picks it up part-way through** — a shift changes, a tablet
+gets put down — they can carry on. The sheet moves to whoever is working it,
+the hand-over is recorded, and the screen tells them they are now the one
+signing. You can see the hand-over in the machine's history afterwards. This
+is deliberate: blocking it would strand half-finished work, and allowing it
+quietly would leave the record naming the wrong person.
+
+**Assigning people to machines** (Admin → Machines → **Operators**) marks a
+machine as somebody's usual work. It is **not a permission.** Anyone signed in
+at the kiosk can complete any checklist on your site, assigned or not — which
+is what lets someone cover an unfamiliar machine at 6am without ringing you.
+Removing someone from this list does not lock them out.
+
+What limits people is the **site**, not the assignment. An operator never sees
+another site's work.
+
+To find out who did a particular check and exactly when, use the **Checks
+completed** report.
 
 ## People
 

@@ -16,6 +16,7 @@ final class ReportRegistry
     /** @var array<string, class-string<Report>> */
     private const REPORTS = [
         'compliance' => ComplianceReport::class,
+        'checks' => ChecksCompletedReport::class,
         'missed' => MissedChecksReport::class,
         'parts' => PartsUsageReport::class,
         'operators' => OperatorActivityReport::class,

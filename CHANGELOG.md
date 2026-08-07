@@ -3,6 +3,75 @@
 Versions track build milestones: `0.<milestone>.<patch>`. The project reaches
 `1.0.0` when all 8 milestones are complete and the paper forms are retired.
 
+## [0.13.0] — Who did the check, and how they came to be doing it
+
+### A report that names names
+`Checks completed` — one row per sheet: operator, employee number, machine,
+checklist, shift, the day it was **due**, the moment it was **signed**, status
+and who signed it off. On screen, CSV and PDF like the other four.
+
+Every existing report is an aggregate — a percentage per machine, a count per
+operator. None answered the question an auditor actually asks: *who signed
+this one, and on what day?*
+
+Two dates on purpose. `scheduled_for` is the day the work was owed and
+`submitted_at` the moment it was attested; collapsing them into one column
+would hide lateness entirely.
+
+Only finished work appears. A sheet in progress has an operator but no
+completion date, and a row whose date column is a dash answers nothing —
+outstanding and missed work is the missed-checks report's job.
+
+**Caught while testing:** `scheduled_for` is a date cast to midnight UTC, so
+formatting it through `America/Port_of_Spain` rendered every run a day early —
+a report claiming the 6th for work scheduled on the 7th. It is now formatted
+without timezone conversion, with a test pinning it.
+
+### Assignment stopped being a fence
+`MachineScope` narrowed an operator to their `user_machine` rows, and showed
+the whole site only to operators with **no** assignments. That is backwards:
+assigning somebody to the two machines they normally run *removed* their
+ability to cover a third when a shift was short, and the fix was an
+administrator editing a pivot table that had no screen. Nobody does that at
+6am, so in practice the table stayed empty and the fence never existed.
+
+Now everyone sees every machine at their site, and assignment marks a machine
+as somebody's usual work rather than gating it. **The site is still the
+boundary** — an operator cannot see another site's work, and there is a test
+for it.
+
+Also fixed a trap in the old rule: a user with assignments but no
+`default_site_id` saw nothing at all. Sites are now inferred from assignments
+when no default is set.
+
+### Assigning someone, from a screen
+`user_machine` has existed since milestone 1 with no UI whatsoever. **Admin →
+Machines → Operators** attaches and detaches people, logged to the activity
+trail. The modal says in as many words that the list is not a permission,
+because a list of names beside a machine reads like one.
+
+Not restricted to the operator role: supervisors and managers cover shifts and
+complete sheets themselves, and an assignment list that could not name them
+would be wrong about who works a machine.
+
+### Self-assignment and hand-over
+The first tap on a sheet already claimed it. What was missing is what happens
+when a **second** person continues it — shifts change mid-checklist and a
+tablet gets picked up by whoever is free.
+
+Blocking that would strand half-finished work; letting it happen silently
+would leave the record naming somebody who did not do the second half. So it
+is allowed, the sheet moves to whoever is working it, the hand-over is written
+to the activity log with the previous operator's name, and the screen says so.
+Whoever **signs** is still the operator of record (seed-notes D13).
+
+### Tests
+12 new (77 total, 266 assertions): assignment not narrowing, cross-site still
+blocked, the no-default-site fallback, the nothing-at-all case, attach/detach
+through the admin screen, rejection of an inactive user id, self-claim on
+first tap, hand-over logged, no hand-over logged for the same operator, and
+three on the new report including the timezone bug.
+
 ## [0.12.0] — A kiosk is not always a tablet
 
 The whole surface assumed tablets: the screen was "Kiosk Tablets", the actions
