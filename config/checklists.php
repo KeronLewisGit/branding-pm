@@ -57,7 +57,13 @@ return [
     |
     */
 
-    'signature_disk' => env('CHECKLISTS_SIGNATURE_DISK', 'public'),
+    /*
+     * Signatures live on a PRIVATE disk. `local` is not web-reachable; the
+     * files are served only by MediaController, which checks the run's own
+     * view policy first. This was `public` — a guessable, unauthenticated URL
+     * for what is effectively a biometric (seed-notes §D11).
+     */
+    'signature_disk' => env('CHECKLISTS_SIGNATURE_DISK', 'local'),
 
     'signature_path' => env('CHECKLISTS_SIGNATURE_PATH', 'signatures'),
 

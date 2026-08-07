@@ -190,7 +190,7 @@
                                         class="disabled:opacity-30"
                                         wire:click="moveItemUp({{ $item->id }})"
                                         wire:loading.attr="disabled"
-                                        @disabled($loop->first)
+                                        :disabled="$loop->first"
                                     />
 
                                     <x-icon-button
@@ -199,7 +199,7 @@
                                         class="disabled:opacity-30"
                                         wire:click="moveItemDown({{ $item->id }})"
                                         wire:loading.attr="disabled"
-                                        @disabled($loop->last)
+                                        :disabled="$loop->last"
                                     />
 
                                     <x-icon-button icon="edit" :label="__('app.actions.edit')"
@@ -297,7 +297,7 @@
                                             class="disabled:opacity-30"
                                             wire:click="movePartUp({{ $templatePart->id }})"
                                             wire:loading.attr="disabled"
-                                            @disabled($loop->first)
+                                            :disabled="$loop->first"
                                         />
 
                                         <x-icon-button
@@ -306,7 +306,7 @@
                                             class="disabled:opacity-30"
                                             wire:click="movePartDown({{ $templatePart->id }})"
                                             wire:loading.attr="disabled"
-                                            @disabled($loop->last)
+                                            :disabled="$loop->last"
                                         />
 
                                         <x-icon-button

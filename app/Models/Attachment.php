@@ -8,7 +8,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
-use Illuminate\Support\Facades\Storage;
 
 class Attachment extends Model
 {
@@ -55,8 +54,15 @@ class Attachment extends Model
     /**
      * Public URL on whichever disk the attachment was stored on.
      */
+    /**
+     * Display URL — the authorised media route, never a direct disk URL.
+     *
+     * MediaController re-checks the policy of whatever this photo hangs off
+     * before streaming it. A plain public-disk URL served fault photos to
+     * anybody who could guess a path (seed-notes §D11).
+     */
     public function getUrlAttribute(): string
     {
-        return Storage::disk($this->disk)->url($this->path);
+        return route('media.attachment', ['attachment' => $this]);
     }
 }

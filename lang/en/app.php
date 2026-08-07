@@ -258,6 +258,7 @@ return [
         'method_pin' => 'PIN',
         'method_none' => 'Cannot sign in',
         'clear_pin' => 'Clear PIN',
+        'no_pin_to_clear' => 'No PIN set — nothing to clear',
 
         'empty_title' => 'Nobody found',
         'empty_description' => 'No user matches these filters.',

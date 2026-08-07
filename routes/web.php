@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Kiosk\KioskEnrolmentController;
 use App\Http\Controllers\Kiosk\KioskSessionController;
+use App\Http\Controllers\MediaController;
 use App\Http\Controllers\ReportExportController;
 use App\Http\Controllers\RunPdfController;
 use App\Livewire\Admin\HolidayManager;
@@ -161,6 +162,23 @@ Route::middleware(['auth', 'kiosk.idle'])->group(function (): void {
      * list is a plain 404, not a peeling sticker needing an explanation.
      */
     Route::get('/machines/{machine}', MachineProfile::class)->name('machines.show');
+
+    /*
+     * Run photos and signature images.
+     *
+     * Both were served straight off the public disk as guessable URLs
+     * (seed-notes §D11) — no login required to fetch a fault photo or an
+     * operator's signature. MediaController re-checks the policy of the
+     * record each file belongs to and streams it.
+     *
+     * `role` is constrained here so it can never name another column.
+     */
+    Route::get('/media/attachments/{attachment}', [MediaController::class, 'attachment'])
+        ->name('media.attachment');
+
+    Route::get('/media/signatures/{run}/{role}', [MediaController::class, 'signature'])
+        ->whereIn('role', ['operator', 'supervisor'])
+        ->name('media.signature');
 
     Route::get('/runs', RunIndex::class)->name('runs.index');
 

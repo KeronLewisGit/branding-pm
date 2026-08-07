@@ -6,7 +6,8 @@
         <x-signature-block
             :label="__('app.runs.operator_signature')"
             :user="$run->operator"
-            :path="$run->operator_signature_path"
+            :run="$run"
+            role="operator"
             :signed-at="$run->operator_signed_at" />
 
     Renders an explicit "not signed" state rather than nothing — a missing
@@ -15,13 +16,20 @@
 @props([
     'label',
     'user' => null,
-    'path' => null,
+    'run' => null,
+    'role' => 'operator',
     'signedAt' => null,
     'note' => null,
 ])
 
 @php
     $displayTz = (string) config('app.display_timezone', 'UTC');
+
+    // The run carries the path; the URL is authorised against the run, so the
+    // component needs both rather than a bare path it cannot check.
+    $path = $run === null ? null : ($role === 'operator'
+        ? $run->operator_signature_path
+        : $run->supervisor_signature_path);
 @endphp
 
 <div {{ $attributes->merge(['class' => 'rounded-xl border border-slate-200 p-4 [.kiosk_&]:border-slate-700']) }}>
@@ -31,7 +39,7 @@
         {{-- White plate: the ink is dark on transparent, so it needs one in
              the dark kiosk layout as much as on a printed sheet. --}}
         <div class="mt-2 flex h-28 items-center justify-center rounded-lg border border-slate-200 bg-white p-2">
-            <img src="{{ \App\Support\SignatureImage::url($path) }}"
+            <img src="{{ \App\Support\SignatureImage::url($run, $role) }}"
                  alt="{{ __('app.runs.signature_of', ['name' => $user?->full_name ?? __('app.runs.unknown_user')]) }}"
                  class="max-h-full max-w-full object-contain">
         </div>

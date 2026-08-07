@@ -258,12 +258,14 @@
             <x-signature-block
                 :label="__('app.runs.operator_signature')"
                 :user="$run->operator"
-                :path="$run->operator_signature_path"
+                :run="$run"
+                    role="operator"
                 :signed-at="$run->operator_signed_at" />
             <x-signature-block
                 :label="__('app.runs.supervisor_signature')"
                 :user="$run->supervisor"
-                :path="$run->supervisor_signature_path"
+                :run="$run"
+                    role="supervisor"
                 :signed-at="$run->supervisor_signed_at" />
         </div>
     </x-card>
