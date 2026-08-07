@@ -3,6 +3,40 @@
 Versions track build milestones: `0.<milestone>.<patch>`. The project reaches
 `1.0.0` when all 8 milestones are complete and the paper forms are retired.
 
+## [0.13.1] — Issues scope tighter than runs
+
+Two scopes now, because the two screens want opposite things.
+
+`MachineScope::for()` — **runs, the kiosk, reports.** Site-wide. Anybody may
+have to cover any machine at short notice, and a checklist nobody can open is
+a checklist that does not get done.
+
+`MachineScope::forIssues()` — **the issues register, its detail screen, its
+policy and the dashboard tile.** An assignment narrows it: the register is a
+standing worklist, and a plant-wide one buries the three faults on the
+machines somebody actually runs.
+
+Two judgement calls, both reversible, both stated here because they are the
+kind of thing that is invisible until it annoys somebody:
+
+- **A user with no assignments still sees their whole site.** Almost everybody
+  is in that state — `user_machine` was unreachable from the UI until 0.13.0 —
+  and an empty register reads as broken rather than tidy.
+- **Reporting a fault is not narrowed.** The "raise an issue" picker still
+  offers every machine at the site. An operator who walks past a bearing
+  screaming on a machine they are not assigned to must be able to say so.
+  Accepted consequence: they may raise a fault that does not then appear in
+  their own register. The alternative is an unreported fault.
+
+The dashboard's open-issues tile moved to the issue scope too — it links into
+the register, and a count that disagrees with the list behind it is worse than
+no count.
+
+### Tests
+4 new (81 total, 274 assertions): the same user seeing a machine's runs but
+not its issues, the no-assignment fallback, the detail screen returning 403
+for an issue on an unassigned machine, and the raise picker staying wide.
+
 ## [0.13.0] — Who did the check, and how they came to be doing it
 
 ### A report that names names

@@ -78,6 +78,42 @@ class MachineScope
     }
 
     /**
+     * The **issue** scope, which is narrower than the run scope on purpose.
+     *
+     * Runs are site-wide because anybody may have to cover any machine at
+     * short notice, and a checklist nobody can open is a checklist that does
+     * not get done. The issues register is the opposite problem: it is a
+     * standing worklist, and a plant-wide one buries the three faults on the
+     * machines somebody actually runs. So an assignment narrows it.
+     *
+     * A user with **no** assignments still sees their whole site. Most users
+     * have none — `user_machine` was unreachable from the UI until recently —
+     * and an empty register looks broken rather than tidy.
+     *
+     * Reporting a fault is deliberately NOT narrowed by this; see
+     * `IssueRegister::creatableMachines()`.
+     */
+    public static function forIssues(User $user): Builder
+    {
+        if ($user->can('machine.manage')) {
+            return Machine::query();
+        }
+
+        $assignedIds = static::assignedIds($user);
+
+        if ($assignedIds !== []) {
+            return Machine::query()->whereIn('machines.id', $assignedIds);
+        }
+
+        return static::for($user);
+    }
+
+    public static function allowsIssue(User $user, Machine $machine): bool
+    {
+        return static::forIssues($user)->whereKey($machine->getKey())->exists();
+    }
+
+    /**
      * Machine ids this user is explicitly assigned to — "mine", for ordering
      * and highlighting. Never a permission check.
      *

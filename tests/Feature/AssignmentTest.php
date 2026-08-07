@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 use App\Enums\RunStatus;
 use App\Livewire\Admin\MachineManager;
+use App\Livewire\Issues\IssueRegister;
 use App\Livewire\Runs\RunForm;
 use App\Models\ChecklistRun;
 use App\Models\ChecklistRunItem;
 use App\Models\ChecklistTemplate;
 use App\Models\ChecklistTemplateItem;
+use App\Models\Issue;
 use App\Models\Location;
 use App\Models\Machine;
 use App\Models\Site;
@@ -245,4 +247,82 @@ it('does not log a hand-over when the same operator carries on', function (): vo
         ->assertSet('notice', null);
 
     expect(Activity::query()->where('description', 'run.taken_over')->count())->toBe(0);
+});
+
+/*
+|--------------------------------------------------------------------------
+| Issues are scoped more tightly than runs
+|--------------------------------------------------------------------------
+| Runs stay site-wide so a shift can be covered. The issues register is a
+| standing worklist, and a plant-wide one buries the faults on the machines
+| somebody actually runs.
+*/
+
+it('narrows issues to assigned machines while runs stay site-wide', function (): void {
+    [$mine, $site] = machineAtNewSite('MATAN');
+
+    $location = Location::factory()->for($site)->create();
+    $notMine = Machine::factory()->for($location)->create(['name' => 'HP 570 Latex']);
+
+    $operator = User::factory()->operator()->create(['default_site_id' => $site->id]);
+    $operator->machines()->attach($mine->id);
+
+    // Same site, same user, two different answers — that is the point.
+    expect(MachineScope::allows($operator, $notMine))->toBeTrue()
+        ->and(MachineScope::allowsIssue($operator, $notMine))->toBeFalse()
+        ->and(MachineScope::allowsIssue($operator, $mine))->toBeTrue();
+});
+
+it('shows a whole site of issues to somebody with no assignments', function (): void {
+    [$machine, $site] = machineAtNewSite();
+
+    // Most users are in this state — user_machine was unreachable from the
+    // UI until recently, so an empty register would look broken, not tidy.
+    $operator = User::factory()->operator()->create(['default_site_id' => $site->id]);
+
+    expect(MachineScope::allowsIssue($operator, $machine))->toBeTrue();
+});
+
+it('hides an issue on an unassigned machine from the detail screen', function (): void {
+    $this->seed(RolesAndPermissionsSeeder::class);
+
+    [$mine, $site] = machineAtNewSite('MATAN');
+
+    $location = Location::factory()->for($site)->create();
+    $notMine = Machine::factory()->for($location)->create(['name' => 'HP 570 Latex']);
+
+    $operator = User::factory()->create(['default_site_id' => $site->id]);
+    $operator->assignRole('operator');
+    $operator->machines()->attach($mine->id);
+
+    $ours = Issue::factory()->create(['machine_id' => $mine->id]);
+    $theirs = Issue::factory()->create(['machine_id' => $notMine->id]);
+
+    $this->actingAs($operator)->get(route('issues.show', $ours))->assertOk();
+    $this->actingAs($operator)->get(route('issues.show', $theirs))->assertForbidden();
+});
+
+it('still lets an operator report a fault on any machine at their site', function (): void {
+    $this->seed(RolesAndPermissionsSeeder::class);
+
+    [$mine, $site] = machineAtNewSite('MATAN');
+
+    $location = Location::factory()->for($site)->create();
+    $notMine = Machine::factory()->for($location)->create(['name' => 'HP 570 Latex']);
+
+    $operator = User::factory()->create(['default_site_id' => $site->id]);
+    $operator->assignRole('operator');
+    $operator->machines()->attach($mine->id);
+
+    $creatable = Livewire::actingAs($operator)
+        ->test(IssueRegister::class)
+        ->instance()
+        ->creatableMachines()
+        ->pluck('name')
+        ->all();
+
+    // Reporting a fault must never be harder than walking past one, even
+    // though the resulting issue will not show in this operator's register.
+    expect($creatable)->toContain('MATAN')
+        ->and($creatable)->toContain('HP 570 Latex');
 });

@@ -255,7 +255,7 @@ class IssueDetail extends Component
         return Issue::query()
             ->where('machine_id', $this->issue->machine_id)
             ->whereKeyNot($this->issue->id)
-            ->whereIn('machine_id', MachineScope::for(Auth::user())->select('machines.id'))
+            ->whereIn('machine_id', MachineScope::forIssues(Auth::user())->select('machines.id'))
             ->open()
             ->orderBy('created_at')
             ->limit(5)
