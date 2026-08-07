@@ -117,6 +117,12 @@
                     </x-nav-link>
                 @endcan
 
+                @can('user.manage')
+                    <x-nav-link :href="route('admin.users')" :active="request()->routeIs('admin.users')">
+                        {{ __('app.nav.users') }}
+                    </x-nav-link>
+                @endcan
+
                 @can('holiday.manage')
                     <x-nav-link :href="route('admin.holidays')" :active="request()->routeIs('admin.holidays*')">
                         {{ __('app.nav.holidays') }}

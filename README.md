@@ -51,11 +51,10 @@ panel PC rather than only a tablet).
 
 Not yet built, and outstanding against [`docs/SPEC.md`](docs/SPEC.md):
 
-- **Admin → users, roles and settings.** Machines, locations, parts, templates,
-  holidays and kiosk tablets are all manageable in the UI; user and role
-  administration is not, so operators and PINs are currently created through
-  seeders or tinker. The `user.manage` permission and `UserPolicy` already
-  exist — this is a missing screen, not missing authorisation.
+- **Admin → settings.** The `settings` table is seeded but nothing reads it —
+  every value it holds actually comes from `config/checklists.php` via `.env`,
+  so editing a seeded setting has no effect. Either give it a screen and read
+  from it, or drop the table.
 - **The machine profile screen** (spec screen 5) — details, run history, issue
   history and parts consumption on one page per machine. The data is all
   reachable today, but through the runs, issues and reports screens rather than

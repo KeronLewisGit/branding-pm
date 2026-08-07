@@ -9,10 +9,20 @@ use App\Models\User;
 class UserPolicy
 {
     /**
-     * Admins can do everything.
+     * Admins can do everything — except delete, which falls through to the
+     * method below.
+     *
+     * A blanket `true` here let an administrator delete their own account,
+     * because `before()` cannot see the target model and so cannot apply the
+     * self-check. With one administrator that locks everybody out of user
+     * management permanently, and there is no second screen to undo it from.
      */
-    public function before(User $user): ?bool
+    public function before(User $user, string $ability): ?bool
     {
+        if ($ability === 'delete') {
+            return null;
+        }
+
         return $user->hasRole('admin') ? true : null;
     }
 

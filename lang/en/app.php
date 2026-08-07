@@ -188,6 +188,68 @@ return [
         'close' => 'Close',
     ],
 
+    // Role names — spatie roles, BUILD-CONTRACT section 5. Cumulative: each
+    // holds everything below it.
+    'roles' => [
+        'operator' => 'Operator',
+        'supervisor' => 'Supervisor',
+        'maintenance_manager' => 'Maintenance Manager',
+        'admin' => 'Administrator',
+    ],
+
+    // Admin -> Users. Gated on `user.manage`, which only the admin role
+    // holds, so this screen is admin-only by construction.
+    'users' => [
+        'title' => 'Users',
+        'description' => 'Everyone who can sign in. Floor operators use an employee number and a PIN on the kiosk; office users sign in with an email address or employee number and a password.',
+        'add_user' => 'Add a person',
+        'edit_user' => 'Edit person',
+        'delete_user' => 'Remove person',
+        'search_placeholder' => 'Search name, employee number or email…',
+        'all_roles' => 'All roles',
+        'include_inactive' => 'Show deactivated people',
+        'you' => 'you',
+
+        'full_name' => 'Full name',
+        'employee_number' => 'Employee number',
+        'employee_number_hint' => 'The number on the floor. This is what they type at the kiosk, and it never changes once work is signed under it.',
+        'email' => 'Email address',
+        'email_hint' => 'Leave blank for floor operators. Most have no company address, and they do not need one.',
+        'role' => 'Role',
+        'role_hint' => 'Roles are cumulative: a supervisor can do everything an operator can, and so on up.',
+        'default_site' => 'Site',
+        'default_site_hint' => 'Which site this person works at. It decides which machines and checklists they can see.',
+        'password' => 'Password',
+        'password_hint_new' => 'Only needed for supervisors and office users. Leave blank for a PIN-only operator.',
+        'password_hint_edit' => 'Leave blank to keep the current password.',
+        'pin' => 'PIN',
+        'pin_hint_new' => '4 to 6 digits, for signing in at a shop-floor kiosk.',
+        'pin_hint_edit' => 'Leave blank to keep the current PIN. Type a new one to replace it — the old one cannot be read back.',
+        'is_active_hint' => 'Deactivating stops this person signing in anywhere. Their completed work is kept.',
+
+        'signs_in_with' => 'Signs in with',
+        'method_password' => 'Password',
+        'method_pin' => 'PIN',
+        'method_none' => 'Cannot sign in',
+        'clear_pin' => 'Clear PIN',
+
+        'empty_title' => 'Nobody found',
+        'empty_description' => 'No user matches these filters.',
+
+        'created_message' => '“:name” added.',
+        'updated_message' => '“:name” updated.',
+        'deleted_message' => '“:name” removed. Their completed checklists and signatures are kept.',
+        'activated_message' => '“:name” can sign in again.',
+        'deactivated_message' => '“:name” has been deactivated and can no longer sign in.',
+        'pin_cleared' => 'PIN cleared for “:name”. Set a new one before they next use a kiosk.',
+        'delete_confirm' => 'Remove “:name”? They can no longer sign in. Everything they completed or signed is kept, and still shows their name — a maintenance record is never rewritten.',
+
+        'cannot_demote_self' => 'You cannot remove your own administrator role. Ask another administrator to do it.',
+        'cannot_deactivate_self' => 'You cannot deactivate your own account.',
+        'cannot_delete_self' => 'You cannot remove your own account.',
+        'cannot_remove_last_admin' => 'This is the last active administrator. Give somebody else the administrator role first, or nobody will be able to manage the system.',
+    ],
+
     'machines' => [
         'title' => 'Machines',
         'machine' => 'Machine',

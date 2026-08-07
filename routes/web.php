@@ -15,6 +15,7 @@ use App\Livewire\Admin\PartManager;
 use App\Livewire\Admin\QrStickerSheet;
 use App\Livewire\Admin\TemplateEditor;
 use App\Livewire\Admin\TemplateManager;
+use App\Livewire\Admin\UserManager;
 use App\Livewire\Dashboard;
 use App\Livewire\Issues\IssueDetail;
 use App\Livewire\Issues\IssueRegister;
@@ -212,6 +213,12 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function (): v
         Route::get('/templates', TemplateManager::class)->name('templates');
         Route::get('/templates/{template}/edit', TemplateEditor::class)->name('templates.edit');
     });
+
+    // User administration. `user.manage` is held only by the admin role, so
+    // this is admin-only without a second check.
+    Route::get('/users', UserManager::class)
+        ->middleware('permission:user.manage')
+        ->name('users');
 
     Route::get('/holidays', HolidayManager::class)
         ->middleware('permission:holiday.manage')
