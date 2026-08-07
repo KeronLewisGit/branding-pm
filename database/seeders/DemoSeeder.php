@@ -145,7 +145,7 @@ class DemoSeeder extends Seeder
         }
 
         $this->command?->info(sprintf(
-            'DemoSeeder: %d runs over the last %d days (%d approved, %d submitted, %d rejected, %d missed), %d failed items, %d issues. Demo users: OP-1001 (PIN 4321, no email), OP-1002 / operator@example.com, supervisor@example.com, manager@example.com — password "password".',
+            'DemoSeeder: %d runs over the last %d days (%d approved, %d submitted, %d rejected, %d missed), %d failed items, %d issues. Demo users: OP-1001 (PIN 4321, no email), OP-1002 / operator@example.com, supervisor@example.com, manager@example.com, qa@example.com — password "password".',
             $this->summary['runs'],
             self::HISTORY_DAYS,
             $this->summary['approved'],
@@ -217,7 +217,21 @@ class DemoSeeder extends Seeder
             ],
         );
 
-        foreach ([[$operatorPin, 'operator'], [$operatorEmail, 'operator'], [$supervisor, 'supervisor'], [$manager, 'maintenance_manager']] as [$user, $role]) {
+        // Quality Assurance is a standalone role, not a rung on the ladder —
+        // this person verifies work they can neither do nor approve.
+        $qa = User::firstOrCreate(
+            ['employee_number' => 'QA-4001'],
+            [
+                'full_name' => 'Anisa Ramkissoon',
+                'email' => 'qa@example.com',
+                'password' => 'password',
+                'pin' => null,
+                'is_active' => true,
+                'default_site_id' => $site->id,
+            ],
+        );
+
+        foreach ([[$operatorPin, 'operator'], [$operatorEmail, 'operator'], [$supervisor, 'supervisor'], [$manager, 'maintenance_manager'], [$qa, 'quality_assurance']] as [$user, $role]) {
             if (! $user->hasRole($role)) {
                 $user->assignRole($role);
             }
@@ -241,8 +255,8 @@ class DemoSeeder extends Seeder
     }
 
     /**
-     * @param Collection<int, Holiday> $holidays
-     * @param list<int> $workingDays
+     * @param  Collection<int, Holiday>  $holidays
+     * @param  list<int>  $workingDays
      */
     private function isWorkingDay(Carbon $date, array $workingDays, Collection $holidays): bool
     {
@@ -299,7 +313,7 @@ class DemoSeeder extends Seeder
     }
 
     /**
-     * @param Collection<int, Part> $partsById
+     * @param  Collection<int, Part>  $partsById
      */
     private function createRun(
         ChecklistTemplate $template,
@@ -464,7 +478,7 @@ class DemoSeeder extends Seeder
     }
 
     /**
-     * @param Collection<int, Part> $partsById
+     * @param  Collection<int, Part>  $partsById
      */
     private function createRunParts(
         ChecklistRun $run,

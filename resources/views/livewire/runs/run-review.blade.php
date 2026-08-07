@@ -316,6 +316,52 @@
     </x-card>
 
     {{--
+        Quality Assurance — the third sign-off. Shown to everyone who can read
+        the sheet once it has happened, because "who checked the checker" is
+        part of the record, not a private note.
+    --}}
+    @if ($run->qa_verified_at || $this->canVerify || $this->verifyBlockedReason)
+        <x-card class="mt-6">
+            <h2 class="text-xl font-bold text-slate-900">{{ __('app.qa.title') }}</h2>
+
+            @if ($run->qa_verified_at)
+                <p class="mt-2 text-base text-slate-700">
+                    {{ __('app.qa.verified_by_at', [
+                        'name' => $run->qaVerifiedBy?->full_name ?? __('app.common.none'),
+                        'at' => $run->qa_verified_at->timezone($displayTz)->format('D j M Y, g:i A'),
+                    ]) }}
+                </p>
+
+                @if ($run->qa_comment)
+                    <p class="mt-2 whitespace-pre-line rounded-lg bg-slate-50 p-3 text-base text-slate-700">{{ $run->qa_comment }}</p>
+                @endif
+            @elseif ($this->canVerify)
+                <p class="mt-1 text-base text-slate-600">{{ __('app.qa.verify_hint') }}</p>
+
+                <div class="mt-4">
+                    <label for="qa-comment" class="mb-1 block text-base font-semibold">
+                        {{ __('app.qa.comment') }}
+                        <span class="font-normal text-slate-500">({{ __('app.common.optional') }})</span>
+                    </label>
+                    <x-textarea id="qa-comment" wire:model="qaComment" rows="3" maxlength="2000" class="w-full" />
+                    @error('qaComment') <p class="mt-1 text-sm text-rose-600">{{ $message }}</p> @enderror
+                </div>
+
+                <div class="mt-4 flex justify-end" x-data="{ busy: false }">
+                    <x-button size="lg" x-bind:disabled="busy"
+                        x-on:click="busy = true; $wire.verify().finally(() => busy = false)">
+                        <span x-show="! busy">{{ __('app.qa.verify') }}</span>
+                        <span x-show="busy" x-cloak>{{ __('app.runs.saving') }}</span>
+                    </x-button>
+                </div>
+            @else
+                {{-- Never go quiet on a QA officer who expected to be able to sign. --}}
+                <p class="mt-2 text-base text-slate-600">{{ $this->verifyBlockedReason }}</p>
+            @endif
+        </x-card>
+    @endif
+
+    {{--
         Amendment history. Rendered from the activity log itself, so the audit
         trail and what this screen shows cannot drift apart — and shown to
         everyone who can read the sheet, not only to whoever may amend it. A

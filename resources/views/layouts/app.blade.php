@@ -91,6 +91,13 @@
                     </x-nav-link>
                 @endcan
 
+                @can('run.verify')
+                    <x-nav-link :href="route('runs.verifications')" :active="request()->routeIs('runs.verifications')">
+                        <x-slot:icon>{!! $ico('<path d="M9 12l2 2 4-4"/><path d="M12 3l7 4v5c0 4.4-3 8.5-7 9.5C8 20.5 5 16.4 5 12V7l7-4z"/>') !!}</x-slot:icon>
+                        {{ __('app.nav.verifications') }}
+                    </x-nav-link>
+                @endcan
+
                 @can('issue.view')
                     <x-nav-link :href="route('issues.index')" :active="request()->routeIs('issues.*')">
                         <x-slot:icon>{!! $ico('<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>') !!}</x-slot:icon>

@@ -18,6 +18,7 @@ return [
         'dashboard' => 'Dashboard',
         'runs' => 'Checklist Runs',
         'approvals' => 'Approvals',
+        'verifications' => 'QA Verification',
         'kiosk' => 'Kiosk',
         'kiosk_devices' => 'Kiosk Devices',
         'machines' => 'Machines',
@@ -197,6 +198,29 @@ return [
         'supervisor' => 'Supervisor',
         'maintenance_manager' => 'Maintenance Manager',
         'admin' => 'Administrator',
+        'quality_assurance' => 'Quality Assurance Officer',
+    ],
+
+    // Quality Assurance — the third sign-off, after the supervisor's.
+    'qa' => [
+        'title' => 'Quality Assurance',
+        'verify' => 'Verify',
+        'verified' => 'Verified',
+        'awaiting' => 'Awaiting QA',
+        'comment' => 'QA finding',
+        'verify_hint' => 'Confirm that this work was actually carried out as recorded. Your name and the time are stored on the sheet. This does not change the supervisor’s sign-off.',
+        'verified_message' => 'Verified. Recorded against this sheet.',
+        'verified_by_at' => 'Verified by :name on :at.',
+        'verified_count' => ':count verified',
+        'already_verified' => 'Already verified by :name on :at.',
+        'not_approved_yet' => 'This sheet has not been signed off by a supervisor yet, so there is nothing to verify.',
+        'self_verify_blocked' => 'You completed or signed off this sheet yourself, so somebody else must verify it.',
+        'queue_title' => 'QA Verification',
+        'queue_description' => 'Sheets a supervisor has signed off that nobody has verified yet, oldest first.',
+        'show_verified' => 'Include verified',
+        'outstanding' => '{0} Nothing awaiting verification|{1} 1 sheet awaiting verification|[2,*] :count sheets awaiting verification',
+        'empty_title' => 'Nothing to verify',
+        'empty_description' => 'Every signed-off sheet in this view has been verified.',
     ],
 
     // Admin -> Users. Gated on `user.manage`, which only the admin role
@@ -972,6 +996,7 @@ return [
             'scheduled_for' => 'Due',
             'completed_at' => 'Completed',
             'approved_by' => 'Signed off by',
+            'verified_by' => 'QA verified by',
             'total_checks' => 'Total checks',
         ],
 
