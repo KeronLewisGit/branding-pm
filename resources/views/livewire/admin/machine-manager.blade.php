@@ -1,6 +1,17 @@
 <div>
     <x-page-header :title="__('app.machines.title')">
         <x-slot:actions>
+            {{--
+                The sticker sheet used to be its own sidebar entry. It is a
+                task you perform on machines, not a section of the system, so
+                it lives here — one fewer thing in the menu, and found where
+                you would look for it.
+            --}}
+            @can('machine.manage')
+                <x-button variant="ghost" :href="route('admin.machines.qr')">
+                    {{ __('app.qr.title') }}
+                </x-button>
+            @endcan
             @can('create', App\Models\Machine::class)
                 <x-button wire:click="openCreateModal">
                     {{ __('app.machines.add_machine') }}
@@ -128,6 +139,9 @@
                                 </td>
                                 <td class="px-4 py-3">
                                     <div class="flex flex-wrap items-center justify-end gap-2">
+                                        <x-button variant="ghost" :href="route('machines.show', ['machine' => $machine->code])">
+                                            {{ __('app.machines.profile') }}
+                                        </x-button>
                                         @can('update', $machine)
                                             <x-button variant="ghost" wire:click="openEditModal({{ $machine->id }})">
                                                 {{ __('app.actions.edit') }}

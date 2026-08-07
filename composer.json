@@ -2,7 +2,7 @@
     "$schema": "https://getcomposer.org/schema.json",
     "name": "branding/branding-pm",
     "type": "project",
-    "version": "0.14.0",
+    "version": "0.15.0",
     "description": "Preventive Maintenance Checklist System for the Branding & Signage department.",
     "keywords": [
         "laravel",

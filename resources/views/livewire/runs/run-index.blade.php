@@ -102,7 +102,17 @@
                     @foreach ($runs as $run)
                         <tr wire:key="run-{{ $run->id }}" class="hover:bg-slate-50">
                             <td class="px-4 py-3">
-                                <p class="font-semibold text-slate-900">{{ $run->machine->name }}</p>
+                                {{-- Into the machine profile, so a supervisor can get from
+                                     "this run looks wrong" to the machine's history in one
+                                     tap. Gated: an operator outside the scope gets plain text. --}}
+                                <p class="font-semibold text-slate-900">
+                                    @can('view', $run->machine)
+                                        <a href="{{ route('machines.show', ['machine' => $run->machine->code]) }}"
+                                           class="underline decoration-slate-300 underline-offset-2 hover:decoration-slate-900">{{ $run->machine->name }}</a>
+                                    @else
+                                        {{ $run->machine->name }}
+                                    @endcan
+                                </p>
                                 <p class="text-sm text-slate-500">{{ $run->machine->location->name }}</p>
                             </td>
                             <td class="px-4 py-3 text-slate-700">{{ $run->template->name }}</td>
