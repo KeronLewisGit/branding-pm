@@ -28,12 +28,30 @@
 ])
 
 @php
+    // A disabled control keeps its place in the row. Dropping the button
+    // instead shifts every icon beside it, so the same action sits under a
+    // different pixel from one row to the next — and the reader is left to
+    // work out whether it is missing or forbidden. Greyed out with the reason
+    // in its tooltip answers that.
+    // `has('disabled')` is NOT the test: the attribute bag still holds the key
+    // for `:disabled="false"`, so using it greyed out every button on the
+    // page. Read the value, and accept the several shapes Blade produces —
+    // `true` from `:disabled="$expr"`, and the string "disabled" from
+    // `@disabled($expr)`.
+    $disabledValue = $attributes->get('disabled', false);
+    $isDisabled = $disabledValue === true
+        || $disabledValue === 'disabled'
+        || $disabledValue === 'true'
+        || $disabledValue === '1';
+
     // Literal class strings — Tailwind's JIT cannot see an interpolated one.
-    $variantClasses = match ($variant) {
-        'danger' => 'text-rose-600 hover:bg-rose-50 hover:text-rose-700 active:bg-rose-100',
-        'primary' => 'text-sky-700 hover:bg-sky-50 hover:text-sky-800 active:bg-sky-100',
-        default => 'text-slate-500 hover:bg-slate-100 hover:text-slate-900 active:bg-slate-200',
-    };
+    $variantClasses = $isDisabled
+        ? 'text-slate-300 cursor-not-allowed'
+        : match ($variant) {
+            'danger' => 'text-rose-600 hover:bg-rose-50 hover:text-rose-700 active:bg-rose-100',
+            'primary' => 'text-sky-700 hover:bg-sky-50 hover:text-sky-800 active:bg-sky-100',
+            default => 'text-slate-500 hover:bg-slate-100 hover:text-slate-900 active:bg-slate-200',
+        };
 
     // One place for the whole vocabulary, so "edit" looks the same on every
     // screen and a new list cannot invent its own pencil.
@@ -65,6 +83,9 @@
     @if ($href) href="{{ $href }}" @else type="button" @endif
     aria-label="{{ $label }}"
     title="{{ $label }}"
+    {{-- A disabled <button> is already out of the tab order and unclickable;
+         `aria-disabled` is what tells a screen reader why it is still here. --}}
+    @if ($isDisabled) aria-disabled="true" @endif
     {{ $attributes->merge(['class' => 'inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-1 '.$variantClasses]) }}
 >
     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none"

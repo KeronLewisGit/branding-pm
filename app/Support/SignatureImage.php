@@ -126,17 +126,33 @@ final class SignatureImage
     }
 
     /**
-     * Public URL for display. Mirrors Attachment::getUrlAttribute() — the
-     * `public` disk is not signable, and hardening attachment URLs is a
-     * single, separate change for both (see seed-notes §D11).
+     * Display URL for a run's signature.
+     *
+     * Points at MediaController, which re-checks the run's own view policy
+     * before streaming a byte. It used to return a plain public-disk URL that
+     * anybody could fetch unauthenticated (seed-notes §D11) — a signature is
+     * the nearest thing this system holds to a biometric.
      */
-    public static function url(string $path): string
+    public static function url(ChecklistRun $run, string $role): string
     {
-        return Storage::disk(self::disk())->url($path);
+        return route('media.signature', ['run' => $run, 'role' => $role]);
     }
 
     private static function disk(): string
     {
-        return (string) config('checklists.signature_disk', 'public');
+        return self::diskName();
+    }
+
+    /**
+     * The configured signature disk.
+     *
+     * Public so MediaController can stream from the same place this class
+     * writes to — there must be exactly one answer to "where do signatures
+     * live", or a hardened URL would serve from a different folder than the
+     * one the signing code fills.
+     */
+    public static function diskName(): string
+    {
+        return (string) config('checklists.signature_disk', 'local');
     }
 }

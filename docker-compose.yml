@@ -46,15 +46,19 @@ services:
     mysql:
         image: mysql:8
         environment:
-            MYSQL_DATABASE: branding_pm
-            MYSQL_USER: branding_pm
-            MYSQL_PASSWORD: secret
-            MYSQL_ROOT_PASSWORD: secret
+            # Local development defaults. Read from the environment so a
+            # shared or exposed box can be given real ones without editing a
+            # tracked file — this compose file is committed, so anything
+            # written here is a published credential.
+            MYSQL_DATABASE: ${DB_DATABASE:-branding_pm}
+            MYSQL_USER: ${DB_USERNAME:-branding_pm}
+            MYSQL_PASSWORD: ${DB_PASSWORD:-secret}
+            MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-secret}
         command: '--character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci'
         volumes:
             - mysql-data:/var/lib/mysql
         healthcheck:
-            test: ['CMD', 'mysqladmin', 'ping', '-h', 'localhost', '-psecret']
+            test: ['CMD-SHELL', 'mysqladmin ping -h localhost -p"$$MYSQL_ROOT_PASSWORD"']
             interval: 5s
             timeout: 5s
             retries: 10

@@ -1,8 +1,13 @@
 <?php
 
+use App\Http\Middleware\EnforceKioskIdleTimeout;
+use App\Http\Middleware\EnsureKioskDevice;
+use App\Http\Middleware\SecurityHeaders;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Spatie\Permission\Middleware\PermissionMiddleware;
+use Spatie\Permission\Middleware\RoleMiddleware;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -11,14 +16,20 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
+        // Response security headers on every web response (OWASP Secure
+        // Headers). Appended, so it wraps everything the group produces.
+        $middleware->web(append: [
+            SecurityHeaders::class,
+        ]);
+
         $middleware->alias([
             // Resolves the signed `kiosk_device` cookie to an enrolled tablet.
-            'kiosk' => App\Http\Middleware\EnsureKioskDevice::class,
+            'kiosk' => EnsureKioskDevice::class,
             // Server-side half of the 2-minute kiosk idle drop. The Alpine
             // `idleRelease` component is a convenience; THIS is authoritative.
-            'kiosk.idle' => App\Http\Middleware\EnforceKioskIdleTimeout::class,
-            'role' => Spatie\Permission\Middleware\RoleMiddleware::class,
-            'permission' => Spatie\Permission\Middleware\PermissionMiddleware::class,
+            'kiosk.idle' => EnforceKioskIdleTimeout::class,
+            'role' => RoleMiddleware::class,
+            'permission' => PermissionMiddleware::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {

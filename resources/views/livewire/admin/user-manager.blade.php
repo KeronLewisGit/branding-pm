@@ -111,20 +111,38 @@
                                         <x-icon-button icon="edit" :label="__('app.actions.edit')"
                                             wire:click="openEditModal({{ $user->id }})" />
 
-                                        @if ($user->pin)
-                                            <x-icon-button icon="pin" :label="__('app.users.clear_pin')"
-                                                wire:click="clearPin({{ $user->id }})" />
-                                        @endif
+                                        {{--
+                                            Actions you cannot use are greyed out and disabled
+                                            rather than dropped. Every row then has the same
+                                            icons in the same places, and the tooltip says why
+                                            this one is unavailable instead of leaving a gap
+                                            the reader has to interpret.
+                                        --}}
+                                        @php($isSelf = $user->id === auth()->id())
 
-                                        @if ($user->id !== auth()->id())
-                                            <x-icon-button
-                                                :icon="$user->is_active ? 'deactivate' : 'activate'"
-                                                :label="$user->is_active ? __('app.actions.deactivate') : __('app.actions.activate')"
-                                                wire:click="toggleActive({{ $user->id }})"
-                                            />
-                                            <x-icon-button icon="delete" variant="danger" :label="__('app.actions.delete')"
-                                                wire:click="confirmDelete({{ $user->id }})" />
-                                        @endif
+                                        <x-icon-button
+                                            icon="pin"
+                                            :label="$user->pin ? __('app.users.clear_pin') : __('app.users.no_pin_to_clear')"
+                                            :disabled="! $user->pin"
+                                            wire:click="clearPin({{ $user->id }})"
+                                        />
+
+                                        <x-icon-button
+                                            :icon="$user->is_active ? 'deactivate' : 'activate'"
+                                            :label="$isSelf
+                                                ? __('app.users.cannot_deactivate_self')
+                                                : ($user->is_active ? __('app.actions.deactivate') : __('app.actions.activate'))"
+                                            :disabled="$isSelf"
+                                            wire:click="toggleActive({{ $user->id }})"
+                                        />
+
+                                        <x-icon-button
+                                            icon="delete"
+                                            variant="danger"
+                                            :label="$isSelf ? __('app.users.cannot_delete_self') : __('app.actions.delete')"
+                                            :disabled="$isSelf"
+                                            wire:click="confirmDelete({{ $user->id }})"
+                                        />
                                     </div>
                                 </td>
                             </tr>

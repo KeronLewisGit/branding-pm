@@ -13,6 +13,7 @@ use App\Models\Location;
 use App\Models\Machine;
 use App\Models\Site;
 use App\Models\User;
+use App\Support\SignatureImage;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
@@ -78,7 +79,9 @@ function completedRun(bool $requiresSignoff = true): array
 
 beforeEach(function (): void {
     $this->seed(RolesAndPermissionsSeeder::class);
-    Storage::fake('public');
+    // Whatever disk signatures are configured to use. Hardcoding 'public'
+    // made these pass only for the old, web-reachable default.
+    Storage::fake(SignatureImage::diskName());
 });
 
 it('stores the signature and submits when the PIN is right', function (): void {
@@ -97,7 +100,7 @@ it('stores the signature and submits when the PIN is right', function (): void {
         ->and($run->submitted_at)->not->toBeNull()
         ->and($run->operator_signature_path)->toStartWith('signatures/runs/'.$run->id.'/operator-');
 
-    Storage::disk('public')->assertExists($run->operator_signature_path);
+    Storage::disk(SignatureImage::diskName())->assertExists($run->operator_signature_path);
 });
 
 it('refuses to submit with the wrong PIN and leaves the run untouched', function (): void {
@@ -114,7 +117,7 @@ it('refuses to submit with the wrong PIN and leaves the run untouched', function
         ->and($run->operator_signature_path)->toBeNull();
 
     // Nothing is written on a failed confirmation — not even the image.
-    expect(Storage::disk('public')->allFiles())->toBeEmpty();
+    expect(Storage::disk(SignatureImage::diskName())->allFiles())->toBeEmpty();
 });
 
 it('refuses to submit without a signature', function (): void {
@@ -178,7 +181,7 @@ it('lets a supervisor approve a submitted run with a signature', function (): vo
         ->and($run->supervisor_signed_at)->not->toBeNull()
         ->and($run->supervisor_comment)->toBe('Looks right.');
 
-    Storage::disk('public')->assertExists($run->supervisor_signature_path);
+    Storage::disk(SignatureImage::diskName())->assertExists($run->supervisor_signature_path);
 });
 
 it('requires a comment to send a run back, and takes no signature for it', function (): void {
@@ -257,6 +260,6 @@ it('replaces and deletes the earlier signature when a rejected run is signed aga
 
     expect($second)->not->toBe($first);
 
-    Storage::disk('public')->assertMissing($first);
-    Storage::disk('public')->assertExists($second);
+    Storage::disk(SignatureImage::diskName())->assertMissing($first);
+    Storage::disk(SignatureImage::diskName())->assertExists($second);
 });

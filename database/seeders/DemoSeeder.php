@@ -85,6 +85,27 @@ class DemoSeeder extends Seeder
 
     public function run(): void
     {
+        /*
+         * Never on production. This seeder creates users with the password
+         * "password" and PINs of 4321 and 2468, and a mistyped
+         * `--class=DemoSeeder` against the live database would hand anyone
+         * who has read the repository a working operator, supervisor,
+         * manager and QA account.
+         *
+         * The README says "never run that on production"; this makes it so.
+         * `--force` is the deliberate override for a staging box that runs
+         * with APP_ENV=production.
+         */
+        if (app()->isProduction() && ! $this->command?->option('force')) {
+            $this->command?->error(
+                'DemoSeeder refuses to run in production: it creates accounts with '
+                .'well-known passwords. Re-run with --force if this really is a '
+                .'staging environment.'
+            );
+
+            return;
+        }
+
         if (Machine::count() === 0 || ChecklistTemplate::count() === 0) {
             $this->command?->error(
                 'DemoSeeder: master data missing. Run `php artisan db:seed` first.'
