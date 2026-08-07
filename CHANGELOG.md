@@ -3,6 +3,50 @@
 Versions track build milestones: `0.<milestone>.<patch>`. The project reaches
 `1.0.0` when all 8 milestones are complete and the paper forms are retired.
 
+## [0.10.0] — Remaining documentation deliverables
+
+No application code changed. This closes the two `docs/` deliverables the spec
+asked for and corrects a README that had been describing a four-milestone build
+since milestone 4.
+
+### `docs/data-model.md`
+Mermaid ER diagram of all 19 domain tables with columns and keys, plus the parts
+that a diagram cannot carry: the delete-behaviour table (cascade for parts of a
+thing, restrict for the thing itself, null for the person or definition that
+produced it), the six snapshot columns and what each one defends against, the
+two unique indexes that carry weight, and `stateDiagram` renderings of the run
+and issue lifecycles taken from `RunStatus` and `IssueStatus::allowedNext()`.
+
+Verified against the migrations rather than transcribed from BUILD-CONTRACT §2.
+
+### `docs/user-guide.md`
+Three guides, written for someone who has never used a computer-based form:
+operator (kiosk, PIN, the run form, signing, and the four things that will go
+wrong — offline queue, reload loss, rejection, idle logout), supervisor
+(approval queue, reviewing, the two-person rule, the issue register, and why
+`report.view` and `export.data` are separate), and maintenance manager (the
+compliance formula and its two consequences, template versioning, scheduling and
+the January holiday-calendar problem, QR stickers, exports, and the `APP_KEY`
+dependency in the verification hash).
+
+### README corrections
+- Status table said milestones 5–8 were **Not started**; all four are built.
+- Test section said the Pest suite was unwritten; there are 34 tests.
+- Queue section said exports would queue. They do not — there is no `app/Jobs`,
+  CSV is streamed and PDF renders inline. A worker is optional today.
+- `data-model.md` and `user-guide.md` were listed as pending; both now link.
+
+### Gaps now recorded in the README
+Checking the routes against SPEC §Screens turned up three things built into the
+authorisation layer but never given a screen:
+
+- **Admin → users, roles, settings.** `user.manage` and `UserPolicy` exist;
+  nothing calls them, so operators and PINs are created via seeder or tinker.
+- **Machine profile** (spec screen 5) — reachable data, no per-machine page.
+- **The admin amendment path.** `run.amend` and `ChecklistRunPolicy::amend()`
+  are in place and unreferenced, so correcting an approved run — the escape
+  hatch that makes immutability tolerable — has no route through the UI.
+
 ## [0.9.0] — Milestone 8: PWA, QR stickers, tests, deployment
 
 ### PWA and offline tolerance
@@ -259,9 +303,22 @@ duplicate runs, the exact failure the index exists to prevent.
 
 ## Unreleased
 
-Milestones 1–8 are complete. Remaining before `1.0.0`:
+Milestones 1–8 are complete and all documentation deliverables are written.
+Remaining before `1.0.0`:
 
+**Needs a person, not code**
 - A browser pass on the signature canvas (JavaScript, not covered by the suite)
+- Verification of the 13 checklist templates against the original paper forms —
+  `docs/source-checklists/` is still empty
+- Confirmation of the 11 machine codes before any QR stickers are printed
 - The open questions in `docs/seed-notes.md` §E, several of which are cheap to
   change now and expensive once history exists
-- Verification of the 13 checklist templates against the original paper forms
+
+**Needs building**
+- Admin screens for users, roles and settings
+- The machine profile screen (SPEC screen 5)
+- The admin amendment path for approved runs
+
+**Never executed.** Authored without PHP, Composer or MySQL available. The first
+`composer install && php artisan migrate --seed` is still the first time any of
+this runs.

@@ -9,7 +9,7 @@ auditable history behind it.
 - **No Redis, no paid packages, no external SaaS.** The plant may be offline.
 - **Timezone:** stored UTC, displayed `America/Port_of_Spain`.
 
-> **Build status: milestones 1–4 of 8.** See [Current status](#current-status).
+> **Build status: all 8 milestones built.** See [Current status](#current-status).
 
 ---
 
@@ -38,13 +38,29 @@ auditable history behind it.
 | 2 | Machine + template admin CRUD | Built |
 | 3 | Run generation command + run listing/kiosk | Built |
 | 4 | Run completion form | Built |
-| 5 | Signatures, submission, supervisor approval/rejection | **Not started** |
-| 6 | Issues register | **Not started** |
-| 7 | Dashboards + reports + CSV/PDF export | **Not started** |
-| 8 | PWA/offline, QR stickers, tests, deployment docs | **Not started** |
+| 5 | Signatures, submission, supervisor approval/rejection | Built |
+| 6 | Issues register | Built |
+| 7 | Dashboards + reports + CSV/PDF export | Built |
+| 8 | PWA/offline, QR stickers, tests, deployment docs | Built |
 
-The database schema covers the **whole** domain — including issues, attachments
-and signatures — so milestones 5–8 add screens, not migrations.
+The database schema covered the **whole** domain from milestone 1 — including
+issues, attachments and signatures — so milestones 5–8 added screens, not
+migrations. There has been no migration since the original 22.
+
+Not yet built, and outstanding against [`docs/SPEC.md`](docs/SPEC.md):
+
+- **Admin → users, roles and settings.** Machines, locations, parts, templates
+  and holidays are all manageable in the UI; user and role administration is
+  not, so operators and PINs are currently created through seeders or tinker.
+  The `user.manage` permission and `UserPolicy` already exist — this is a
+  missing screen, not missing authorisation.
+- **The machine profile screen** (spec screen 5) — details, run history, issue
+  history and parts consumption on one page per machine. The data is all
+  reachable today, but through the runs, issues and reports screens rather than
+  from the machine.
+- **The admin amendment path** for correcting an approved run. `run.amend` and
+  `ChecklistRunPolicy::amend()` are in place, but nothing calls them, so a
+  correction after approval currently has no route through the UI at all.
 
 Two things to know before you run it:
 
@@ -241,8 +257,10 @@ Missed runs are never deleted. A gap in the record is the record.
 
 ## Queue worker
 
-Queue driver is `database`. Milestones 1–4 do not queue anything, but PDF
-generation and exports (milestone 7) will.
+Queue driver is `database`. **Nothing currently queues** — there is no
+`app/Jobs`; CSV exports are streamed and PDFs rendered inline on the request.
+A worker is therefore optional today. Run one anyway if you are setting up a
+production host, so the seam exists before the first slow export needs it.
 
 ```bash
 php artisan queue:work --tries=3 --timeout=120
@@ -277,8 +295,14 @@ php artisan test          # or: ./vendor/bin/pest
 CREATE DATABASE branding_pm_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
-The Pest feature suite is **milestone 8** and is not written yet. Factories are
-in place so it can be.
+34 Pest feature tests cover run generation (per-shift, idempotent, working days,
+holidays, inactive templates), the missed-run job either side of the grace
+period, required-item enforcement, signature and PIN confirmation, approval and
+rejection, the two-person rule, issue transitions and scoping, the compliance
+definition, and export permissions.
+
+The signature canvas itself is **not** covered — it is JavaScript on a touch
+device and still needs a human with a tablet.
 
 ---
 
@@ -414,7 +438,6 @@ a comment. A rejected run reopens for the operator with the reason shown.
 Approved runs are immutable — corrections are admin-only amendments, logged.
 A supervisor cannot approve a run they operated themselves; the paper form has
 two signature blocks, and one person signing both defeats the control.
-*(Milestone 5.)*
 
 **Audit.** Nothing that constitutes a record is hard-deleted. Every state
 change, signature and template edit is attributed via
@@ -435,6 +458,7 @@ policies and re-checked in every Livewire action, never in Blade alone.
 | [`docs/BUILD-CONTRACT.md`](docs/BUILD-CONTRACT.md) | Authoritative schema, enums, routes and permission names. Read before changing anything structural |
 | [`docs/SPEC.md`](docs/SPEC.md) | The original functional specification |
 | [`docs/seed-notes.md`](docs/seed-notes.md) | **Read this.** Preserved typos, decisions taken, deviations from the spec, and open questions for the Maintenance Manager |
-| `docs/data-model.md` | ER diagram — *milestone 8* |
-| `docs/user-guide.md` | Operator / supervisor / manager guides — *milestone 8* |
+| [`docs/data-model.md`](docs/data-model.md) | ER diagram, delete behaviour, the snapshot columns and the run/issue lifecycles |
+| [`docs/user-guide.md`](docs/user-guide.md) | One guide each for operator, supervisor and maintenance manager |
+| [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) | Install, permissions, scheduler, kiosk enrolment, backups, upgrades, troubleshooting |
 | `docs/source-checklists/` | The 13 source PDFs — **currently empty, please add them** |
