@@ -78,10 +78,15 @@
                                         </span>
                                     @endif
                                 </td>
-                                <td class="px-4 py-3 text-right">
-                                    <x-button variant="ghost" :href="route('runs.review', $run)">
-                                        {{ $run->qa_verified_at ? __('app.actions.view') : __('app.qa.verify') }}
-                                    </x-button>
+                                <td class="px-4 py-3">
+                                    <div class="flex items-center justify-end gap-1">
+                                        <x-icon-button
+                                            :icon="$run->qa_verified_at ? 'view' : 'verify'"
+                                            :variant="$run->qa_verified_at ? 'ghost' : 'primary'"
+                                            :label="$run->qa_verified_at ? __('app.actions.view') : __('app.qa.verify')"
+                                            :href="route('runs.review', $run)"
+                                        />
+                                    </div>
                                 </td>
                             </tr>
                         @endforeach

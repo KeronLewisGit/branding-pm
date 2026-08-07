@@ -137,30 +137,28 @@
                                 </td>
 
                                 <td class="px-4 py-3">
-                                    <div class="flex flex-wrap items-center justify-end gap-2">
+                                    <div class="flex items-center justify-end gap-1">
                                         @if ($device->is_active)
-                                            <x-button wire:click="openEnrolModal({{ $device->id }})">
-                                                {{ __('app.kiosk_devices.set_up') }}
-                                            </x-button>
+                                            <x-icon-button icon="setup" variant="primary" :label="__('app.kiosk_devices.set_up')"
+                                                wire:click="openEnrolModal({{ $device->id }})" />
                                         @endif
 
-                                        <x-button variant="ghost" wire:click="openEditModal({{ $device->id }})">
-                                            {{ __('app.actions.edit') }}
-                                        </x-button>
+                                        <x-icon-button icon="edit" :label="__('app.actions.edit')"
+                                            wire:click="openEditModal({{ $device->id }})" />
 
-                                        <x-button variant="ghost" wire:click="toggleActive({{ $device->id }})">
-                                            {{ $device->is_active ? __('app.actions.deactivate') : __('app.actions.activate') }}
-                                        </x-button>
+                                        <x-icon-button
+                                            :icon="$device->is_active ? 'deactivate' : 'activate'"
+                                            :label="$device->is_active ? __('app.actions.deactivate') : __('app.actions.activate')"
+                                            wire:click="toggleActive({{ $device->id }})"
+                                        />
 
                                         @if ($device->last_seen_at)
-                                            <x-button variant="ghost" wire:click="confirmRevoke({{ $device->id }})">
-                                                {{ __('app.kiosk_devices.revoke') }}
-                                            </x-button>
+                                            <x-icon-button icon="revoke" :label="__('app.kiosk_devices.revoke')"
+                                                wire:click="confirmRevoke({{ $device->id }})" />
                                         @endif
 
-                                        <x-button variant="danger" wire:click="confirmDelete({{ $device->id }})">
-                                            {{ __('app.actions.delete') }}
-                                        </x-button>
+                                        <x-icon-button icon="delete" variant="danger" :label="__('app.actions.delete')"
+                                            wire:click="confirmDelete({{ $device->id }})" />
                                     </div>
                                 </td>
                             </tr>

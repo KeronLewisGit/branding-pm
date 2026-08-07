@@ -3,6 +3,30 @@
 Versions track build milestones: `0.<milestone>.<patch>`. The project reaches
 `1.0.0` when all 8 milestones are complete and the paper forms are retired.
 
+## [0.17.1] — Icon actions in every list
+
+The machines list carried five word-buttons — Profile, Edit, Parts, Operators,
+Delete — which wrapped onto three lines and made the table look unfinished.
+Kiosk devices had five, users four.
+
+`<x-icon-button>` replaces them everywhere an Actions column exists: machines,
+locations, parts, holidays, templates, the template editor (items and parts),
+kiosk devices, users and the QA queue. One 44px square per action, on one row.
+
+Discoverability is the trade, so the component makes the accessible name
+**non-optional**: `aria-label` for screen readers, `title` for the hover
+tooltip, and the icon itself `aria-hidden` so nothing is announced twice. 44px
+is the WCAG 2.2 target-size minimum, and these sit shoulder to shoulder.
+
+The icon vocabulary lives in one map inside the component, so "edit" looks the
+same on every screen and a new list cannot invent its own pencil. Two places
+that had hand-rolled icon buttons — the template editor's reorder arrows and
+the machine parts modal — now use it too, which deleted four copies of an
+inline SVG.
+
+Filter and form buttons keep their words. This is about the Actions column,
+where the meaning is carried by the row.
+
 ## [0.17.0] — Quality Assurance: a third sign-off
 
 Operator signs, supervisor approves, **QA verifies**. Three people, three
