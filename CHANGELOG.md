@@ -3,6 +3,51 @@
 Versions track build milestones: `0.<milestone>.<patch>`. The project reaches
 `1.0.0` when all 8 milestones are complete and the paper forms are retired.
 
+## [0.14.0] — User administration
+
+**Admin → Users**, gated on `user.manage` — a permission only the `admin`
+role holds, so the screen is admin-only by construction rather than by a
+second check. A maintenance manager runs the plant, not the user list.
+
+Until now there was no way to create a person at all. Operators, their PINs
+and their roles came from a seeder or tinker, so a new starter on a Monday
+needed a developer.
+
+- Create and edit: name, employee number, email (blank for floor operators —
+  most have no company address), role, site, password, PIN, active.
+- **A blank password or PIN on edit means "leave it alone".** Correcting a
+  spelling must not silently lock somebody out of a kiosk.
+- **Clear PIN** for the whiteboard case. A PIN can be replaced, never read
+  back.
+- A *Signs in with* column — password, PIN, both, or **cannot sign in**. That
+  last one is the single most common support question about a floor operator.
+- Removal is a soft delete plus a deactivate. Runs, signatures and issues
+  reference users with `nullOnDelete`, so a hard delete would strip the name
+  off signed work; a maintenance record is never rewritten.
+
+### The lockout guards
+An administrator cannot demote, deactivate or delete **their own account**,
+and the last active administrator cannot be removed by anyone. Both are
+unrecoverable from inside the application — there is no second screen to undo
+them from.
+
+`UserPolicy::before()` returned a blanket `true` for admins, which bypassed
+the policy's own self-delete check because `before()` cannot see the target
+model. It now defers on `delete`.
+
+Worth being honest about the second guard: only admins can reach this screen
+and an admin is already blocked from acting on themselves, so the last-admin
+count check is reachable only when `user.manage` has been granted directly to
+a non-admin. It is defence in depth, and the test exercises it that way rather
+than pretending otherwise.
+
+### Tests
+18 new (99 total, 327 assertions): role-by-role access, a PIN-only operator
+with no email or password, PIN format, employee-number reuse, blank fields
+preserving credentials, PIN replacement and clearing, every self-guard, the
+last-admin guard, and that a spare administrator *can* still be deactivated —
+a guard that fired there would make the role impossible to hand over.
+
 ## [0.13.1] — Issues scope tighter than runs
 
 Two scopes now, because the two screens want opposite things.
