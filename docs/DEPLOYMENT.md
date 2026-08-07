@@ -171,13 +171,45 @@ application code.
 
 ## 7. Kiosk tablets
 
-1. Sign in as an admin, create the device under kiosk management, then open
-   `/kiosk/enrol/{device}` **on the tablet itself**. That plants the signed
-   device cookie; without it the tablet gets the "not enrolled" screen.
-2. Add the site to the home screen — `start_url` is `/kiosk`, and it launches
-   standalone with no browser chrome.
-3. The cookie is long-lived but not eternal. Re-enrol after a factory reset,
-   a browser-data wipe, or a change of tablet.
+A tablet must be enrolled **once** before the kiosk will open on it. Until it
+is, `/kiosk` returns the "not enrolled" screen — and a clean install has no
+devices at all, so this is the first thing to do after seeding.
+
+1. **Admin → Kiosk Tablets → Add a tablet.** Give it a name somebody can find
+   on a shelf ("Digital Print — wall tablet"). The token is generated for you
+   and never displayed; it is the shared secret between this row and the
+   tablet's cookie.
+2. **Enrol a tablet.** This shows a QR code and a link, both good for 15
+   minutes. Scan it with the tablet's camera. The tablet opens the kiosk and
+   stays enrolled — the cookie lasts about five years.
+
+   The link carries its own signature and needs **no login**, which is the
+   point: the alternative is typing an admin password into a shared shop-floor
+   device in front of whoever is standing there. Anyone who opens the link
+   before it expires turns their own browser into that kiosk; they would still
+   need an operator PIN to record anything, and you can revoke it (below).
+   Generate a fresh link rather than saving or forwarding one.
+3. **Add the site to the home screen** — `start_url` is `/kiosk`, and it
+   launches standalone with no browser chrome. Note this needs HTTPS; iOS in
+   particular will not register the service worker over plain `http://`, so
+   over HTTP you get a browser tab and no offline queue.
+4. Re-enrol after a factory reset, a browser-data wipe, or a change of tablet.
+
+**When a tablet goes missing.** Two buttons, and the difference matters:
+
+| Button | Effect |
+|---|---|
+| **Deactivate** | The tablet is locked out on its very next tap. Reversible — activate it and the same tablet works again, no re-enrolment. |
+| **Un-enrol** | Rotates the token, so every browser enrolled as this device drops to the "not enrolled" screen. The entry and its history survive, so the replacement tablet enrols under the same name. Not reversible — the old tablet must be enrolled again. |
+| **Delete** | Removes the entry entirely. Use Un-enrol instead unless the device is genuinely gone for good. |
+
+Both take effect immediately: `EnsureKioskDevice` looks the token up on every
+request, through an `is_active` scope. There is no cache to wait out.
+
+**The kiosk address must be stable.** Tablets remember the URL they were
+enrolled on, and the PWA `start_url` is absolute. A DHCP lease that moves will
+strand every tablet. Give the host a DHCP reservation or a DNS name before
+enrolling anything.
 
 Offline behaviour is scoped deliberately (SPEC §Non-Functional): a run that is
 **already open** stays completable, queuing answers in IndexedDB and syncing

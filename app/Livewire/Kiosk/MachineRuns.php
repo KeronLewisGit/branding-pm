@@ -14,17 +14,22 @@ use Livewire\Attributes\Layout;
 use Livewire\Component;
 
 /**
- * Kiosk machine page (route `kiosk.machine`, URI `/m/{machine}`) — the QR
+ * Kiosk machine page (route `kiosk.machine`, URI `/m/{code}`) — the QR
  * deep-link target. Shows the paper form's header block and today's due
  * checklist(s) as large tappable cards.
  *
- * The {machine} segment is accepted as a STRING, not an implicit model
- * binding, on purpose: `Machine::getRouteKeyName()` is `code`, and an
- * implicit binding would turn an unknown or mistyped QR slug into a bare
- * 404. A sticker that peels, smudges or outlives its machine must produce a
- * clear on-screen message on the kiosk, so the lookup is done here and the
- * failure modes (unknown / inactive / out of scope) each render friendly
- * kiosk copy instead.
+ * The {code} segment is accepted as a STRING, not an implicit model binding,
+ * on purpose: an implicit binding would turn an unknown or mistyped QR slug
+ * into a bare 404. A sticker that peels, smudges or outlives its machine must
+ * produce a clear on-screen message on the kiosk, so the lookup is done here
+ * and the failure modes (unknown / inactive / out of scope) each render
+ * friendly kiosk copy instead.
+ *
+ * The route parameter must stay named `code`. Livewire's ImplicitRouteBinding
+ * intersects route parameters with public property NAMES, so a parameter
+ * named `machine` would bind to $machine below (typed ?Machine) and resolve
+ * the model before mount() ran, defeating all of the above. `code` matches
+ * the public string $code and is passed through untouched.
  */
 #[Layout('layouts::kiosk')]
 class MachineRuns extends Component
@@ -37,12 +42,12 @@ class MachineRuns extends Component
     /** ok | unknown | inactive | forbidden */
     public string $state = 'ok';
 
-    public function mount(string $machine): void
+    public function mount(string $code): void
     {
-        $this->code = $machine;
+        $this->code = $code;
 
         $found = Machine::query()
-            ->where('code', $machine)
+            ->where('code', $code)
             ->with(['location:id,name,floor,site_id', 'location.site:id,name'])
             ->first();
 

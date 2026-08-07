@@ -729,7 +729,7 @@ class RunForm extends Component
         // would land on the "this tablet is not enrolled" screen.
         if (session()->has('kiosk.device_id')) {
             $this->redirectRoute('kiosk.machine', [
-                'machine' => $this->run->loadMissing('machine')->machine,
+                'code' => $this->run->loadMissing('machine')->machine->code,
             ]);
 
             return;

@@ -57,7 +57,7 @@
                 ?>
 
                 <a
-                    href="<?php echo e(route('kiosk.machine', $machine)); ?>"
+                    href="<?php echo e(route('kiosk.machine', ['code' => $machine->code])); ?>"
                     <?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::$currentLoop['key'] = 'machine-'.e($machine->id).''; ?>wire:key="machine-<?php echo e($machine->id); ?>"
                     class="flex min-h-[140px] flex-col justify-between rounded-2xl p-5 active:bg-slate-800
                         <?php echo e($hasBreakdown

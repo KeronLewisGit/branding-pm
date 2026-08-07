@@ -49,11 +49,11 @@ migrations. There has been no migration since the original 22.
 
 Not yet built, and outstanding against [`docs/SPEC.md`](docs/SPEC.md):
 
-- **Admin → users, roles and settings.** Machines, locations, parts, templates
-  and holidays are all manageable in the UI; user and role administration is
-  not, so operators and PINs are currently created through seeders or tinker.
-  The `user.manage` permission and `UserPolicy` already exist — this is a
-  missing screen, not missing authorisation.
+- **Admin → users, roles and settings.** Machines, locations, parts, templates,
+  holidays and kiosk tablets are all manageable in the UI; user and role
+  administration is not, so operators and PINs are currently created through
+  seeders or tinker. The `user.manage` permission and `UserPolicy` already
+  exist — this is a missing screen, not missing authorisation.
 - **The machine profile screen** (spec screen 5) — details, run history, issue
   history and parts consumption on one page per machine. The data is all
   reachable today, but through the runs, issues and reports screens rather than

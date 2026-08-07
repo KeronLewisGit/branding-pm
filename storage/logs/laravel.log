@@ -764,3 +764,69 @@ test
 #76 /var/www/html/public/index.php(17): Illuminate\\Foundation\\Application->handleRequest(Object(Illuminate\\Http\\Request))
 #77 {main}
 "} 
+[2026-08-07 15:46:03] local.ERROR: Invalid route action: [KioskDeviceManager]. {"exception":"[object] (UnexpectedValueException(code: 0): Invalid route action: [KioskDeviceManager]. at /var/www/html/vendor/laravel/framework/src/Illuminate/Routing/RouteAction.php:92)
+[stacktrace]
+#0 /var/www/html/vendor/laravel/framework/src/Illuminate/Routing/RouteAction.php(47): Illuminate\\Routing\\RouteAction::makeInvokable('KioskDeviceMana...')
+#1 /var/www/html/vendor/laravel/framework/src/Illuminate/Routing/Route.php(202): Illuminate\\Routing\\RouteAction::parse('admin/kiosk', Array)
+#2 /var/www/html/vendor/laravel/framework/src/Illuminate/Routing/Route.php(183): Illuminate\\Routing\\Route->parseAction(Array)
+#3 /var/www/html/vendor/laravel/framework/src/Illuminate/Routing/Router.php(685): Illuminate\\Routing\\Route->__construct(Array, 'admin/kiosk', Array)
+#4 /var/www/html/vendor/laravel/framework/src/Illuminate/Routing/Router.php(576): Illuminate\\Routing\\Router->newRoute(Array, 'admin/kiosk', Array)
+#5 /var/www/html/vendor/laravel/framework/src/Illuminate/Routing/Router.php(556): Illuminate\\Routing\\Router->createRoute(Array, '/kiosk', Array)
+#6 /var/www/html/vendor/laravel/framework/src/Illuminate/Routing/Router.php(160): Illuminate\\Routing\\Router->addRoute(Array, '/kiosk', 'KioskDeviceMana...')
+#7 /var/www/html/vendor/laravel/framework/src/Illuminate/Support/Facades/Facade.php(364): Illuminate\\Routing\\Router->get('/kiosk', 'KioskDeviceMana...')
+#8 /var/www/html/routes/web.php(202): Illuminate\\Support\\Facades\\Facade::__callStatic('get', Array)
+#9 /var/www/html/vendor/laravel/framework/src/Illuminate/Routing/Router.php(524): Illuminate\\Routing\\RouteFileRegistrar->{closure:/var/www/html/routes/web.php:191}(Object(Illuminate\\Routing\\Router))
+#10 /var/www/html/vendor/laravel/framework/src/Illuminate/Routing/Router.php(480): Illuminate\\Routing\\Router->loadRoutes(Object(Closure))
+#11 /var/www/html/vendor/laravel/framework/src/Illuminate/Routing/RouteRegistrar.php(224): Illuminate\\Routing\\Router->group(Array, Object(Closure))
+#12 /var/www/html/routes/web.php(191): Illuminate\\Routing\\RouteRegistrar->group(Object(Closure))
+#13 /var/www/html/vendor/laravel/framework/src/Illuminate/Routing/RouteFileRegistrar.php(34): require('/var/www/html/r...')
+#14 /var/www/html/vendor/laravel/framework/src/Illuminate/Routing/Router.php(526): Illuminate\\Routing\\RouteFileRegistrar->register('/var/www/html/b...')
+#15 /var/www/html/vendor/laravel/framework/src/Illuminate/Routing/Router.php(480): Illuminate\\Routing\\Router->loadRoutes('/var/www/html/b...')
+#16 /var/www/html/vendor/laravel/framework/src/Illuminate/Routing/RouteRegistrar.php(224): Illuminate\\Routing\\Router->group(Array, '/var/www/html/b...')
+#17 /var/www/html/vendor/laravel/framework/src/Illuminate/Foundation/Configuration/ApplicationBuilder.php(261): Illuminate\\Routing\\RouteRegistrar->group('/var/www/html/b...')
+#18 /var/www/html/vendor/laravel/framework/src/Illuminate/Container/BoundMethod.php(36): Illuminate\\Foundation\\Configuration\\ApplicationBuilder->{closure:Illuminate\\Foundation\\Configuration\\ApplicationBuilder::buildRoutingCallback():210}()
+#19 /var/www/html/vendor/laravel/framework/src/Illuminate/Container/Util.php(43): Illuminate\\Container\\BoundMethod::{closure:Illuminate\\Container\\BoundMethod::call():35}()
+#20 /var/www/html/vendor/laravel/framework/src/Illuminate/Container/BoundMethod.php(84): Illuminate\\Container\\Util::unwrapIfClosure(Object(Closure))
+#21 /var/www/html/vendor/laravel/framework/src/Illuminate/Container/BoundMethod.php(35): Illuminate\\Container\\BoundMethod::callBoundMethod(Object(Illuminate\\Foundation\\Application), Object(Closure), Object(Closure))
+#22 /var/www/html/vendor/laravel/framework/src/Illuminate/Container/Container.php(800): Illuminate\\Container\\BoundMethod::call(Object(Illuminate\\Foundation\\Application), Object(Closure), Array, NULL)
+#23 /var/www/html/vendor/laravel/framework/src/Illuminate/Foundation/Support/Providers/RouteServiceProvider.php(162): Illuminate\\Container\\Container->call(Object(Closure))
+#24 /var/www/html/vendor/laravel/framework/src/Illuminate/Foundation/Support/Providers/RouteServiceProvider.php(59): Illuminate\\Foundation\\Support\\Providers\\RouteServiceProvider->loadRoutes()
+#25 /var/www/html/vendor/laravel/framework/src/Illuminate/Container/BoundMethod.php(36): Illuminate\\Foundation\\Support\\Providers\\RouteServiceProvider->{closure:Illuminate\\Foundation\\Support\\Providers\\RouteServiceProvider::register():53}()
+#26 /var/www/html/vendor/laravel/framework/src/Illuminate/Container/Util.php(43): Illuminate\\Container\\BoundMethod::{closure:Illuminate\\Container\\BoundMethod::call():35}()
+#27 /var/www/html/vendor/laravel/framework/src/Illuminate/Container/BoundMethod.php(84): Illuminate\\Container\\Util::unwrapIfClosure(Object(Closure))
+#28 /var/www/html/vendor/laravel/framework/src/Illuminate/Container/BoundMethod.php(35): Illuminate\\Container\\BoundMethod::callBoundMethod(Object(Illuminate\\Foundation\\Application), Object(Closure), Object(Closure))
+#29 /var/www/html/vendor/laravel/framework/src/Illuminate/Container/Container.php(800): Illuminate\\Container\\BoundMethod::call(Object(Illuminate\\Foundation\\Application), Object(Closure), Array, NULL)
+#30 /var/www/html/vendor/laravel/framework/src/Illuminate/Support/ServiceProvider.php(150): Illuminate\\Container\\Container->call(Object(Closure))
+#31 /var/www/html/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(1161): Illuminate\\Support\\ServiceProvider->callBootedCallbacks()
+#32 /var/www/html/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(1139): Illuminate\\Foundation\\Application->bootProvider(Object(Illuminate\\Foundation\\Support\\Providers\\RouteServiceProvider))
+#33 [internal function]: Illuminate\\Foundation\\Application->{closure:Illuminate\\Foundation\\Application::boot():1138}(Object(Illuminate\\Foundation\\Support\\Providers\\RouteServiceProvider), 'Illuminate\\\\Foun...')
+#34 /var/www/html/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(1138): array_walk(Array, Object(Closure))
+#35 /var/www/html/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/BootProviders.php(17): Illuminate\\Foundation\\Application->boot()
+#36 /var/www/html/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(349): Illuminate\\Foundation\\Bootstrap\\BootProviders->bootstrap(Object(Illuminate\\Foundation\\Application))
+#37 /var/www/html/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(186): Illuminate\\Foundation\\Application->bootstrapWith(Array)
+#38 /var/www/html/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(170): Illuminate\\Foundation\\Http\\Kernel->bootstrap()
+#39 /var/www/html/vendor/laravel/framework/src/Illuminate/Foundation/Http/Kernel.php(144): Illuminate\\Foundation\\Http\\Kernel->sendRequestThroughRouter(Object(Illuminate\\Http\\Request))
+#40 /var/www/html/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(1227): Illuminate\\Foundation\\Http\\Kernel->handle(Object(Illuminate\\Http\\Request))
+#41 /var/www/html/public/index.php(17): Illuminate\\Foundation\\Application->handleRequest(Object(Illuminate\\Http\\Request))
+#42 {main}
+"} 
+[2026-08-07 15:47:00] local.ERROR: Cannot use Livewire\Attributes\Url as Url because the name is already in use {"exception":"[object] (Symfony\\Component\\ErrorHandler\\Error\\FatalError(code: 0): Cannot use Livewire\\Attributes\\Url as Url because the name is already in use at /var/www/html/app/Livewire/Admin/KioskDeviceManager.php:19)
+[stacktrace]
+#0 {main}
+"} 
+[2026-08-07 15:48:00] local.ERROR: Cannot use Livewire\Attributes\Url as Url because the name is already in use {"exception":"[object] (Symfony\\Component\\ErrorHandler\\Error\\FatalError(code: 0): Cannot use Livewire\\Attributes\\Url as Url because the name is already in use at /var/www/html/app/Livewire/Admin/KioskDeviceManager.php:19)
+[stacktrace]
+#0 {main}
+"} 
+[2026-08-07 15:48:17] local.ERROR: Cannot use Livewire\Attributes\Url as Url because the name is already in use {"exception":"[object] (Symfony\\Component\\ErrorHandler\\Error\\FatalError(code: 0): Cannot use Livewire\\Attributes\\Url as Url because the name is already in use at /var/www/html/app/Livewire/Admin/KioskDeviceManager.php:19)
+[stacktrace]
+#0 {main}
+"} 
+[2026-08-07 15:48:18] local.ERROR: Cannot use Livewire\Attributes\Url as Url because the name is already in use {"exception":"[object] (Symfony\\Component\\ErrorHandler\\Error\\FatalError(code: 0): Cannot use Livewire\\Attributes\\Url as Url because the name is already in use at /var/www/html/app/Livewire/Admin/KioskDeviceManager.php:19)
+[stacktrace]
+#0 {main}
+"} 
+[2026-08-07 15:48:19] local.ERROR: Cannot use Livewire\Attributes\Url as Url because the name is already in use {"exception":"[object] (Symfony\\Component\\ErrorHandler\\Error\\FatalError(code: 0): Cannot use Livewire\\Attributes\\Url as Url because the name is already in use at /var/www/html/app/Livewire/Admin/KioskDeviceManager.php:19)
+[stacktrace]
+#0 {main}
+"} 
