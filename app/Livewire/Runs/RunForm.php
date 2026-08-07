@@ -791,21 +791,71 @@ class RunForm extends Component
 
     /**
      * First interaction flips pending → in_progress exactly once, with a
-     * server-side started_at.
+     * server-side started_at, and claims the sheet for whoever is working it.
+     *
+     * Self-assignment is the whole model: nobody hands a sheet out. An
+     * operator walks to a machine, PINs in, and the first tap makes it
+     * theirs.
      */
     private function ensureStarted(): void
     {
-        if ($this->run->status !== RunStatus::Pending) {
+        if ($this->run->status === RunStatus::Pending) {
+            $this->run->update([
+                'status' => RunStatus::InProgress,
+                'started_at' => now(),
+                'operator_id' => auth()->id(),
+            ]);
+
             return;
         }
 
-        $this->run->update([
-            'status' => RunStatus::InProgress,
-            'started_at' => now(),
-            // Not spelled out in the contract: the first user to touch the
-            // run is recorded as its operator so listings show who is on it.
-            // Milestone 5's signature + PIN step re-confirms identity.
-            'operator_id' => $this->run->operator_id ?? auth()->id(),
+        $this->claimFromPreviousOperator();
+    }
+
+    /**
+     * Record a hand-over when a second person continues someone else's sheet.
+     *
+     * Shifts change mid-checklist, and a tablet gets picked up by whoever is
+     * free. Blocking that would strand half-finished work; letting it happen
+     * silently would leave the record naming somebody who did not do the
+     * second half. So it is allowed, moved and logged.
+     *
+     * The signature step still overwrites `operator_id` with whoever signs
+     * (seed-notes D13) — that is the attestation, and this only keeps the
+     * in-progress listing honest about who has it now.
+     */
+    private function claimFromPreviousOperator(): void
+    {
+        $userId = auth()->id();
+        $previousId = $this->run->operator_id;
+
+        if ($previousId === null) {
+            $this->run->update(['operator_id' => $userId]);
+
+            return;
+        }
+
+        if ($previousId === $userId || ! $this->run->status->isEditable()) {
+            return;
+        }
+
+        $previous = User::query()->find($previousId);
+
+        $this->run->update(['operator_id' => $userId]);
+
+        activity('run')
+            ->causedBy(auth()->user())
+            ->performedOn($this->run)
+            ->withProperties([
+                'previous_operator_id' => $previousId,
+                'previous_operator' => $previous?->full_name,
+            ])
+            ->log('run.taken_over');
+
+        // Said once, on screen: the person picking the sheet up should know
+        // they are now the one it will be signed by.
+        $this->notice = __('app.runs.taken_over_from', [
+            'name' => $previous?->full_name ?? __('app.runs.another_operator'),
         ]);
     }
 

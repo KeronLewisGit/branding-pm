@@ -135,6 +135,9 @@
                                             <x-button variant="ghost" wire:click="openPartsModal({{ $machine->id }})">
                                                 {{ __('app.machines.manage_parts') }}
                                             </x-button>
+                                            <x-button variant="ghost" wire:click="openOperatorsModal({{ $machine->id }})">
+                                                {{ __('app.machines.manage_operators') }}
+                                            </x-button>
                                         @endcan
                                         @can('delete', $machine)
                                             <x-button variant="danger" wire:click="confirmDelete({{ $machine->id }})">
@@ -308,6 +311,55 @@
                     <x-button wire:click="attachPart" class="shrink-0">{{ __('app.actions.add') }}</x-button>
                 </div>
                 @error('attachPartId') <p class="mt-1 text-sm text-rose-600">{{ $message }}</p> @enderror
+            </div>
+
+            <div class="flex justify-end pt-4">
+                <x-button variant="ghost" x-on:click="show = false">{{ __('app.actions.close') }}</x-button>
+            </div>
+        @endif
+    </x-modal>
+
+    {{-- Operators --}}
+    <x-modal name="machine-operators" max-width="2xl" :title="$this->operatorsMachine ? __('app.machines.operators_for', ['machine' => $this->operatorsMachine->name]) : __('app.machines.manage_operators')">
+        @if ($this->operatorsMachine)
+            {{--
+                Said plainly, because a list of names next to a machine reads
+                like a permission list and is not one.
+            --}}
+            <x-alert type="info">{{ __('app.machines.operators_not_a_gate') }}</x-alert>
+
+            <div class="mt-4">
+                @if ($this->operatorsMachine->operators->isEmpty())
+                    <p class="text-base text-slate-500">{{ __('app.machines.no_operators') }}</p>
+                @else
+                    <ul class="divide-y divide-slate-100 rounded-lg border border-slate-200">
+                        @foreach ($this->operatorsMachine->operators as $operator)
+                            <li wire:key="machine-operator-{{ $operator->id }}" class="flex items-center justify-between gap-3 px-4 py-3">
+                                <div class="min-w-0">
+                                    <p class="truncate font-semibold text-slate-900">{{ $operator->full_name }}</p>
+                                    <p class="text-sm text-slate-500">#{{ $operator->employee_number }}</p>
+                                </div>
+                                <x-button variant="ghost" wire:click="detachOperator({{ $operator->id }})">
+                                    {{ __('app.actions.delete') }}
+                                </x-button>
+                            </li>
+                        @endforeach
+                    </ul>
+                @endif
+            </div>
+
+            <div class="mt-5">
+                <label for="attach-operator" class="mb-1 block text-base font-semibold">{{ __('app.machines.assign_operator') }}</label>
+                <div class="flex flex-col gap-3 sm:flex-row">
+                    <x-select id="attach-operator" wire:model="attachOperatorId" class="w-full">
+                        <option value="">{{ __('app.runs.operator') }}…</option>
+                        @foreach ($this->availableOperators as $candidate)
+                            <option value="{{ $candidate->id }}">{{ $candidate->full_name }} (#{{ $candidate->employee_number }})</option>
+                        @endforeach
+                    </x-select>
+                    <x-button wire:click="attachOperator" class="shrink-0">{{ __('app.actions.add') }}</x-button>
+                </div>
+                @error('attachOperatorId') <p class="mt-1 text-sm text-rose-600">{{ $message }}</p> @enderror
             </div>
 
             <div class="flex justify-end pt-4">

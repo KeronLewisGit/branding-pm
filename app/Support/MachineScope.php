@@ -12,9 +12,23 @@ use Illuminate\Database\Eloquent\Builder;
  * The single implementation of operator machine scoping (BUILD-CONTRACT §5).
  *
  * - Users with `machine.manage` see every machine.
- * - Otherwise, the machines assigned in `user_machine`.
- * - If the user has NO assignments, every machine at their `default_site_id`
- *   (a user with neither assignments nor a default site sees nothing).
+ * - Everyone else sees every machine at their **site**.
+ *
+ * `user_machine` assignment deliberately does **not** narrow this. It marks
+ * which machines are somebody's usual work — the kiosk surfaces those first —
+ * and nothing more.
+ *
+ * That is a change from the original behaviour, where an assignment was a
+ * fence: assigned users saw only their machines, and unassigned users saw
+ * their whole site. The result was backwards. Assigning somebody to the two
+ * machines they normally run *removed* their ability to cover a third when a
+ * shift was short, and the fix was for an administrator to edit a pivot table
+ * that had no screen. Nobody was going to do that at 6am, so in practice the
+ * assignment table stayed empty and the fence never existed.
+ *
+ * The site remains the boundary. An operator cannot see another site's work.
+ *
+ * @see Machine::operators()
  */
 class MachineScope
 {
@@ -24,16 +38,54 @@ class MachineScope
             return Machine::query();
         }
 
-        $assignedIds = $user->machines()->pluck('machines.id');
+        $siteIds = static::siteIdsFor($user);
 
-        if ($assignedIds->isNotEmpty()) {
-            return Machine::query()->whereIn('machines.id', $assignedIds);
+        if ($siteIds === []) {
+            // Neither a default site nor an assignment to infer one from —
+            // there is nothing this user can be shown.
+            return Machine::query()->whereRaw('1 = 0');
         }
 
         return Machine::query()->whereHas(
             'location',
-            fn (Builder $query) => $query->where('site_id', $user->default_site_id),
+            fn (Builder $query) => $query->whereIn('site_id', $siteIds),
         );
+    }
+
+    /**
+     * The sites a user belongs to: their default site, plus the sites of any
+     * machines they are assigned to.
+     *
+     * The second half matters because `default_site_id` is nullable and no
+     * screen sets it. A user assigned to machines but with no default site
+     * would otherwise see nothing at all — the exact operator most likely to
+     * have been set up in a hurry.
+     *
+     * @return list<int>
+     */
+    private static function siteIdsFor(User $user): array
+    {
+        $siteIds = $user->default_site_id !== null ? [$user->default_site_id] : [];
+
+        $assignedSiteIds = Machine::query()
+            ->whereIn('machines.id', $user->machines()->select('machines.id'))
+            ->join('locations', 'locations.id', '=', 'machines.location_id')
+            ->distinct()
+            ->pluck('locations.site_id')
+            ->all();
+
+        return array_values(array_unique([...$siteIds, ...$assignedSiteIds]));
+    }
+
+    /**
+     * Machine ids this user is explicitly assigned to — "mine", for ordering
+     * and highlighting. Never a permission check.
+     *
+     * @return list<int>
+     */
+    public static function assignedIds(User $user): array
+    {
+        return $user->machines()->pluck('machines.id')->all();
     }
 
     public static function allows(User $user, Machine $machine): bool

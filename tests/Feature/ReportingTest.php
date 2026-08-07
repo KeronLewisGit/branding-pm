@@ -11,6 +11,7 @@ use App\Models\Location;
 use App\Models\Machine;
 use App\Models\Site;
 use App\Models\User;
+use App\Support\Reporting\ChecksCompletedReport;
 use App\Support\Reporting\Compliance;
 use App\Support\Reporting\ComplianceReport;
 use App\Support\Reporting\ReportFilters;
@@ -185,4 +186,74 @@ it('changes the verification hash when the record changes', function (): void {
         // A sheet printed before the change no longer verifies.
         ->and(RunVerification::matches($run->fresh(), $before))->toBeFalse()
         ->and(RunVerification::matches($run->fresh(), $after))->toBeTrue();
+});
+
+/*
+|--------------------------------------------------------------------------
+| Checks completed — who did it, and when
+|--------------------------------------------------------------------------
+*/
+
+it('names the operator and both dates for every completed check', function (): void {
+    [$machine, $site] = machineWithRuns([RunStatus::Approved]);
+
+    $operator = User::factory()->operator()->create([
+        'full_name' => 'Darnell Joseph',
+        'employee_number' => 'OP-1001',
+        'default_site_id' => $site->id,
+    ]);
+
+    $run = ChecklistRun::query()->where('machine_id', $machine->id)->firstOrFail();
+    $run->update([
+        'operator_id' => $operator->id,
+        'submitted_at' => now(),
+    ]);
+
+    $manager = User::factory()->manager()->create(['default_site_id' => $site->id]);
+    $rows = (new ChecksCompletedReport)->rows(filtersFor($manager));
+
+    expect($rows)->toHaveCount(1);
+
+    $row = $rows->first();
+
+    expect($row['operator'])->toBe('Darnell Joseph')
+        ->and($row['employee_number'])->toBe('OP-1001')
+        ->and($row['machine'])->toBe($machine->name)
+        // The day it was due and the moment it was signed are different
+        // facts; conflating them would hide lateness.
+        ->and($row['scheduled_for'])->toBe($run->scheduled_for->format('d M Y'))
+        ->and($row['completed_at'])->not->toBe('—');
+});
+
+it('dates a check by the day it was scheduled, not a timezone-shifted one', function (): void {
+    [$machine, $site] = machineWithRuns([RunStatus::Approved]);
+
+    $operator = User::factory()->operator()->create(['default_site_id' => $site->id]);
+
+    $run = ChecklistRun::query()->where('machine_id', $machine->id)->firstOrFail();
+    $run->update(['operator_id' => $operator->id, 'submitted_at' => now()]);
+
+    $manager = User::factory()->manager()->create(['default_site_id' => $site->id]);
+    $row = (new ChecksCompletedReport)->rows(filtersFor($manager))->first();
+
+    // `scheduled_for` is a calendar date cast to midnight UTC. Converting it
+    // into America/Port_of_Spain (UTC-4) renders every run a day early.
+    expect($row['scheduled_for'])->toBe($run->scheduled_for->format('d M Y'));
+});
+
+it('leaves unfinished work out of the completed-checks report', function (): void {
+    [$machine, $site] = machineWithRuns([RunStatus::InProgress]);
+
+    $operator = User::factory()->operator()->create(['default_site_id' => $site->id]);
+
+    // Claimed, so it has an operator — but never signed, so it is not a
+    // completed check. Outstanding work is the missed-checks report's job.
+    ChecklistRun::query()->where('machine_id', $machine->id)->update([
+        'operator_id' => $operator->id,
+        'submitted_at' => null,
+    ]);
+
+    $manager = User::factory()->manager()->create(['default_site_id' => $site->id]);
+
+    expect((new ChecksCompletedReport)->rows(filtersFor($manager)))->toBeEmpty();
 });
