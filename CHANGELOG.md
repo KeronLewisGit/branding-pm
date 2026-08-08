@@ -3,6 +3,38 @@
 Versions track build milestones: `0.<milestone>.<patch>`. The project reaches
 `1.0.0` when all 8 milestones are complete and the paper forms are retired.
 
+## [0.21.2] — One way out of a preview
+
+The sidebar picker is now hidden while a preview is running. The banner's
+**Back to Administrator** button is the only exit, so there is one obvious way
+back and no second control quietly contradicting the banner. Switching roles
+is stop-then-pick — a click more, and a good deal clearer.
+
+That made the banner load-bearing, which exposed a gap: **`RunForm` renders in
+the kiosk layout**, which has no sidebar and had no banner. An administrator
+previewing an operator could open a run and find no way back at all. The
+banner is now a shared partial included by both layouts.
+
+It still only renders when a preview is active, which requires an
+authenticated administrator's session — a real operator at a kiosk never has
+one, and the shop-floor screens are unchanged. Verified on an enrolled tablet.
+
+### A regression caught on the pilot
+0.21.1 added `X-Forwarded-Host` and `-Port` alongside `-For` and `-Proto`.
+nginx's `$host` omits the port, and a *trusted* `X-Forwarded-Host` makes
+Laravel rebuild request URLs from it — so `:8088` vanished and **every signed
+URL stopped validating**. Kiosk enrolment broke completely, and silently: the
+403 looks exactly like an expired link.
+
+Both headers are dropped. They were the least useful of the four, `APP_URL`
+already tells the application what it is called, and a trusted
+`X-Forwarded-Host` is a host-header poisoning vector in its own right.
+`X-Forwarded-For` and `-Proto` stay, and the audit IP is still unspoofable —
+re-tested both.
+
+Found only because hiding the picker meant re-testing the kiosk. Nothing in
+the suite covers a signed URL crossing a real web server.
+
 ## [0.21.1] — Proxy-aware client IPs (found by testing view-as on the pilot)
 
 Walking "view as" through the live pilot exercised the audit log properly for

@@ -260,7 +260,13 @@
                 gone — and the control to get back out must not vanish with
                 them. Hidden on the icon rail, where a select has nowhere to go.
             --}}
-            @if (auth()->user()?->hasRole('admin'))
+            {{--
+                Hidden while a preview is running: with the banner's button as
+                the only exit there is one obvious way back, and no second
+                control quietly contradicting the banner. Switching roles is
+                stop-then-pick, which is a click more and a good deal clearer.
+            --}}
+            @if (auth()->user()?->hasRole('admin') && ! \App\Support\ViewAs::active())
                 <div class="shrink-0 border-t border-slate-800 px-4 py-3 [.is-collapsed_&]:hidden">
                     <label for="view-as-role" class="block text-xs font-semibold uppercase tracking-wider text-slate-400">
                         {{ __('app.view_as.label') }}
@@ -333,29 +339,7 @@
                 </header>
             @endisset
 
-            {{--
-                Impossible to miss on purpose. Somebody who forgets they are
-                previewing will report missing features as bugs.
-            --}}
-            @if (\App\Support\ViewAs::active())
-                <div class="border-b-2 border-amber-400 bg-amber-100 px-4 py-3 sm:px-6 lg:px-8" role="status">
-                    <div class="mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-3">
-                        <div class="min-w-0">
-                            <p class="text-base font-bold text-amber-900">
-                                {{ __('app.view_as.active', ['role' => __('app.roles.'.\App\Support\ViewAs::role())]) }}
-                            </p>
-                            <p class="text-sm text-amber-800">{{ __('app.view_as.active_hint') }}</p>
-                        </div>
-
-                        <form method="POST" action="{{ route('view-as.stop') }}" class="shrink-0">
-                            @csrf
-                            <x-button type="submit" class="!min-h-11 !text-base">
-                                {{ __('app.view_as.stop') }}
-                            </x-button>
-                        </form>
-                    </div>
-                </div>
-            @endif
+            @include('partials.view-as-banner')
 
             <main class="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 lg:px-8">
                 @if (session('status'))
