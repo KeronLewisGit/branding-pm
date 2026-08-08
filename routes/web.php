@@ -8,6 +8,7 @@ use App\Http\Controllers\Kiosk\KioskSessionController;
 use App\Http\Controllers\MediaController;
 use App\Http\Controllers\ReportExportController;
 use App\Http\Controllers\RunPdfController;
+use App\Http\Controllers\ViewAsController;
 use App\Livewire\Admin\HolidayManager;
 use App\Livewire\Admin\KioskDeviceManager;
 use App\Livewire\Admin\LocationManager;
@@ -138,6 +139,14 @@ Route::middleware(['auth', 'permission:kiosk.manage'])->group(function (): void 
 */
 Route::middleware(['auth', 'kiosk.idle'])->group(function (): void {
     Route::get('/dashboard', Dashboard::class)->name('dashboard');
+
+    /*
+     * "View as" — an administrator previewing another role's permissions.
+     * POST because it changes session state; gated on the REAL admin role, so
+     * an administrator midway through a preview can still get back out.
+     */
+    Route::post('/view-as', [ViewAsController::class, 'start'])->name('view-as.start');
+    Route::post('/view-as/stop', [ViewAsController::class, 'stop'])->name('view-as.stop');
 
     /*
     | Reports (milestone 7). `report.view` shows the numbers; taking them out

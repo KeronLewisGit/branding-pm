@@ -35,6 +35,7 @@ return [
         'admin' => 'Admin',
         'group_plant' => 'Plant',
         'group_system' => 'System',
+        'group_work' => 'Work',
         'profile' => 'Profile',
         'logout' => 'Log Out',
     ],
@@ -195,6 +196,17 @@ return [
 
     // Role names — spatie roles, BUILD-CONTRACT section 5. Cumulative: each
     // holds everything below it.
+    // Admin "view as" — previewing the application through another role.
+    'view_as' => [
+        'label' => 'View as',
+        'hint' => 'Preview the app with another role’s permissions. It only ever removes access, never adds any — and everything you do is still recorded against your own account.',
+        'active' => 'Viewing as :role',
+        'active_hint' => 'You are seeing what this role sees. Your own actions are still logged as you.',
+        'stop' => 'Back to Administrator',
+        'choose' => 'Choose a role…',
+        'apply' => 'View',
+    ],
+
     'roles' => [
         'operator' => 'Operator',
         'supervisor' => 'Supervisor',

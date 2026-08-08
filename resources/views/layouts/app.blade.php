@@ -128,6 +128,18 @@
                     </x-nav-link>
                 @endcan
 
+                {{--
+                    Group 1 — the day's work. Dashboard stays above it as the
+                    landing page; everything you *do* lives in here.
+                --}}
+                @canany(['run.view', 'run.approve', 'run.verify', 'issue.view', 'report.view'])
+                    <x-nav-group
+                        group="work"
+                        :label="__('app.nav.group_work')"
+                        :active="request()->routeIs('runs.*') || request()->routeIs('issues.*') || request()->routeIs('reports.*')"
+                    >
+                        <x-slot:icon>{!! $ico('<path d="M20 7h-9"/><path d="M14 17H5"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/>') !!}</x-slot:icon>
+
                 @can('run.view')
                     <x-nav-link :href="route('runs.index')" :active="request()->routeIs('runs.index') || request()->routeIs('runs.show')">
                         <x-slot:icon>{!! $ico('<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>') !!}</x-slot:icon>
@@ -162,6 +174,9 @@
                         {{ __('app.nav.reports') }}
                     </x-nav-link>
                 @endcan
+
+                    </x-nav-group>
+                @endcanany
 
                 {{--
                     Group 2 — the plant. Folded by default: this is what a
@@ -239,6 +254,41 @@
                 @endcanany
             </nav>
 
+            {{--
+                View-as picker. Gated on the REAL admin role, not `@can`,
+                because while previewing an operator the admin permissions are
+                gone — and the control to get back out must not vanish with
+                them. Hidden on the icon rail, where a select has nowhere to go.
+            --}}
+            @if (auth()->user()?->hasRole('admin'))
+                <div class="shrink-0 border-t border-slate-800 px-4 py-3 [.is-collapsed_&]:hidden">
+                    <label for="view-as-role" class="block text-xs font-semibold uppercase tracking-wider text-slate-400">
+                        {{ __('app.view_as.label') }}
+                    </label>
+
+                    <form method="POST" action="{{ route('view-as.start') }}" class="mt-2 flex gap-2">
+                        @csrf
+                        <select id="view-as-role" name="role"
+                                class="min-h-11 min-w-0 flex-1 rounded-lg border-slate-600 bg-slate-800 text-sm text-slate-100 focus:border-sky-500 focus:ring-sky-500">
+                            <option value="">{{ __('app.view_as.choose') }}</option>
+                            @foreach (\App\Support\ViewAs::selectableRoles() as $previewRole)
+                                <option value="{{ $previewRole }}" @selected(\App\Support\ViewAs::role() === $previewRole)>
+                                    {{ __('app.roles.'.$previewRole) }}
+                                </option>
+                            @endforeach
+                        </select>
+
+                        <x-button
+                            type="submit"
+                            variant="ghost"
+                            class="!min-h-11 shrink-0 border-slate-600 !px-3 !text-sm text-slate-100 hover:bg-slate-800"
+                        >
+                            {{ __('app.view_as.apply') }}
+                        </x-button>
+                    </form>
+                </div>
+            @endif
+
             {{-- Pinned to the bottom of the sticky column, above the scroll. --}}
             <div class="shrink-0 border-t border-slate-800 px-4 py-3 [.is-collapsed_&]:px-2">
                 <p class="truncate text-sm text-white [.is-collapsed_&]:hidden">
@@ -282,6 +332,30 @@
                     </div>
                 </header>
             @endisset
+
+            {{--
+                Impossible to miss on purpose. Somebody who forgets they are
+                previewing will report missing features as bugs.
+            --}}
+            @if (\App\Support\ViewAs::active())
+                <div class="border-b-2 border-amber-400 bg-amber-100 px-4 py-3 sm:px-6 lg:px-8" role="status">
+                    <div class="mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-3">
+                        <div class="min-w-0">
+                            <p class="text-base font-bold text-amber-900">
+                                {{ __('app.view_as.active', ['role' => __('app.roles.'.\App\Support\ViewAs::role())]) }}
+                            </p>
+                            <p class="text-sm text-amber-800">{{ __('app.view_as.active_hint') }}</p>
+                        </div>
+
+                        <form method="POST" action="{{ route('view-as.stop') }}" class="shrink-0">
+                            @csrf
+                            <x-button type="submit" class="!min-h-11 !text-base">
+                                {{ __('app.view_as.stop') }}
+                            </x-button>
+                        </form>
+                    </div>
+                </div>
+            @endif
 
             <main class="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 lg:px-8">
                 @if (session('status'))
