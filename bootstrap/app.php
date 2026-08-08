@@ -16,6 +16,29 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
+        /*
+         * Trust X-Forwarded-* only from a proxy on a private network.
+         *
+         * Two things depend on this. The audit log records `request()->ip()`
+         * on every state change — without it, a reverse proxy or Docker's
+         * published-port NAT means every entry says "the proxy" and the
+         * requirement to log an actor's IP is met in name only. And
+         * `$request->secure()` is what decides whether HSTS is sent; behind a
+         * TLS terminator the connection to PHP is plain HTTP, so without this
+         * the header never goes out.
+         *
+         * Private ranges rather than `*`: trusting every source would let
+         * anyone who can reach the app directly forge their own address in
+         * the audit trail by sending the header themselves.
+         */
+        $middleware->trustProxies(at: [
+            '10.0.0.0/8',
+            '172.16.0.0/12',
+            '192.168.0.0/16',
+            '127.0.0.1/32',
+            '::1/128',
+        ]);
+
         // Response security headers on every web response (OWASP Secure
         // Headers). Appended, so it wraps everything the group produces.
         $middleware->web(append: [
