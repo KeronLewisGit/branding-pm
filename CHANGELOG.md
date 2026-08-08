@@ -3,6 +3,58 @@
 Versions track build milestones: `0.<milestone>.<patch>`. The project reaches
 `1.0.0` when all 8 milestones are complete and the paper forms are retired.
 
+## [0.23.0] — One list of roles, and the bug four copies of it caused
+
+### Fixed: Quality Assurance officers were being silently demoted
+`UserManager` filtered the roles it offered through a private constant that
+listed only four of the five roles — `quality_assurance` was missing. The
+consequences ran deeper than a short dropdown:
+
+- the role could not be **assigned** to anybody from the only screen that
+  assigns roles;
+- **saving an existing QA officer's record took the role away.** The form
+  loads a role, the dropdown cannot represent it, and `save()` calls
+  `syncRoles([$role])` — so an administrator correcting somebody's phone
+  number would demote them to operator. Validation rejected the submission
+  with "The selected Role is invalid", which names neither the cause nor the
+  person it concerns.
+
+### Why it happened, and what stops it happening again
+The five roles were written out by hand in **four separate places**. Adding
+Quality Assurance meant editing all four, and one was missed. That is not
+carelessness; it is what a hand-copied list does.
+
+`App\Support\Roles` is now the single source of truth. `ViewAs`,
+`Walkthrough` (both copies) and `UserManager` derive from it — the orders they
+each need (most-senior-first, everything-but-admin) are derived, not
+re-typed. `RolesAndPermissionsSeeder` remains the authority on what each role
+may *do*; `Roles` is the authority on which roles exist.
+
+`UserManager::roles()` additionally **appends any seeded role it does not
+recognise** rather than dropping it. A role missing from the dropdown deletes
+data; a role listed out of order does not.
+
+### Fixed: walkthrough cards could be written and never shown
+`Walkthrough` counted each role's cards in a `STEP_COUNTS` constant kept
+alongside the language file. Adding a fifth card to a four-card role left it
+written, translated and invisible, with nothing to report the discrepancy.
+The cards are now read from the language file itself.
+
+### Redundancies removed
+- Nine enums carried a **byte-identical** copy of `options()` — now one
+  `HasOptions` trait.
+- Three superseded kiosk strings (`not_enrolled_title`, `not_enrolled_help`,
+  `device_not_registered`, replaced by the device-type-aware `not_enrolled`
+  block) and the unused `view_as.hint` deleted from `lang/en/app.php`.
+
+### Guarded
+Four new tests, each confirmed to **fail against the previous code**: every
+seeded role is offered; editing a QA officer does not demote them; the most
+senior role is the one loaded when somebody holds several; and every card
+written for a role is shown.
+
+**212 tests, 841 assertions.**
+
 ## [0.22.1] — Plainer walkthrough copy, and previewing it from the banner
 
 ### Rewritten for the person reading it

@@ -3,9 +3,11 @@
 declare(strict_types=1);
 
 use App\Models\User;
+use App\Support\Roles;
 use App\Support\ViewAs;
 use App\Support\Walkthrough;
 use Database\Seeders\RolesAndPermissionsSeeder;
+use Illuminate\Support\Facades\Lang;
 
 /*
 |--------------------------------------------------------------------------
@@ -41,6 +43,23 @@ it('shows each role its own walkthrough on first sight', function (string $role,
     'quality assurance' => ['quality_assurance', 4, '/dashboard'],
     'admin' => ['admin', 4, '/dashboard'],
 ]);
+
+it('shows every card written for a role, without a count to keep in step', function (string $role): void {
+    // The cards used to be counted by a constant next to the class. Adding a
+    // card to the language file and forgetting the number left it written and
+    // never shown, with nothing to say so.
+    $written = Lang::get("app.walkthrough.{$role}");
+
+    expect(Walkthrough::stepsFor($role))->toHaveCount(count($written));
+})->with(['operator', 'supervisor', 'maintenance_manager', 'quality_assurance', 'admin']);
+
+it('has a walkthrough for every role the system defines', function (): void {
+    // A role added without cards gets an empty tour rather than an error, and
+    // an empty tour is invisible — so check the copy exists for all of them.
+    foreach (Roles::ALL as $role) {
+        expect(Walkthrough::stepsFor($role))->not->toBeEmpty("No walkthrough copy for {$role}");
+    }
+});
 
 it('picks the most senior role, not the first one it finds', function (): void {
     // Roles are cumulative, so somebody senior also holds the junior ones.

@@ -6,6 +6,7 @@ namespace App\Livewire\Admin;
 
 use App\Models\Site;
 use App\Models\User;
+use App\Support\Roles;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -45,9 +46,6 @@ class UserManager extends Component
 
     protected $paginationTheme = 'tailwind';
 
-    /** The four roles from BUILD-CONTRACT §5, most privileged last. */
-    private const ROLES = ['operator', 'supervisor', 'maintenance_manager', 'admin'];
-
     #[Url(as: 'q')]
     public string $search = '';
 
@@ -67,7 +65,7 @@ class UserManager extends Component
 
     public string $email = '';
 
-    public string $role = 'operator';
+    public string $role = Roles::OPERATOR;
 
     public string $siteId = '';
 
@@ -102,12 +100,19 @@ class UserManager extends Component
     #[Computed]
     public function roles(): array
     {
-        // Read from the database so a role added later shows up, but ordered
-        // by the contract's hierarchy rather than alphabetically — "admin"
+        // Read from the database so a role added later shows up, ordered by
+        // the contract's hierarchy rather than alphabetically — "admin"
         // sorting above "operator" would read as a ranking and is not one.
-        $existing = Role::query()->pluck('name')->all();
+        //
+        // Anything seeded but not in `Roles::ALL` is appended rather than
+        // dropped. A role that exists in the database but cannot be seen here
+        // is worse than one shown out of order: it cannot be assigned, and
+        // saving somebody who holds it would take it away.
+        $existing = Role::query()->orderBy('name')->pluck('name')->all();
 
-        return array_values(array_filter(self::ROLES, fn (string $role) => in_array($role, $existing, true)));
+        $known = array_values(array_filter(Roles::ALL, fn (string $role) => in_array($role, $existing, true)));
+
+        return array_merge($known, array_values(array_diff($existing, Roles::ALL)));
     }
 
     /**
@@ -130,7 +135,7 @@ class UserManager extends Component
      */
     private function activeAdminCount(): int
     {
-        return User::query()->where('is_active', true)->role('admin')->count();
+        return User::query()->where('is_active', true)->role(Roles::ADMIN)->count();
     }
 
     /**
@@ -140,7 +145,7 @@ class UserManager extends Component
     private function isLastActiveAdmin(User $user): bool
     {
         return $user->is_active
-            && $user->hasRole('admin')
+            && $user->hasRole(Roles::ADMIN)
             && $this->activeAdminCount() <= 1;
     }
 
@@ -165,7 +170,14 @@ class UserManager extends Component
         $this->fullName = $user->full_name;
         $this->employeeNumber = $user->employee_number;
         $this->email = $user->email ?? '';
-        $this->role = $user->roles->first()?->name ?? 'operator';
+        // `save()` calls `syncRoles([$this->role])`, so whatever lands in the
+        // dropdown is what the person keeps. Somebody holding two roles gets
+        // their most senior one selected — picking `roles->first()` would let
+        // an arbitrary row order decide, and the loser is deleted on save.
+        $held = $user->roles->pluck('name')->all();
+
+        $this->role = collect(Roles::mostSeniorFirst())->first(fn (string $r) => in_array($r, $held, true))
+            ?? ($held[0] ?? Roles::OPERATOR);
         $this->siteId = (string) ($user->default_site_id ?? '');
         $this->isActive = $user->is_active;
 
@@ -186,7 +198,7 @@ class UserManager extends Component
         // their own admin role, or switches off their own account, cannot
         // put it back — there is no other screen.
         if ($editing !== null && $editing->id === auth()->id()) {
-            if ($this->role !== 'admin') {
+            if ($this->role !== Roles::ADMIN) {
                 $this->addError('role', __('app.users.cannot_demote_self'));
 
                 return;
@@ -199,7 +211,7 @@ class UserManager extends Component
             }
         }
 
-        if ($editing !== null && $this->isLastActiveAdmin($editing) && ($this->role !== 'admin' || ! $this->isActive)) {
+        if ($editing !== null && $this->isLastActiveAdmin($editing) && ($this->role !== Roles::ADMIN || ! $this->isActive)) {
             $this->addError('role', __('app.users.cannot_remove_last_admin'));
 
             return;

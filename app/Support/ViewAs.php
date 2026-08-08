@@ -42,7 +42,7 @@ final class ViewAs
      */
     public static function selectableRoles(): array
     {
-        return ['operator', 'supervisor', 'maintenance_manager', 'quality_assurance'];
+        return Roles::previewable();
     }
 
     public static function active(): bool
