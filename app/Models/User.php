@@ -42,6 +42,7 @@ class User extends Authenticatable
         'password',
         'pin',
         'pin_set_at',
+        'walkthrough_seen_at',
         'is_active',
         'default_site_id',
     ];
@@ -65,6 +66,7 @@ class User extends Authenticatable
             'password' => 'hashed',
             'pin' => 'hashed',
             'pin_set_at' => 'datetime',
+            'walkthrough_seen_at' => 'datetime',
             'is_active' => 'boolean',
         ];
     }
@@ -119,6 +121,29 @@ class User extends Authenticatable
         }
 
         return $this->spatieHasPermissionTo($permission, $guardName);
+    }
+
+    /**
+     * Has this person been shown the first-run walkthrough?
+     *
+     * Stored on the user rather than in the browser, because the shop-floor
+     * tablet is shared — see the migration for why that matters.
+     */
+    public function needsWalkthrough(): bool
+    {
+        return $this->walkthrough_seen_at === null;
+    }
+
+    public function markWalkthroughSeen(): void
+    {
+        // forceFill + saveQuietly: this is not a change to the maintenance
+        // record and has no business in the activity log.
+        $this->forceFill(['walkthrough_seen_at' => now()])->saveQuietly();
+    }
+
+    public function resetWalkthrough(): void
+    {
+        $this->forceFill(['walkthrough_seen_at' => null])->saveQuietly();
     }
 
     // ── Relationships ────────────────────────────────────────────────

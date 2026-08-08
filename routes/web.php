@@ -9,6 +9,7 @@ use App\Http\Controllers\MediaController;
 use App\Http\Controllers\ReportExportController;
 use App\Http\Controllers\RunPdfController;
 use App\Http\Controllers\ViewAsController;
+use App\Http\Controllers\WalkthroughController;
 use App\Livewire\Admin\HolidayManager;
 use App\Livewire\Admin\KioskDeviceManager;
 use App\Livewire\Admin\LocationManager;
@@ -145,6 +146,14 @@ Route::middleware(['auth', 'kiosk.idle'])->group(function (): void {
      * POST because it changes session state; gated on the REAL admin role, so
      * an administrator midway through a preview can still get back out.
      */
+    /*
+     * First-run walkthrough. Both write to the signed-in user's own record,
+     * so neither is a GET — a crawler or a pasted link must not be able to
+     * dismiss somebody's introduction for them.
+     */
+    Route::post('/walkthrough/complete', [WalkthroughController::class, 'complete'])->name('walkthrough.complete');
+    Route::post('/walkthrough/replay', [WalkthroughController::class, 'replay'])->name('walkthrough.replay');
+
     Route::post('/view-as', [ViewAsController::class, 'start'])->name('view-as.start');
     Route::post('/view-as/stop', [ViewAsController::class, 'stop'])->name('view-as.stop');
 
