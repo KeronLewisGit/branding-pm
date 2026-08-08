@@ -1,5 +1,8 @@
 # Changelog
 
+Versions track build milestones: `0.<milestone>.<patch>`. The project reaches
+`1.0.0` when all 8 milestones are complete and the paper forms are retired.
+
 ## [0.19.1] — Production settings, made safe by default and verifiable
 
 ### SESSION_SECURE_COOKIE
@@ -50,8 +53,66 @@ not start gets "fixed" by whoever is on shift deleting the check.
 - 10 new tests (155 total, 474 assertions).
 
 
-Versions track build milestones: `0.<milestone>.<patch>`. The project reaches
-`1.0.0` when all 8 milestones are complete and the paper forms are retired.
+## [0.19.0] — Security hardening
+
+### Hardcoded credentials removed
+- `AdminUserSeeder` had `ChangeMe!2026` as a constant. That is a published
+  credential: the source stated the admin password of every install where
+  nobody changed it, and "we print a warning" is not a control. It now reads
+  `ADMIN_PASSWORD`, or generates a random 24-character password and prints it
+  once.
+- `DemoSeeder` refuses to run when `APP_ENV=production` unless `--force`. It
+  creates accounts with the password `password` and PINs 4321/2468; a mistyped
+  `--class` against the live database would hand those to anyone who has read
+  the repository.
+- The compose file's MySQL credentials are env-driven. A committed file cannot
+  hold a real password.
+
+### Signatures and photos are no longer public files
+Both were served straight off the `public` disk as guessable URLs
+(seed-notes §D11) — no login needed to fetch an operator's signature or a
+photo of a fault. A signature is the closest thing this system holds to a
+biometric.
+
+`MediaController` streams both, checking the **same policy that guards the
+screen each file appears on**: a run photo against its run, an issue photo
+against its issue, a signature against its run. Streamed rather than
+redirected, because a redirect to a public URL is the old hole with a step in
+front of it. The signature disk now defaults to the private `local` one.
+
+Found while wiring it up: Laravel 11 dropped `AuthorizesRequests` from the
+base controller, so `$this->authorize()` did not exist and every media request
+500'd instead of being checked.
+
+### Security headers
+The application sent none. New `SecurityHeaders` middleware adds CSP,
+`X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy`, `Permissions-Policy`,
+and HSTS only over HTTPS in production.
+
+nginx was sending `SAMEORIGIN` while the application now sends `DENY`, so
+every page carried two contradictory `X-Frame-Options` values and which one
+applied was the browser's choice. nginx now sends only what static responses
+need, plus `server_tokens off`.
+
+The CSP keeps `unsafe-inline` and `unsafe-eval` for scripts because Alpine
+evaluates the `x-*` attributes this UI is built from. The comment says so
+rather than implying a stronger policy than it is.
+
+### Row actions: disabled, not hidden
+On the users screen, actions you cannot use are greyed out and disabled with
+the reason in the tooltip instead of being dropped — dropping them shifted
+every other icon, so the same action sat under a different pixel from row to
+row.
+
+Two bugs caught doing it: the component tested `attributes->has('disabled')`,
+which greyed out every button on the page; and `@disabled()` is a directive
+for plain HTML, not a component-tag attribute, so the template editor's
+reorder buttons had silently disappeared in 0.17.1.
+
+### Tests
+6 new (145 total, 454 assertions): unauthenticated refusal, cross-site
+refusal, the role segment being unable to name another column, and signatures
+staying off the web-reachable disk.
 
 ## [0.18.0] — UI standardisation
 
