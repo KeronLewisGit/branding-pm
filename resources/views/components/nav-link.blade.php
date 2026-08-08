@@ -21,7 +21,17 @@
     href="{{ $href }}"
     title="{{ trim(strip_tags($slot)) }}"
     @if ($active) aria-current="page" @endif
-    {{ $attributes->merge(['class' => 'flex min-h-14 items-center gap-3 rounded-xl px-4 text-lg font-medium transition-colors [.is-collapsed_&]:justify-center [.is-collapsed_&]:px-0 '
+    {{--
+        44px rows, not the 56px used elsewhere. This component is only ever
+        rendered in the office sidebar (the kiosk has its own chrome and does
+        not use it), so the target is a mouse pointer rather than a gloved
+        thumb — and at 56px an administrator's thirteen entries did not fit on
+        a 1080p screen, which put a scrollbar in the navigation.
+
+        44px is the WCAG 2.2 minimum target size, so this is the floor, not a
+        convenience.
+    --}}
+    {{ $attributes->merge(['class' => 'flex min-h-11 items-center gap-3 rounded-xl px-4 text-base font-medium transition-colors [.is-collapsed_&]:justify-center [.is-collapsed_&]:px-0 '
         . ($active
             ? 'bg-slate-800 text-white'
             : 'text-slate-300 hover:bg-slate-800 hover:text-white active:bg-slate-700')]) }}

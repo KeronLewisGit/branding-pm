@@ -3,6 +3,37 @@
 Versions track build milestones: `0.<milestone>.<patch>`. The project reaches
 `1.0.0` when all 8 milestones are complete and the paper forms are retired.
 
+## [0.20.1] — The menu fits without scrolling
+
+An administrator sees thirteen entries. At the old sizes that came to
+**1116px** of sidebar against roughly 900px of usable height on a 1080p
+screen, so the navigation had its own scrollbar — the one piece of chrome that
+should never need scrolling to reach.
+
+Measured rather than guessed, then trimmed where it cost nothing:
+
+| | Was | Now |
+|---|---|---|
+| Row height | 56px | **44px** |
+| Row label | `text-lg` | `text-base` |
+| Row gap | 4px | 2px |
+| Brand / nav padding | 20px / 16px | 12px |
+| Group heading | `pt-6`, `text-sm` | `pt-4`, `text-xs` |
+| Footer | name and number on two lines, 56px button | one line, 44px button |
+
+**1116px → 840px**, about 60px of headroom on a 1080p screen.
+
+44px is the floor, not a convenience: it is the WCAG 2.2 minimum target size.
+It is safe to go there because `<x-nav-link>` is rendered in the office
+sidebar and nowhere else — the kiosk has its own chrome and keeps its 56px
+gloved-thumb targets, as do every button and row on the run form.
+
+Per role, the whole menu now fits: operator 262px, supervisor and QA 400px,
+maintenance manager 666px, administrator 840px.
+
+`overflow-y-auto` stays on the nav. The point was that it should not normally
+be needed — not that a very short window should clip the menu instead.
+
 ## [0.20.0] — Sticky, collapsible sidebar
 
 ### Sticky
