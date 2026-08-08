@@ -3,6 +3,40 @@
 Versions track build milestones: `0.<milestone>.<patch>`. The project reaches
 `1.0.0` when all 8 milestones are complete and the paper forms are retired.
 
+## [0.20.0] — Sticky, collapsible sidebar
+
+### Sticky
+The sidebar scrolled away with the page. On the long screens — the run list,
+the template editor, a machine profile — you had to scroll back to the top to
+go anywhere else.
+
+`md:sticky md:top-0 md:h-screen md:self-start`, with the nav scrolling inside
+its own column rather than moving the page. `self-start` is the part that is
+easy to get wrong: a flex child stretches to the row height by default, and an
+element exactly as tall as its container has no room to stick — it just
+scrolls away, looking like `sticky` did nothing.
+
+### Collapsible
+A toggle collapses the sidebar to a 20-unit icon rail: labels hidden, icons
+centred, group headings replaced by a divider rule so the grouping survives,
+and the user's initials standing in for their name.
+
+Every nav link now carries its label as a `title`, so the rail is still
+readable with a mouse. The label stays in the DOM and is only hidden, so a
+screen reader reads the link normally either way, and the toggle reports
+`aria-expanded`.
+
+The state is kept in `localStorage` and read **synchronously in `x-data`**,
+not in `init()` — read later, the rail renders wide and then snaps narrow on
+every page load.
+
+Two pieces of state on purpose: the mobile drawer always opens shut (a menu
+that remembered being open would cover the page on every load), while the
+desktop rail is remembered (a sidebar that expanded again on every navigation
+would be worse than not collapsing at all).
+
+The kiosk layout is untouched — it has its own header and no sidebar.
+
 ## [0.19.1] — Production settings, made safe by default and verifiable
 
 ### SESSION_SECURE_COOKIE
