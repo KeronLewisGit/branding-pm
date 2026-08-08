@@ -76,12 +76,28 @@ php artisan db:seed --class=DemoSeeder     # demo/training installs only
 ## 3. The admin account
 
 `AdminUserSeeder` creates exactly one account — `ADMIN-0001` /
-`admin@example.com` — using `ADMIN_PASSWORD` from `.env`. If that variable is
-unset it falls back to a **published default** and prints a loud warning; the
-default is in the repository, so an install left on it is open to anyone who
-can read this project.
+`admin@example.com` (override with `ADMIN_EMAIL`).
 
-Set `ADMIN_PASSWORD` before seeding, or change the password immediately after.
+The password comes from `ADMIN_PASSWORD`. **If that is unset, a random one is
+generated and printed once**, like this:
+
+```
+========================================================================
+ADMIN PASSWORD — SHOWN ONCE, NOT RECOVERABLE
+========================================================================
+  Sign in with: admin@example.com  (or ADMIN-0001)
+  Password:     kQ2m7ZrxT9vBnL4sPfWdHc1e
+========================================================================
+```
+
+Write it down before that scrollback is gone. Nothing stores it in the clear
+and no command can print it again; if it is lost, reset it with
+`php artisan tinker` and `$u->update(['password' => 'new'])`.
+
+> This used to fall back to a constant in the repository. That is a published
+> credential — the source stated the admin password of every install where
+> nobody changed it, and a printed warning is not a control. `security:check`
+> still tests for that old default, in case an install predates the change.
 
 Everyone else is created through the app. Floor operators need a PIN (4–6
 digits) and may have no email or password at all.
@@ -152,7 +168,52 @@ php artisan checklists:mark-missed
 
 ---
 
-## 6. Production caches
+## 6. Before go-live — verify, do not assume
+
+```bash
+php artisan security:check --strict
+```
+
+It exits non-zero on anything wrong, so it can gate a deploy script. Every
+item is something that lives on the host, not in the code, and so cannot be
+enforced from inside it:
+
+| Check | Why it fails a production host |
+|---|---|
+| `APP_DEBUG` | An error page prints the stack trace, the failing query and the whole `.env` — `APP_KEY` and the database password included |
+| `APP_KEY` | Keys sessions, cookies **and** the run-sheet verification hashes |
+| Secure cookies | A session cookie sent over plain HTTP can be read off the shop-floor Wi-Fi and replayed |
+| `APP_URL` | Not HTTPS means PINs and passwords cross the network in the clear |
+| Signature storage | On the `public` disk, signatures are guessable unauthenticated URLs |
+| Demo accounts | `OP-1001` and friends ship with the password `password` and PINs that are in the repository |
+| Admin password | Still the old published default |
+
+### The three settings that matter
+
+```dotenv
+APP_ENV=production
+APP_DEBUG=false
+APP_URL=https://your-host
+```
+
+`APP_ENV=production` is the switch. On it, **`SESSION_SECURE_COOKIE` defaults
+to true on its own** — session and kiosk cookies become HTTPS-only without
+anyone remembering to set it.
+
+> **That means the site must be on HTTPS first.** With Secure cookies on and
+> the site still on `http://`, the browser will not send the cookie back:
+> nobody can log in, and every enrolled tablet looks un-enrolled. If you are
+> running a plain-HTTP pilot, set `SESSION_SECURE_COOKIE=false` explicitly and
+> treat it as a debt, not a setting — `security:check` will keep reporting it.
+
+A production host also logs a `critical` line on every boot while `APP_DEBUG`
+or insecure cookies are on. It does not refuse to start: taking the checklists
+off the shop floor over a configuration mistake is worse than the mistake, and
+an application that will not boot gets "fixed" by deleting the check.
+
+---
+
+## 7. Production caches
 
 After every deploy, in this order:
 
@@ -169,7 +230,7 @@ application code.
 
 ---
 
-## 7. Kiosk tablets
+## 8. Kiosk tablets
 
 A tablet must be enrolled **once** before the kiosk will open on it. Until it
 is, `/kiosk` returns the "not enrolled" screen — and a clean install has no
@@ -275,7 +336,7 @@ one silently.
 
 ---
 
-## 8. QR stickers
+## 9. QR stickers
 
 `/admin/machines/qr` prints the sheet. Each sticker encodes `/m/{code}` and
 prints the code in plain text beneath, because a sticker in a print shop gets
@@ -288,7 +349,7 @@ replacement sticker in the same visit.
 
 ---
 
-## 9. Backups
+## 10. Backups
 
 Back up two things; either alone is useless:
 
@@ -308,7 +369,7 @@ Test a restore before you need one.
 
 ---
 
-## 10. Upgrading
+## 11. Upgrading
 
 ```bash
 php artisan down
@@ -326,7 +387,7 @@ tablet seems stuck on an old build, close the standalone window and reopen it.
 
 ---
 
-## 11. When something is wrong
+## 12. When something is wrong
 
 | Symptom | Look here first |
 |---|---|
