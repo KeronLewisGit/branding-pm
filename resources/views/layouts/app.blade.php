@@ -11,7 +11,28 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="min-h-screen bg-slate-100 font-sans text-slate-900 antialiased">
-    <div x-data="{ sidebarOpen: false }" class="flex min-h-screen flex-col md:flex-row">
+    {{--
+        Two independent bits of state, because they are two different things:
+
+        `sidebarOpen` — the mobile drawer. Always starts shut; a menu that
+        remembered being open would cover the page on every load.
+
+        `collapsed`  — the desktop icon rail. Remembered in localStorage,
+        because a sidebar that expanded again on every navigation would be
+        worse than not being collapsible at all. Read synchronously in
+        x-data (not init) so the rail never flashes wide first.
+    --}}
+    <div
+        x-data="{
+            sidebarOpen: false,
+            collapsed: window.localStorage.getItem('brandingPm.sidebarCollapsed') === '1',
+            toggleCollapsed() {
+                this.collapsed = ! this.collapsed;
+                window.localStorage.setItem('brandingPm.sidebarCollapsed', this.collapsed ? '1' : '0');
+            },
+        }"
+        class="flex min-h-screen flex-col md:flex-row"
+    >
 
         {{-- Mobile top bar — the sidebar collapses into this under md --}}
         <header data-nav-chrome class="flex items-center justify-between gap-3 bg-slate-900 px-4 py-2 text-white md:hidden">
@@ -44,16 +65,46 @@
         <aside
             id="sidebar-nav"
             data-nav-chrome
-            class="hidden w-full flex-shrink-0 flex-col bg-slate-900 text-slate-100 md:!flex md:min-h-screen md:w-72"
-            x-bind:class="sidebarOpen && '!flex'"
+            {{--
+                `md:sticky md:top-0 md:h-screen md:self-start` is the sticky
+                part. `self-start` matters: a flex child stretches to the row
+                height by default, and an element exactly as tall as its
+                container has no room to stick — it would simply scroll away.
+            --}}
+            class="hidden w-full flex-shrink-0 flex-col bg-slate-900 text-slate-100 md:!flex md:sticky md:top-0 md:h-screen md:self-start"
+            x-bind:class="{
+                '!flex': sidebarOpen,
+                'is-collapsed md:w-20': collapsed,
+                'md:w-72': ! collapsed,
+            }"
         >
-            <div class="hidden items-center px-6 py-5 md:flex">
-                <a href="{{ route('dashboard') }}" class="rounded-lg text-xl font-bold text-white">
+            <div class="hidden items-center gap-2 px-3 py-5 md:flex">
+                <a href="{{ route('dashboard') }}"
+                   class="min-w-0 flex-1 truncate rounded-lg px-3 text-xl font-bold text-white [.is-collapsed_&]:hidden">
                     {{ config('app.name', 'Branding PM') }}
                 </a>
+
+                {{-- Desktop collapse. The mobile drawer has its own hamburger. --}}
+                <button
+                    type="button"
+                    class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-800 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 [.is-collapsed_&]:mx-auto"
+                    x-on:click="toggleCollapsed()"
+                    x-bind:aria-expanded="(! collapsed).toString()"
+                    aria-controls="sidebar-nav"
+                    x-bind:aria-label="collapsed ? '{{ __('app.nav.expand_menu') }}' : '{{ __('app.nav.collapse_menu') }}'"
+                    x-bind:title="collapsed ? '{{ __('app.nav.expand_menu') }}' : '{{ __('app.nav.collapse_menu') }}'"
+                >
+                    <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+                         stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"
+                         aria-hidden="true">
+                        <rect x="3" y="3" width="18" height="18" rx="2"/>
+                        <line x1="9" y1="3" x2="9" y2="21"/>
+                    </svg>
+                </button>
             </div>
 
-            <nav aria-label="{{ __('app.nav.main') }}" class="flex-1 space-y-1 px-3 py-4">
+            {{-- The nav scrolls inside the sticky column, not the page. --}}
+            <nav aria-label="{{ __('app.nav.main') }}" class="flex-1 space-y-1 overflow-y-auto px-3 py-4">
                 @php
                     // Icons are decorative — every entry is named in text beside it.
                     $ico = fn (string $d) => '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">'.$d.'</svg>';
@@ -117,7 +168,7 @@
                     once and then rarely touches.
                 --}}
                 @canany(['machine.manage', 'part.manage', 'template.manage', 'holiday.manage'])
-                    <p class="px-4 pb-1 pt-6 text-sm font-semibold uppercase tracking-wider text-slate-400">
+                    <p class="px-4 pb-1 pt-6 text-sm font-semibold uppercase tracking-wider text-slate-400 [.is-collapsed_&]:mx-2 [.is-collapsed_&]:mt-4 [.is-collapsed_&]:mb-0 [.is-collapsed_&]:h-px [.is-collapsed_&]:overflow-hidden [.is-collapsed_&]:bg-slate-700 [.is-collapsed_&]:p-0 [.is-collapsed_&]:text-transparent">
                         {{ __('app.nav.group_plant') }}
                     </p>
                 @endcanany
@@ -158,7 +209,7 @@
 
                 {{-- Group 3 — the system itself. Admin territory. --}}
                 @canany(['kiosk.manage', 'user.manage'])
-                    <p class="px-4 pb-1 pt-6 text-sm font-semibold uppercase tracking-wider text-slate-400">
+                    <p class="px-4 pb-1 pt-6 text-sm font-semibold uppercase tracking-wider text-slate-400 [.is-collapsed_&]:mx-2 [.is-collapsed_&]:mt-4 [.is-collapsed_&]:mb-0 [.is-collapsed_&]:h-px [.is-collapsed_&]:overflow-hidden [.is-collapsed_&]:bg-slate-700 [.is-collapsed_&]:p-0 [.is-collapsed_&]:text-transparent">
                         {{ __('app.nav.group_system') }}
                     </p>
                 @endcanany
@@ -178,14 +229,33 @@
                 @endcan
             </nav>
 
-            <div class="border-t border-slate-800 px-4 py-4">
-                <p class="truncate text-base font-semibold text-white">{{ auth()->user()?->full_name }}</p>
-                <p class="text-sm text-slate-400">#{{ auth()->user()?->employee_number }}</p>
+            {{-- Pinned to the bottom of the sticky column, above the scroll. --}}
+            <div class="shrink-0 border-t border-slate-800 px-4 py-4 [.is-collapsed_&]:px-2">
+                <p class="truncate text-base font-semibold text-white [.is-collapsed_&]:hidden">{{ auth()->user()?->full_name }}</p>
+                <p class="text-sm text-slate-400 [.is-collapsed_&]:hidden">#{{ auth()->user()?->employee_number }}</p>
+
+                {{-- Collapsed, the initials stand in for the name. --}}
+                <p class="hidden text-center text-base font-bold text-white [.is-collapsed_&]:block"
+                   title="{{ auth()->user()?->full_name }}">
+                    {{ Str::of(auth()->user()?->full_name ?? '')->explode(' ')->filter()->take(2)->map(fn ($part) => Str::substr($part, 0, 1))->implode('') }}
+                </p>
 
                 <form method="POST" action="{{ route('logout') }}" class="mt-3">
                     @csrf
-                    <x-button variant="ghost" type="submit" class="w-full border-slate-600 text-slate-100 hover:bg-slate-800 active:bg-slate-700">
-                        {{ __('app.nav.logout') }}
+                    <x-button
+                        variant="ghost"
+                        type="submit"
+                        :title="__('app.nav.logout')"
+                        class="w-full border-slate-600 text-slate-100 hover:bg-slate-800 active:bg-slate-700 [.is-collapsed_&]:px-0"
+                    >
+                        <span class="[.is-collapsed_&]:hidden">{{ __('app.nav.logout') }}</span>
+                        <svg class="hidden h-5 w-5 [.is-collapsed_&]:block" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
+                             fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"
+                             stroke-linejoin="round" aria-hidden="true">
+                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                            <polyline points="16 17 21 12 16 7"/>
+                            <line x1="21" y1="12" x2="9" y2="12"/>
+                        </svg>
                     </x-button>
                 </form>
             </div>

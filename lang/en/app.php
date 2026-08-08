@@ -15,6 +15,8 @@ return [
     'nav' => [
         'main' => 'Main navigation',
         'toggle_menu' => 'Toggle navigation menu',
+        'collapse_menu' => 'Collapse menu',
+        'expand_menu' => 'Expand menu',
         'dashboard' => 'Dashboard',
         'runs' => 'Checklist Runs',
         'approvals' => 'Approvals',
