@@ -3,6 +3,51 @@
 Versions track build milestones: `0.<milestone>.<patch>`. The project reaches
 `1.0.0` when all 8 milestones are complete and the paper forms are retired.
 
+## [0.21.1] — Proxy-aware client IPs (found by testing view-as on the pilot)
+
+Walking "view as" through the live pilot exercised the audit log properly for
+the first time, and the log turned out to be recording **`172.20.0.1` — the
+Docker gateway — for all 51 events in the system**, not just view-as. SPEC
+§Non-Functional asks for "actor, IP and timestamp" on every state transition;
+the IP was being met in name only.
+
+nginx now forwards `X-Forwarded-For`, `-Proto`, `-Host` and `-Port` to
+PHP-FPM, and `trustProxies()` is configured to read them — from **private
+ranges only**, because trusting every source lets anyone who can reach the app
+forge their own address.
+
+`X-Forwarded-Proto` matters beyond the log: behind a TLS terminator the
+connection to PHP is plain HTTP, so `$request->secure()` is false and the HSTS
+header added in 0.19.0 would never have been sent.
+
+### The bug this nearly shipped
+The first version used nginx's `$proxy_add_x_forwarded_for`, which **appends
+to whatever the client sent**. Tested against the pilot: a request carrying
+its own `X-Forwarded-For: 203.0.113.9` was logged as coming from 203.0.113.9.
+A forgeable audit trail is worse than an unhelpful one — it is confidently
+wrong.
+
+nginx is the edge here, so it now **overwrites** the header with `$remote_addr`
+instead. Re-tested: the spoof is ignored. If a real proxy is ever put in front,
+the comment in the config says to switch back to the appending form *and* add
+that proxy to the trusted list — never one without the other.
+
+### Honestly, about the pilot
+The logged address is still `172.20.0.1` there, and cannot be anything else:
+Docker's published-port NAT rewrites the source before nginx ever sees it.
+That is a property of running behind `docker compose`, not of the application.
+On the documented production target — nginx and PHP-FPM on the host — the real
+client address is recorded, and now stays correct if a load balancer is added.
+
+### View as, verified end to end on the pilot
+All four roles through the real form and CSRF: the access matrix matches each
+role exactly, the banner shows, the menu shrinks, and stopping restores
+everything. Also confirmed: a second session for the same administrator is
+unaffected; a supervisor is refused outright; a missing CSRF token is a 419;
+`role=admin` is rejected and does not escalate; logging out clears the
+preview; the kiosk is untouched; and every start and stop is in the activity
+log with actor and role.
+
 ## [0.21.0] — A Work menu, and "view as" for administrators
 
 ### Everything is a group now
