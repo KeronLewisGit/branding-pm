@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Support;
 
 use App\Models\User;
+use Illuminate\Support\Facades\Lang;
 use Illuminate\Support\Facades\Session;
 
 /**
@@ -25,34 +26,14 @@ use Illuminate\Support\Facades\Session;
 final class Walkthrough
 {
     /**
-     * Most senior first. `admin` leads because an administrator who is also
-     * given the operator role should still be introduced as an administrator.
-     *
-     * @var list<string>
-     */
-    private const ROLE_PRIORITY = [
-        'admin',
-        'quality_assurance',
-        'maintenance_manager',
-        'supervisor',
-        'operator',
-    ];
-
-    /** How many cards each role's walkthrough has. */
-    private const STEP_COUNTS = [
-        'admin' => 4,
-        'quality_assurance' => 4,
-        'maintenance_manager' => 4,
-        'supervisor' => 4,
-        'operator' => 5,
-    ];
-
-    /**
      * Which walkthrough this user gets, or null if no role matches.
+     *
+     * `admin` leads because an administrator who also holds the operator role
+     * should still be introduced as an administrator.
      */
     public static function roleFor(User $user): ?string
     {
-        foreach (self::ROLE_PRIORITY as $role) {
+        foreach (Roles::mostSeniorFirst() as $role) {
             if ($user->hasRole($role)) {
                 return $role;
             }
@@ -68,14 +49,26 @@ final class Walkthrough
      */
     public static function stepsFor(string $role): array
     {
-        $count = self::STEP_COUNTS[$role] ?? 0;
+        if (! Roles::exists($role)) {
+            return [];
+        }
+
+        // Read the cards from the language file rather than a card count kept
+        // alongside it. A hand-maintained count is a second list to remember:
+        // adding a card here and forgetting to raise the number would leave it
+        // written, translated, reviewed — and never shown to anybody.
+        $cards = Lang::get("app.walkthrough.{$role}");
+
+        if (! is_array($cards)) {
+            return [];
+        }
+
         $steps = [];
 
-        for ($i = 1; $i <= $count; $i++) {
-            $steps[] = [
-                'title' => __("app.walkthrough.{$role}.{$i}.title"),
-                'body' => __("app.walkthrough.{$role}.{$i}.body"),
-            ];
+        foreach ($cards as $card) {
+            if (is_array($card) && isset($card['title'], $card['body'])) {
+                $steps[] = ['title' => (string) $card['title'], 'body' => (string) $card['body']];
+            }
         }
 
         return $steps;
@@ -91,7 +84,7 @@ final class Walkthrough
     {
         $role = Session::get(self::PREVIEW_KEY);
 
-        return is_string($role) && array_key_exists($role, self::STEP_COUNTS) ? $role : null;
+        return is_string($role) && Roles::exists($role) ? $role : null;
     }
 
     public static function isPreviewing(): bool
@@ -101,7 +94,7 @@ final class Walkthrough
 
     public static function startPreview(string $role): void
     {
-        if (array_key_exists($role, self::STEP_COUNTS)) {
+        if (Roles::exists($role)) {
             Session::put(self::PREVIEW_KEY, $role);
         }
     }
@@ -118,7 +111,7 @@ final class Walkthrough
      */
     public static function availableRoles(): array
     {
-        return array_reverse(self::ROLE_PRIORITY);
+        return Roles::ALL;
     }
 
     /**

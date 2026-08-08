@@ -199,7 +199,6 @@ return [
     // Admin "view as" — previewing the application through another role.
     'view_as' => [
         'label' => 'View as',
-        'hint' => 'Preview the app with another role’s permissions. It only ever removes access, never adds any — and everything you do is still recorded against your own account.',
         'active' => 'Viewing as :role',
         'active_hint' => 'You are seeing what this role sees. Your own actions are still logged as you.',
         'stop' => 'Back to Administrator',
@@ -934,7 +933,6 @@ return [
         'released' => 'Session ended. The tablet is back at the kiosk.',
         'idle_warning' => 'Still there? This session will end in :seconds seconds.',
         'idle_released' => 'Session ended after inactivity.',
-        'device_not_registered' => 'This device is not registered as a kiosk. Contact your administrator.',
 
         /*
          * The "not set up as a kiosk" screen, worded for whatever is asking.
@@ -989,8 +987,6 @@ return [
         'enrolled' => 'This tablet is now enrolled as :name.',
         'unenrolled' => 'This tablet is no longer enrolled as a kiosk.',
         'device_inactive' => 'That kiosk device is marked inactive and cannot be enrolled.',
-        'not_enrolled_title' => 'This tablet is not set up as a kiosk',
-        'not_enrolled_help' => 'Ask your supervisor or IT to enrol this tablet before using it on the floor. Nothing is wrong with the machine or the checklist.',
 
         // Operator picker and PIN pad.
         'search_operators' => 'Search for your name',

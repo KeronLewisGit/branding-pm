@@ -7,6 +7,7 @@ use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Support\Facades\Hash;
 use Livewire\Livewire;
+use Spatie\Permission\Models\Role;
 
 /*
 |--------------------------------------------------------------------------
@@ -264,4 +265,49 @@ it('soft-deletes and deactivates rather than erasing somebody', function (): voi
         ->and($trashed->trashed())->toBeTrue()
         ->and($trashed->is_active)->toBeFalse()
         ->and($trashed->full_name)->toBe('Darnell Joseph');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Every seeded role is assignable
+|--------------------------------------------------------------------------
+| This screen writes with `syncRoles([$role])`, so a role missing from the
+| dropdown is not merely unassignable — opening somebody who holds it and
+| pressing Save takes it away. Quality Assurance was in exactly that state:
+| seeded, held by real people, and absent from a hand-written list here.
+*/
+
+it('offers every seeded role, not a hand-written subset', function (): void {
+    $offered = Livewire::actingAs(admin())->test(UserManager::class)->instance()->roles();
+
+    expect($offered)->toEqualCanonicalizing(Role::query()->pluck('name')->all());
+});
+
+it('does not demote somebody whose role is missing from the dropdown', function (): void {
+    $officer = User::factory()->create();
+    $officer->assignRole('quality_assurance');
+
+    Livewire::actingAs(admin())
+        ->test(UserManager::class)
+        ->call('openEditModal', $officer->id)
+        // The role the form loaded is what Save writes back. If the dropdown
+        // cannot represent it, this is where the demotion happens.
+        ->assertSet('role', 'quality_assurance')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect($officer->fresh()->hasRole('quality_assurance'))->toBeTrue();
+});
+
+it('keeps the most senior role when somebody holds several', function (): void {
+    $user = User::factory()->create();
+    $user->assignRole('operator');
+    $user->assignRole('maintenance_manager');
+
+    // `roles->first()` is row order, not seniority — loading the junior role
+    // and saving would silently strip the senior one.
+    Livewire::actingAs(admin())
+        ->test(UserManager::class)
+        ->call('openEditModal', $user->id)
+        ->assertSet('role', 'maintenance_manager');
 });

@@ -4,8 +4,12 @@ declare(strict_types=1);
 
 namespace App\Enums;
 
+use App\Enums\Concerns\HasOptions;
+
 enum Shift: string
 {
+    use HasOptions;
+
     case Day = 'day';
     case Night = 'night';
     case All = 'all';
@@ -13,20 +17,6 @@ enum Shift: string
     public function label(): string
     {
         return __('app.shift.'.$this->value);
-    }
-
-    /**
-     * @return array<string, string> value => label, for select boxes.
-     */
-    public static function options(): array
-    {
-        $options = [];
-
-        foreach (self::cases() as $case) {
-            $options[$case->value] = $case->label();
-        }
-
-        return $options;
     }
 
     /**
