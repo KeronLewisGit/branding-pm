@@ -78,7 +78,7 @@
                 'md:w-72': ! collapsed,
             }"
         >
-            <div class="hidden items-center gap-2 px-3 py-5 md:flex">
+            <div class="hidden shrink-0 items-center gap-2 px-3 py-3 md:flex">
                 <a href="{{ route('dashboard') }}"
                    class="min-w-0 flex-1 truncate rounded-lg px-3 text-xl font-bold text-white [.is-collapsed_&]:hidden">
                     {{ config('app.name', 'Branding PM') }}
@@ -104,7 +104,7 @@
             </div>
 
             {{-- The nav scrolls inside the sticky column, not the page. --}}
-            <nav aria-label="{{ __('app.nav.main') }}" class="flex-1 space-y-1 overflow-y-auto px-3 py-4">
+            <nav aria-label="{{ __('app.nav.main') }}" class="flex-1 space-y-0.5 overflow-y-auto px-3 py-3">
                 @php
                     // Icons are decorative — every entry is named in text beside it.
                     $ico = fn (string $d) => '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">'.$d.'</svg>';
@@ -168,7 +168,7 @@
                     once and then rarely touches.
                 --}}
                 @canany(['machine.manage', 'part.manage', 'template.manage', 'holiday.manage'])
-                    <p class="px-4 pb-1 pt-6 text-sm font-semibold uppercase tracking-wider text-slate-400 [.is-collapsed_&]:mx-2 [.is-collapsed_&]:mt-4 [.is-collapsed_&]:mb-0 [.is-collapsed_&]:h-px [.is-collapsed_&]:overflow-hidden [.is-collapsed_&]:bg-slate-700 [.is-collapsed_&]:p-0 [.is-collapsed_&]:text-transparent">
+                    <p class="px-4 pb-1 pt-4 text-xs font-semibold uppercase tracking-wider text-slate-400 [.is-collapsed_&]:mx-2 [.is-collapsed_&]:mt-4 [.is-collapsed_&]:mb-0 [.is-collapsed_&]:h-px [.is-collapsed_&]:overflow-hidden [.is-collapsed_&]:bg-slate-700 [.is-collapsed_&]:p-0 [.is-collapsed_&]:text-transparent">
                         {{ __('app.nav.group_plant') }}
                     </p>
                 @endcanany
@@ -209,7 +209,7 @@
 
                 {{-- Group 3 — the system itself. Admin territory. --}}
                 @canany(['kiosk.manage', 'user.manage'])
-                    <p class="px-4 pb-1 pt-6 text-sm font-semibold uppercase tracking-wider text-slate-400 [.is-collapsed_&]:mx-2 [.is-collapsed_&]:mt-4 [.is-collapsed_&]:mb-0 [.is-collapsed_&]:h-px [.is-collapsed_&]:overflow-hidden [.is-collapsed_&]:bg-slate-700 [.is-collapsed_&]:p-0 [.is-collapsed_&]:text-transparent">
+                    <p class="px-4 pb-1 pt-4 text-xs font-semibold uppercase tracking-wider text-slate-400 [.is-collapsed_&]:mx-2 [.is-collapsed_&]:mt-4 [.is-collapsed_&]:mb-0 [.is-collapsed_&]:h-px [.is-collapsed_&]:overflow-hidden [.is-collapsed_&]:bg-slate-700 [.is-collapsed_&]:p-0 [.is-collapsed_&]:text-transparent">
                         {{ __('app.nav.group_system') }}
                     </p>
                 @endcanany
@@ -230,9 +230,11 @@
             </nav>
 
             {{-- Pinned to the bottom of the sticky column, above the scroll. --}}
-            <div class="shrink-0 border-t border-slate-800 px-4 py-4 [.is-collapsed_&]:px-2">
-                <p class="truncate text-base font-semibold text-white [.is-collapsed_&]:hidden">{{ auth()->user()?->full_name }}</p>
-                <p class="text-sm text-slate-400 [.is-collapsed_&]:hidden">#{{ auth()->user()?->employee_number }}</p>
+            <div class="shrink-0 border-t border-slate-800 px-4 py-3 [.is-collapsed_&]:px-2">
+                <p class="truncate text-sm text-white [.is-collapsed_&]:hidden">
+                    <span class="font-semibold">{{ auth()->user()?->full_name }}</span>
+                    <span class="text-slate-400">#{{ auth()->user()?->employee_number }}</span>
+                </p>
 
                 {{-- Collapsed, the initials stand in for the name. --}}
                 <p class="hidden text-center text-base font-bold text-white [.is-collapsed_&]:block"
@@ -240,13 +242,13 @@
                     {{ Str::of(auth()->user()?->full_name ?? '')->explode(' ')->filter()->take(2)->map(fn ($part) => Str::substr($part, 0, 1))->implode('') }}
                 </p>
 
-                <form method="POST" action="{{ route('logout') }}" class="mt-3">
+                <form method="POST" action="{{ route('logout') }}" class="mt-2">
                     @csrf
                     <x-button
                         variant="ghost"
                         type="submit"
                         :title="__('app.nav.logout')"
-                        class="w-full border-slate-600 text-slate-100 hover:bg-slate-800 active:bg-slate-700 [.is-collapsed_&]:px-0"
+                        class="!min-h-11 w-full border-slate-600 !text-base text-slate-100 hover:bg-slate-800 active:bg-slate-700 [.is-collapsed_&]:px-0"
                     >
                         <span class="[.is-collapsed_&]:hidden">{{ __('app.nav.logout') }}</span>
                         <svg class="hidden h-5 w-5 [.is-collapsed_&]:block" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
