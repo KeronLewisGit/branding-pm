@@ -117,6 +117,8 @@
         {{ $slot }}
     </main>
 
+    @include('partials.walkthrough')
+
     @stack('scripts')
 </body>
 </html>

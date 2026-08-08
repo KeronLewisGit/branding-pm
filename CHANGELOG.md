@@ -3,6 +3,53 @@
 Versions track build milestones: `0.<milestone>.<patch>`. The project reaches
 `1.0.0` when all 8 milestones are complete and the paper forms are retired.
 
+## [0.22.0] — First-run walkthrough
+
+A few cards over the page the first time somebody signs in, explaining the
+app in the terms of the job they actually do. Skip or step through; either
+way it does not come back.
+
+### One set per role
+| Role | Cards | Opens with |
+|---|---|---|
+| Operator | 5 | Find your machine |
+| Supervisor | 4 | Your queue is Approvals |
+| Maintenance manager | 4 | The checklists are yours to change |
+| Quality assurance | 4 | You are the third signature |
+| Administrator | 4 | People come first |
+
+A shared generic tour is the kind nobody reads. An operator needs to know that
+tapping a row saves it and that reporting a fault is the job; a QA officer
+needs to know they verify after the supervisor and cannot do the work they are
+checking. Neither cares about the other's screens.
+
+Roles are cumulative, so the role is resolved **most senior first** —
+introducing a maintenance manager as an operator would be wrong.
+
+### Decisions worth keeping
+- **Stored on the user (`users.walkthrough_seen_at`), not in localStorage.**
+  The shop-floor tablet is shared: local storage would show the walkthrough to
+  whoever used that tablet first and to nobody after, while showing it again
+  to the same person on the next tablet along. Exactly backwards.
+- **Shown on the kiosk layout too.** The run form renders there, and an
+  operator's first sight of this system is a tablet — a walkthrough only in
+  the office chrome would miss the one person it is written for.
+- **Skip and finish do the same thing.** Somebody who skips has decided they
+  do not need it; making them sit through five cards to stop it would be the
+  opposite of help.
+- **Not shown while an administrator is previewing another role.** They have
+  been introduced already, and dismissing it there would mark the
+  *administrator* onboarded for a role they were only looking at.
+- **Both routes are POST.** They write to the signed-in user's record, so
+  neither may be reachable by a link or a crawler — there is a test asserting
+  a GET is refused.
+- A **Show the walkthrough again** link sits in the sidebar, for whoever
+  skipped it on day one and wants it in week two.
+
+### Tests
+17 new (191 total, 657 assertions), including that every card has real copy
+rather than a missing translation key, and that the senior role wins.
+
 ## [0.21.2] — One way out of a preview
 
 The sidebar picker is now hidden while a preview is running. The banner's

@@ -308,6 +308,14 @@
                     {{ Str::of(auth()->user()?->full_name ?? '')->explode(' ')->filter()->take(2)->map(fn ($part) => Str::substr($part, 0, 1))->implode('') }}
                 </p>
 
+                {{-- For somebody who skipped it on day one and wants it back. --}}
+                <form method="POST" action="{{ route('walkthrough.replay') }}" class="mt-2 [.is-collapsed_&]:hidden">
+                    @csrf
+                    <button type="submit" class="text-xs text-slate-400 underline-offset-2 hover:text-slate-200 hover:underline">
+                        {{ __('app.walkthrough.replay') }}
+                    </button>
+                </form>
+
                 <form method="POST" action="{{ route('logout') }}" class="mt-2">
                     @csrf
                     <x-button
@@ -353,6 +361,8 @@
             </main>
         </div>
     </div>
+
+    @include('partials.walkthrough')
 
     @stack('scripts')
 </body>

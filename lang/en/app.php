@@ -207,6 +207,121 @@ return [
         'apply' => 'View',
     ],
 
+    /*
+     * First-run walkthrough. One set per role, because a shared generic tour
+     * is the kind nobody reads. Written for somebody who has never used a
+     * computer-based form — same voice as docs/user-guide.md.
+     */
+    'walkthrough' => [
+        'welcome' => 'Welcome, :name',
+        'step_of' => 'Step :current of :total',
+        'next' => 'Next',
+        'back' => 'Back',
+        'skip' => 'Skip',
+        'done' => 'Start using it',
+        'replay' => 'Show the walkthrough again',
+        'replay_started' => 'The walkthrough will show on your next screen.',
+
+        'operator' => [
+            1 => [
+                'title' => 'Find your machine',
+                'body' => 'Tap the machine on the screen, or scan the square code sticker on the machine itself. If the sticker is too dirty to scan, the machine\'s code is printed underneath it.',
+            ],
+            2 => [
+                'title' => 'Tap each job as you do it',
+                'body' => 'The list is the same one, in the same order, as the paper sheet. Tap a row when that job is done. The counter at the top shows how far along you are.',
+            ],
+            3 => [
+                'title' => 'If something is wrong, say so',
+                'body' => 'Use the button on the right of a row to mark it N/A or Failed. Marking it Failed asks you what you found and reports the fault for you. Finding faults is the job — it is never a mark against you.',
+            ],
+            4 => [
+                'title' => 'There is no Save button',
+                'body' => 'Every tap is saved the moment you make it. If the tablet sleeps or somebody walks off with it, nothing is lost.',
+            ],
+            5 => [
+                'title' => 'Sign when you finish',
+                'body' => 'Tap Submit, sign your name with your finger, and type your PIN once more. The PIN is what proves the signature is yours on a shared tablet.',
+            ],
+        ],
+
+        'supervisor' => [
+            1 => [
+                'title' => 'Your queue is Approvals',
+                'body' => 'Sheets an operator has signed wait for you there, oldest first. Each row shows how many checks failed before you open anything.',
+            ],
+            2 => [
+                'title' => 'Read the failures first',
+                'body' => 'On a sheet, failed checks are pulled to the top with the operator\'s own words and any photo they took. Look at the photos — that is why they were taken.',
+            ],
+            3 => [
+                'title' => 'Approve locks it; Reject needs a reason',
+                'body' => 'Once you approve, the sheet cannot be edited by anyone. A rejection must say why, and goes straight back to the operator with your reason at the top.',
+            ],
+            4 => [
+                'title' => 'You cannot sign off your own work',
+                'body' => 'If you completed a sheet yourself, another supervisor has to approve it. The buttons stay visible and explain why rather than quietly disappearing.',
+            ],
+        ],
+
+        'maintenance_manager' => [
+            1 => [
+                'title' => 'The checklists are yours to change',
+                'body' => 'Plant → Checklist Templates. Editing the questions bumps the version; sheets already completed keep the wording they were signed against, so history stays honest.',
+            ],
+            2 => [
+                'title' => 'Sheets appear on their own',
+                'body' => 'They are generated at 05:00 every working day. Keep Plant → Holidays up to date, or the plant generates sheets nobody completes and your compliance figure drops for no real reason.',
+            ],
+            3 => [
+                'title' => 'What the numbers mean',
+                'body' => 'Compliance is completed ÷ everything owed in the window. Work not yet due is not counted, and a window with nothing due shows a dash rather than 0% or 100% — both would be a lie.',
+            ],
+            4 => [
+                'title' => 'Machine codes are permanent',
+                'body' => 'A machine\'s code is what its QR sticker encodes. Changing it invalidates every sticker already fitted, so confirm codes before the first print run.',
+            ],
+        ],
+
+        'quality_assurance' => [
+            1 => [
+                'title' => 'You are the third signature',
+                'body' => 'An operator signs, a supervisor approves, and then you verify that the work was really done. Your queue is QA Verification.',
+            ],
+            2 => [
+                'title' => 'Only after the supervisor',
+                'body' => 'A sheet appears in your queue once it has been signed off, oldest first, with failed-item counts on the row so you know which to open.',
+            ],
+            3 => [
+                'title' => 'A finding is optional',
+                'body' => 'Most verifications have nothing to say. When something is worth noting, write it — it is stored on the sheet and anybody who can read the sheet can see it.',
+            ],
+            4 => [
+                'title' => 'You do not complete or approve',
+                'body' => 'That separation is the point of the role. You can read every sheet in the plant and export the reports, but you cannot do the work you are checking.',
+            ],
+        ],
+
+        'admin' => [
+            1 => [
+                'title' => 'People come first',
+                'body' => 'System → Users. Floor operators need an employee number and a PIN, and no email at all. Supervisors and office staff need a password.',
+            ],
+            2 => [
+                'title' => 'A tablet must be set up once',
+                'body' => 'System → Kiosk Devices. Until a device is enrolled the kiosk refuses to open on it — that is the answer when somebody says a new tablet "doesn\'t work".',
+            ],
+            3 => [
+                'title' => 'See what everyone else sees',
+                'body' => 'Use the View as picker at the bottom of the menu to look at the app as an operator, supervisor, manager or QA officer. It only ever removes access, never adds it.',
+            ],
+            4 => [
+                'title' => 'Before it goes live',
+                'body' => 'Run php artisan security:check on the server. It reports debug mode, cookie security, HTTPS, demo accounts and the admin password, and fails the build if any of them are wrong.',
+            ],
+        ],
+    ],
+
     'roles' => [
         'operator' => 'Operator',
         'supervisor' => 'Supervisor',
