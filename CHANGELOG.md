@@ -1,5 +1,55 @@
 # Changelog
 
+## [0.19.1] — Production settings, made safe by default and verifiable
+
+### SESSION_SECURE_COOKIE
+Defaulted to Laravel's `null`, which means "never Secure" — session and kiosk
+cookies would have gone over plain HTTP on a production host, readable off the
+shop-floor Wi-Fi and replayable.
+
+It now defaults to **true when `APP_ENV=production`** and false elsewhere. A
+production host gets HTTPS-only cookies without anyone remembering to set it,
+and a plain-HTTP pilot is not locked out of its own login page. An explicit
+`SESSION_SECURE_COOKIE=false` still wins — that is the pilot override, and the
+check below keeps reporting it.
+
+Consequence, spelled out in the deployment guide: the site must be on HTTPS
+*before* `APP_ENV` flips, or nobody can log in and every enrolled tablet looks
+un-enrolled.
+
+### APP_DEBUG
+Already defaulted to `false` in `config/app.php`, so nothing to fix — but
+nothing verified it either, and it is the setting that leaks `.env`, `APP_KEY`
+and the database password to anyone who can reach an error page.
+
+### `php artisan security:check`
+Exits non-zero on anything wrong, so it can gate a deploy script. `--strict`
+also fails on warnings. It checks `APP_DEBUG`, `APP_KEY`, secure cookies,
+whether `APP_URL` is HTTPS, whether signatures are on the public disk, whether
+demo accounts are still active, and whether the admin password is still the
+old published default.
+
+Warnings rather than failures outside production: a pilot on plain HTTP with
+debug on is a legitimate state, and a check that cries wolf gets ignored.
+
+Run against this repository's own dev install it reports one **FAIL** — the
+admin password is still `ChangeMe!2026`.
+
+### A boot-time reminder
+A production host logs a `critical` line while `APP_DEBUG` or insecure cookies
+are on. Deliberately not an exception: refusing to boot takes the checklists
+off the shop floor over a configuration mistake, and an application that will
+not start gets "fixed" by whoever is on shift deleting the check.
+
+### Also
+- `DEPLOYMENT.md` §3 still described the removed published-default password;
+  it now documents the print-once random one. Sections renumbered.
+- Found while testing: `app()->isProduction()` reads the environment bound at
+  bootstrap, so it cannot see a runtime config change — the command graded a
+  production configuration against pilot rules. It reads `config('app.env')`.
+- 10 new tests (155 total, 474 assertions).
+
+
 Versions track build milestones: `0.<milestone>.<patch>`. The project reaches
 `1.0.0` when all 8 milestones are complete and the paper forms are retired.
 

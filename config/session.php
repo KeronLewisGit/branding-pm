@@ -169,7 +169,26 @@ return [
     |
     */
 
-    'secure' => env('SESSION_SECURE_COOKIE'),
+    /*
+     * Defaults to TRUE in production and false elsewhere, rather than to the
+     * framework's `null` (= never Secure).
+     *
+     * A session cookie without the Secure flag is sent over plain HTTP, so
+     * anyone on the same network can read it and become that user. On a plant
+     * floor, "the same network" is the shop-floor Wi-Fi.
+     *
+     * Two consequences worth knowing before you flip APP_ENV to production:
+     *
+     *   - The site must be on HTTPS. With this on and the site on http://,
+     *     the browser will not send the cookie back and nobody can log in.
+     *   - It also covers the kiosk `kiosk_device` cookie, which is issued
+     *     through the same session config — an unenrolled-looking tablet is
+     *     the symptom of getting this wrong.
+     *
+     * `SESSION_SECURE_COOKIE=false` is the deliberate override for a
+     * plain-HTTP pilot. `php artisan security:check` reports when it is set.
+     */
+    'secure' => env('SESSION_SECURE_COOKIE', env('APP_ENV') === 'production'),
 
     /*
     |--------------------------------------------------------------------------

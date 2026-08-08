@@ -16,6 +16,7 @@ use App\Policies\MachinePolicy;
 use App\Policies\UserPolicy;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -44,5 +45,40 @@ class AppServiceProvider extends ServiceProvider
         // Surface N+1 queries everywhere except production. Mass assignment
         // stays guarded — every model declares an explicit $fillable.
         Model::preventLazyLoading(! $this->app->isProduction());
+
+        $this->warnAboutUnsafeProductionSettings();
+    }
+
+    /**
+     * Shout, in the log, when a production host is running with settings that
+     * expose it.
+     *
+     * Deliberately a log line and not an exception. Refusing to boot would
+     * take the checklists off the shop floor for a configuration mistake, and
+     * an application that will not start gets "fixed" by whoever is on shift
+     * — usually by deleting the check. `php artisan security:check` is the
+     * gate; this is the thing that keeps saying so afterwards.
+     */
+    private function warnAboutUnsafeProductionSettings(): void
+    {
+        if (! $this->app->isProduction()) {
+            return;
+        }
+
+        if (config('app.debug')) {
+            Log::critical(
+                'APP_DEBUG is enabled in production. Any error page now exposes the '
+                .'stack trace, the failing query and the entire .env — including '
+                .'APP_KEY and the database password. Set APP_DEBUG=false.'
+            );
+        }
+
+        if (! config('session.secure')) {
+            Log::critical(
+                'SESSION_SECURE_COOKIE is disabled in production. Session and kiosk '
+                .'cookies will be sent over plain HTTP, where anyone on the same '
+                .'network can read and replay them. Serve over HTTPS and set it true.'
+            );
+        }
     }
 }
