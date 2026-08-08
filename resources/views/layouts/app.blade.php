@@ -164,14 +164,17 @@
                 @endcan
 
                 {{--
-                    Group 2 — the plant. What a maintenance manager sets up
-                    once and then rarely touches.
+                    Group 2 — the plant. Folded by default: this is what a
+                    maintenance manager sets up once and then rarely touches,
+                    so it does not deserve five permanent rows.
                 --}}
                 @canany(['machine.manage', 'part.manage', 'template.manage', 'holiday.manage'])
-                    <p class="px-4 pb-1 pt-4 text-xs font-semibold uppercase tracking-wider text-slate-400 [.is-collapsed_&]:mx-2 [.is-collapsed_&]:mt-4 [.is-collapsed_&]:mb-0 [.is-collapsed_&]:h-px [.is-collapsed_&]:overflow-hidden [.is-collapsed_&]:bg-slate-700 [.is-collapsed_&]:p-0 [.is-collapsed_&]:text-transparent">
-                        {{ __('app.nav.group_plant') }}
-                    </p>
-                @endcanany
+                    <x-nav-group
+                        group="plant"
+                        :label="__('app.nav.group_plant')"
+                        :active="request()->routeIs('admin.machines*') || request()->routeIs('machines.show') || request()->routeIs('admin.locations*') || request()->routeIs('admin.templates*') || request()->routeIs('admin.parts*') || request()->routeIs('admin.holidays*')"
+                    >
+                        <x-slot:icon>{!! $ico('<path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M10 21v-6h4v6"/>') !!}</x-slot:icon>
 
                 @can('machine.manage')
                     {{-- Also active on the machine profile and the sticker sheet:
@@ -207,12 +210,17 @@
                     </x-nav-link>
                 @endcan
 
-                {{-- Group 3 — the system itself. Admin territory. --}}
-                @canany(['kiosk.manage', 'user.manage'])
-                    <p class="px-4 pb-1 pt-4 text-xs font-semibold uppercase tracking-wider text-slate-400 [.is-collapsed_&]:mx-2 [.is-collapsed_&]:mt-4 [.is-collapsed_&]:mb-0 [.is-collapsed_&]:h-px [.is-collapsed_&]:overflow-hidden [.is-collapsed_&]:bg-slate-700 [.is-collapsed_&]:p-0 [.is-collapsed_&]:text-transparent">
-                        {{ __('app.nav.group_system') }}
-                    </p>
+                    </x-nav-group>
                 @endcanany
+
+                {{-- Group 3 — the system itself. Admin territory, and rarer still. --}}
+                @canany(['kiosk.manage', 'user.manage'])
+                    <x-nav-group
+                        group="system"
+                        :label="__('app.nav.group_system')"
+                        :active="request()->routeIs('admin.kiosk') || request()->routeIs('admin.users')"
+                    >
+                        <x-slot:icon>{!! $ico('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>') !!}</x-slot:icon>
 
                 @can('kiosk.manage')
                     <x-nav-link :href="route('admin.kiosk')" :active="request()->routeIs('admin.kiosk')">
@@ -221,12 +229,14 @@
                     </x-nav-link>
                 @endcan
 
-                @can('user.manage')
+                    @can('user.manage')
                     <x-nav-link :href="route('admin.users')" :active="request()->routeIs('admin.users')">
                         <x-slot:icon>{!! $ico('<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/>') !!}</x-slot:icon>
                         {{ __('app.nav.users') }}
                     </x-nav-link>
-                @endcan
+                    @endcan
+                    </x-nav-group>
+                @endcanany
             </nav>
 
             {{-- Pinned to the bottom of the sticky column, above the scroll. --}}

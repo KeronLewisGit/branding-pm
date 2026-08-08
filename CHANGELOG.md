@@ -3,6 +3,48 @@
 Versions track build milestones: `0.<milestone>.<patch>`. The project reaches
 `1.0.0` when all 8 milestones are complete and the paper forms are retired.
 
+## [0.20.2] — Collapsible sub-menus
+
+0.20.1 got an administrator's sidebar from 1116px to 840px, which fits a
+1080p screen and still scrolls on a 1366×768 laptop — about 640px of usable
+height. Tightening further would have meant shrinking below the 44px target
+minimum, which is not a trade worth making.
+
+So the two setup groups became **collapsible sub-menus** instead. Thirteen
+permanent rows become six, plus two group headers:
+
+| | Rows | Height |
+|---|---|---|
+| Operator | 2 | 262px |
+| Supervisor / QA | 5 | 400px |
+| Maintenance manager | 6 + 1 group | 498px |
+| Administrator | 6 + 2 groups | **550px** |
+
+### How it behaves
+- **Shut by default.** Defaulting open would leave thirteen rows and no gain.
+- **The group holding the current page opens itself**, so you can always see
+  where you are. That beats the remembered state, deliberately — being on
+  Machines with "Plant" folded shut would be disorienting.
+- **Otherwise the state is remembered per group**, read synchronously so
+  nothing flashes open then shut on load.
+- **One at a time.** Opening a group closes the other, except the one holding
+  the current page. With both open an administrator is back at thirteen rows,
+  which is the thing this exists to remove.
+- **On the icon rail the children are forced open** and the toggle is hidden.
+  A rail whose destinations were folded behind a heading nobody can read would
+  hide half the application.
+
+Uses a class toggle rather than `x-show`, because `x-show` writes an inline
+`display:none` that no class could override — and the rail has to force these
+open.
+
+### Honestly
+With a five-item group expanded, an administrator's menu reaches 780px and
+will still scroll on a 1366×768 screen. That is a state the reader opened on
+purpose, it scrolls inside the sidebar rather than moving the page, and the
+alternative was sub-44px rows. The default view — the complaint — no longer
+scrolls for anybody.
+
 ## [0.20.1] — The menu fits without scrolling
 
 An administrator sees thirteen entries. At the old sizes that came to
