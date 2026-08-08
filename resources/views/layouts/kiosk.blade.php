@@ -104,6 +104,8 @@
         </div>
     </div>
 
+    @include('partials.view-as-banner')
+
     <main class="flex-1 px-4 py-6 sm:px-6">
         @if (session('status'))
             <x-alert type="success" class="mb-6">{{ session('status') }}</x-alert>

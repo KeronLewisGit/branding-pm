@@ -168,3 +168,40 @@ it('ignores a stale role left in the session', function (): void {
 
     $this->actingAs($admin)->get(route('admin.users'))->assertOk();
 });
+
+/*
+|--------------------------------------------------------------------------
+| The exit is the banner, and it has to be everywhere
+|--------------------------------------------------------------------------
+*/
+
+it('hides the sidebar picker while previewing and shows the banner instead', function (): void {
+    $admin = anAdmin();
+
+    $this->actingAs($admin)->get(route('dashboard'))
+        ->assertOk()
+        ->assertSee('id="view-as-role"', escape: false)
+        ->assertDontSee(__('app.view_as.active_hint'));
+
+    $this->actingAs($admin)->post(route('view-as.start'), ['role' => 'supervisor']);
+
+    // With the picker gone the banner's button is the only way out, so it
+    // must be present wherever the preview can reach.
+    $this->actingAs($admin)->get(route('dashboard'))
+        ->assertOk()
+        ->assertDontSee('id="view-as-role"', escape: false)
+        ->assertSee(__('app.view_as.active_hint'))
+        ->assertSee(route('view-as.stop'), escape: false);
+});
+
+it('shows the banner on the kiosk layout too, where there is no sidebar', function (): void {
+    $admin = anAdmin();
+
+    // RunForm renders in the kiosk layout. Before the banner was shared, an
+    // administrator previewing an operator could open a run and find no way
+    // back at all.
+    expect(file_get_contents(resource_path('views/layouts/kiosk.blade.php')))
+        ->toContain("@include('partials.view-as-banner')")
+        ->and(file_get_contents(resource_path('views/layouts/app.blade.php')))
+        ->toContain("@include('partials.view-as-banner')");
+});
