@@ -52,7 +52,7 @@ final class MissedChecksReport implements Report
                 $query->where('status', RunStatus::Missed->value)
                     ->orWhere(fn ($q) => $q
                         ->whereIn('status', Compliance::OUTSTANDING)
-                        ->whereDate('scheduled_for', '<', $today->toDateString()));
+                        ->where('scheduled_for', '<', $today->toDateString()));
             })
             ->with(['machine:id,name', 'template:id,name', 'operator:id,full_name'])
             ->orderBy('scheduled_for')

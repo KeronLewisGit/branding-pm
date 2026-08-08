@@ -48,8 +48,8 @@ final class PartsUsageReport implements Report
         return ChecklistRunPart::query()
             ->join('checklist_runs', 'checklist_runs.id', '=', 'checklist_run_parts.checklist_run_id')
             ->whereIn('checklist_runs.machine_id', $filters->machineIds())
-            ->whereDate('checklist_runs.scheduled_for', '>=', $filters->from->toDateString())
-            ->whereDate('checklist_runs.scheduled_for', '<=', $filters->to->toDateString())
+            ->where('checklist_runs.scheduled_for', '>=', $filters->from->toDateString())
+            ->where('checklist_runs.scheduled_for', '<=', $filters->to->toDateString())
             ->where('checklist_run_parts.qty_used', '>', 0)
             ->groupBy('checklist_run_parts.part_code_snapshot', 'checklist_run_parts.part_name_snapshot')
             ->selectRaw(

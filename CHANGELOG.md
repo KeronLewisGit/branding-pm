@@ -3,6 +3,53 @@
 Versions track build milestones: `0.<milestone>.<patch>`. The project reaches
 `1.0.0` when all 8 milestones are complete and the paper forms are retired.
 
+## [0.24.0] — Query review: a wrong sort, and 26 lost indexes
+
+### Fixed: an unrecognised issue status sorted to the top, not the bottom
+The machine profile ordered its fault list with
+`ORDER BY FIELD(status, 'open', 'acknowledged', …)` — the five statuses typed
+out again inside a SQL string. MySQL's `FIELD()` returns **0** for a value it
+does not find, and matches start at **1**. So a status added to the enum but
+not to that string would not fall to the end of the list; it would sort
+**above open breakdowns**, on the screen a maintenance manager uses to decide
+what to fix next. Nothing would error. The list would just be wrong.
+
+Verified directly — given statuses `deferred`, `closed`, `open`:
+
+    old FIELD():  deferred, open, closed
+    new rank():   open, closed, deferred
+
+`App\Support\SqlOrder` now builds these clauses from the enum, with an
+explicit last place for anything unranked. Two further hand-written copies
+went with it: `IssueRegister` had re-typed `IssueStatus::openStatuses()` and
+re-implemented `IssueSeverity::rank()`, both as SQL strings.
+
+### Fixed: 26 queries could not use their index
+`scheduled_for` is a MySQL `DATE` column, so `whereDate()` on it wraps an
+already-date value in `date()` — no change to the result, and the predicate
+stops being sargable. Measured on the pilot data:
+
+    whereDate('scheduled_for', …)   type=ALL  key=NULL                            rows=359
+    where('scheduled_for', …)       type=ref  key=…_scheduled_for_index           rows=19
+
+A full scan of the busiest table instead of an index lookup, and the gap
+widens as the table grows. Replaced at all 26 `DATE`-column call sites across
+the dashboard, reports, kiosk, scheduler commands and machine profile. The
+two remaining `whereDate()` calls are on `issues.created_at`, a `TIMESTAMP`
+with no index, where it is both meaningful and free.
+
+`ChecklistRun::scopeDueOn()` carries the reason, so it does not get "fixed"
+back.
+
+### Reviewed and found sound
+No unauthorised write paths (every Livewire action that writes calls
+`authorize()`), no unescaped user input in Blade (`{!! !!}` is SVG paths and
+library-generated QR only), no untranslated user-facing copy, no duplicated
+method bodies, and no N+1 risk — `preventLazyLoading` is already on outside
+production.
+
+**217 tests, 847 assertions.**
+
 ## [0.23.0] — One list of roles, and the bug four copies of it caused
 
 ### Fixed: Quality Assurance officers were being silently demoted

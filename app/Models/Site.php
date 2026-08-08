@@ -92,7 +92,7 @@ class Site extends Model
                     ->orWhereNull('site_id');
             })
             ->where(function ($query) use ($date) {
-                $query->whereDate('date', $date->toDateString())
+                $query->where('date', $date->toDateString())
                     ->orWhere(function ($query) use ($date) {
                         $query->where('is_recurring', true)
                             ->whereMonth('date', $date->month)

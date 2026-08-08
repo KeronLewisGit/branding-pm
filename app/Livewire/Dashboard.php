@@ -102,7 +102,7 @@ class Dashboard extends Component
     {
         $runs = ChecklistRun::query()
             ->whereIn('machine_id', $filters->machineIds())
-            ->whereDate('scheduled_for', $today->toDateString())
+            ->where('scheduled_for', $today->toDateString())
             ->toBase()
             ->selectRaw('status, COUNT(*) as total')
             ->groupBy('status')
@@ -112,7 +112,7 @@ class Dashboard extends Component
 
         $overdue = ChecklistRun::query()
             ->whereIn('machine_id', $filters->machineIds())
-            ->whereDate('scheduled_for', '<', $today->toDateString())
+            ->where('scheduled_for', '<', $today->toDateString())
             ->whereIn('status', Compliance::OUTSTANDING)
             ->count();
 
@@ -179,8 +179,8 @@ class Dashboard extends Component
 
         $rows = ChecklistRun::query()
             ->whereIn('machine_id', $machines->pluck('id'))
-            ->whereDate('scheduled_for', '>=', $start->toDateString())
-            ->whereDate('scheduled_for', '<=', $end->toDateString())
+            ->where('scheduled_for', '>=', $start->toDateString())
+            ->where('scheduled_for', '<=', $end->toDateString())
             ->toBase()
             ->selectRaw(
                 'machine_id,

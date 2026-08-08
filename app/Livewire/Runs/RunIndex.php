@@ -84,8 +84,8 @@ class RunIndex extends Component
             // Never a raw machine query — MachineScope is the single
             // implementation of operator scoping (BUILD-CONTRACT §5).
             ->whereIn('machine_id', MachineScope::for($user)->select('machines.id'))
-            ->when($this->dateFrom !== '', fn (Builder $q) => $q->whereDate('scheduled_for', '>=', $this->dateFrom))
-            ->when($this->dateTo !== '', fn (Builder $q) => $q->whereDate('scheduled_for', '<=', $this->dateTo))
+            ->when($this->dateFrom !== '', fn (Builder $q) => $q->where('scheduled_for', '>=', $this->dateFrom))
+            ->when($this->dateTo !== '', fn (Builder $q) => $q->where('scheduled_for', '<=', $this->dateTo))
             ->when($this->machine !== '', fn (Builder $q) => $q->where('machine_id', (int) $this->machine))
             ->when($this->location !== '', fn (Builder $q) => $q->whereHas(
                 'machine',

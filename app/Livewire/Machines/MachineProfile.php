@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Livewire\Machines;
 
+use App\Enums\IssueStatus;
 use App\Enums\RunStatus;
 use App\Models\ChecklistRun;
 use App\Models\ChecklistRunPart;
@@ -11,6 +12,7 @@ use App\Models\ChecklistTemplate;
 use App\Models\Issue;
 use App\Models\Machine;
 use App\Models\User;
+use App\Support\SqlOrder;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -108,7 +110,7 @@ class MachineProfile extends Component
     {
         $counts = ChecklistRun::query()
             ->where('machine_id', $this->machine->id)
-            ->whereDate('scheduled_for', '>=', now()->subDays($this->days)->toDateString())
+            ->where('scheduled_for', '>=', now()->subDays($this->days)->toDateString())
             ->toBase()
             ->selectRaw('status, COUNT(*) as total')
             ->groupBy('status')
@@ -139,7 +141,7 @@ class MachineProfile extends Component
     {
         return ChecklistRun::query()
             ->where('machine_id', $this->machine->id)
-            ->whereDate('scheduled_for', '>=', now()->subDays($this->days)->toDateString())
+            ->where('scheduled_for', '>=', now()->subDays($this->days)->toDateString())
             ->with(['template:id,name', 'operator:id,full_name', 'supervisor:id,full_name'])
             ->orderByDesc('scheduled_for')
             ->orderByDesc('id')
@@ -158,7 +160,7 @@ class MachineProfile extends Component
         return Issue::query()
             ->where('machine_id', $this->machine->id)
             ->with(['raisedBy:id,full_name', 'assignedTo:id,full_name'])
-            ->orderByRaw("FIELD(status, 'open', 'acknowledged', 'in_progress', 'resolved', 'closed')")
+            ->orderByRaw(...SqlOrder::rank('status', IssueStatus::values()))
             ->orderByDesc('id')
             ->limit(20)
             ->get();
@@ -179,7 +181,7 @@ class MachineProfile extends Component
         return ChecklistRunPart::query()
             ->join('checklist_runs', 'checklist_runs.id', '=', 'checklist_run_parts.checklist_run_id')
             ->where('checklist_runs.machine_id', $this->machine->id)
-            ->whereDate('checklist_runs.scheduled_for', '>=', now()->subDays($this->days)->toDateString())
+            ->where('checklist_runs.scheduled_for', '>=', now()->subDays($this->days)->toDateString())
             ->where('checklist_run_parts.qty_used', '>', 0)
             ->groupBy('checklist_run_parts.part_code_snapshot', 'checklist_run_parts.part_name_snapshot')
             ->orderByDesc(DB::raw('SUM(checklist_run_parts.qty_used)'))

@@ -56,7 +56,7 @@ class MarkMissedChecklistRuns extends Command
             // cannot possibly be past end-of-day + a non-negative grace
             // period. The exact per-template deadline is checked in PHP below
             // because it depends on grace_period_hours and the plant timezone.
-            ->whereDate('scheduled_for', '<=', $todayLocal)
+            ->where('scheduled_for', '<=', $todayLocal)
             ->with('template:id,grace_period_hours')
             // chunkById pages on the primary key, so flipping rows out of the
             // filtered set mid-iteration is safe (no skipped records).

@@ -34,6 +34,20 @@ enum IssueSeverity: string
         };
     }
 
+    /**
+     * Values in queue order, most urgent first — `rank()`, for the query
+     * layer, so a list can be sorted without re-typing the order in SQL.
+     *
+     * @return list<string>
+     */
+    public static function mostUrgentFirst(): array
+    {
+        $cases = self::cases();
+        usort($cases, fn (self $a, self $b): int => $a->rank() <=> $b->rank());
+
+        return array_map(fn (self $case): string => $case->value, $cases);
+    }
+
     /** Badge token — always shown with the label, never colour alone. */
     public function color(): string
     {

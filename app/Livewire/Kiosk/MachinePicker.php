@@ -93,9 +93,9 @@ class MachinePicker extends Component
         $rows = ChecklistRun::query()
             ->whereIn('machine_id', $machineIds)
             ->where(function (Builder $query) use ($today) {
-                $query->whereDate('scheduled_for', $today)
+                $query->where('scheduled_for', $today)
                     ->orWhere(fn (Builder $q) => $q
-                        ->whereDate('scheduled_for', '<', $today)
+                        ->where('scheduled_for', '<', $today)
                         ->whereIn('status', ['pending', 'in_progress', 'rejected']));
             })
             ->groupBy('machine_id')

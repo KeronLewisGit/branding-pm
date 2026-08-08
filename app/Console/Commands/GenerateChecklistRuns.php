@@ -114,7 +114,7 @@ class GenerateChecklistRuns extends Command
             foreach ($shifts as $shift) {
                 $alreadyExists = ChecklistRun::query()
                     ->where('checklist_template_id', $template->id)
-                    ->whereDate('scheduled_for', $date->toDateString())
+                    ->where('scheduled_for', $date->toDateString())
                     ->where('shift', $shift->value)
                     ->exists();
 
