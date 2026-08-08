@@ -3,6 +3,49 @@
 Versions track build milestones: `0.<milestone>.<patch>`. The project reaches
 `1.0.0` when all 8 milestones are complete and the paper forms are retired.
 
+## [0.22.1] — Plainer walkthrough copy, and previewing it from the banner
+
+### Rewritten for the person reading it
+The audience is somebody who has never used a computer-based form, and the
+first draft did not read like it: sentences ran to **26 words**, and terms
+went unexplained. All 21 cards rewritten — **longest sentence anywhere is now
+17 words**, most are under 14.
+
+`N/A` is now spelled out where it first appears ("mark a job N/A, which means
+not needed"), and the long compound sentences are broken into short ones:
+"Your work is saved the moment you tap. The tablet may go to sleep. Somebody
+may take it away. Nothing is lost."
+
+`WalkthroughTest` now **enforces the sentence length**, so a well-meant rewrite
+cannot quietly put the long ones back.
+
+### An administrator can read any role's walkthrough
+Moved out of the sidebar and into the **Viewing as** banner: "show me what an
+operator sees" and "show me what an operator is told on day one" are the same
+question, and the menu was not the place to answer half of it. The banner now
+carries **Show this role's walkthrough** beside **Back to Administrator**.
+
+Closing the walkthrough returns to the still-active preview rather than ending
+both, and it never marks the administrator's own introduction as seen.
+
+Admin → Users also gained a per-person **Show the walkthrough again** action,
+for the operator who skipped it on day one and is now struggling.
+
+### A grammar bug in the new copy, caught by reading the output
+The preview banner said "this is what a Operator sees". No article works for
+every role, so the article is gone: **"Preview — the Operator walkthrough"**.
+
+### The sidebar scrollbar
+The menu fits at every normal size, but a short window or an expanded group
+can still overflow — and the browser's default scrollbar is a light grey
+system control dropped into a slate-900 column, which reads as a rendering
+fault. Now a thin slate thumb on a transparent track, in both the standard
+`scrollbar-*` syntax and `::-webkit-scrollbar` for older Chrome, Edge and
+Safari.
+
+### Tests
+12 new (203 total, 826 assertions).
+
 ## [0.22.0] — First-run walkthrough
 
 A few cards over the page the first time somebody signs in, explaining the

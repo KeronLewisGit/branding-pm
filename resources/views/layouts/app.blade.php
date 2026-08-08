@@ -104,7 +104,7 @@
             </div>
 
             {{-- The nav scrolls inside the sticky column, not the page. --}}
-            <nav aria-label="{{ __('app.nav.main') }}" class="flex-1 space-y-0.5 overflow-y-auto px-3 py-3">
+            <nav aria-label="{{ __('app.nav.main') }}" class="nav-scroll flex-1 space-y-0.5 overflow-y-auto px-3 py-3">
                 @php
                     // Icons are decorative — every entry is named in text beside it.
                     $ico = fn (string $d) => '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">'.$d.'</svg>';

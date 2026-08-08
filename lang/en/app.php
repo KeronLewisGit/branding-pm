@@ -209,8 +209,12 @@ return [
 
     /*
      * First-run walkthrough. One set per role, because a shared generic tour
-     * is the kind nobody reads. Written for somebody who has never used a
-     * computer-based form — same voice as docs/user-guide.md.
+     * is the kind nobody reads.
+     *
+     * Written for somebody who has never used a computer-based form: short
+     * sentences, everyday words, and every term explained the first time it
+     * appears ("N/A, which means not needed"). WalkthroughTest enforces the
+     * sentence length, so a well-meant rewrite cannot quietly undo it.
      */
     'walkthrough' => [
         'welcome' => 'Welcome, :name',
@@ -221,103 +225,108 @@ return [
         'done' => 'Start using it',
         'replay' => 'Show the walkthrough again',
         'replay_started' => 'The walkthrough will show on your next screen.',
+        'preview_from_banner' => 'Show this role’s walkthrough',
+        'previewing' => 'Preview — the :role walkthrough',
+        'close_preview' => 'Close preview',
+        'reset_for_user' => 'Show the walkthrough again for this person',
+        'reset_done' => '“:name” will see the walkthrough the next time they sign in.',
 
         'operator' => [
             1 => [
                 'title' => 'Find your machine',
-                'body' => 'Tap the machine on the screen, or scan the square code sticker on the machine itself. If the sticker is too dirty to scan, the machine\'s code is printed underneath it.',
+                'body' => 'Tap your machine in the list. Or point the tablet camera at the square sticker on the machine. Is the sticker too dirty to scan? The short name printed under it is in the list too.',
             ],
             2 => [
                 'title' => 'Tap each job as you do it',
-                'body' => 'The list is the same one, in the same order, as the paper sheet. Tap a row when that job is done. The counter at the top shows how far along you are.',
+                'body' => 'The jobs are the same, and in the same order, as the paper sheet. Tap a row when you have finished that job. The number at the top counts how many are done.',
             ],
             3 => [
                 'title' => 'If something is wrong, say so',
-                'body' => 'Use the button on the right of a row to mark it N/A or Failed. Marking it Failed asks you what you found and reports the fault for you. Finding faults is the job — it is never a mark against you.',
+                'body' => 'Every row has a button on the right. Use it to mark a job N/A, which means not needed, or Failed. Mark it Failed and the tablet asks what you found. It reports the fault for you. Reporting faults is the job. It is never held against you.',
             ],
             4 => [
                 'title' => 'There is no Save button',
-                'body' => 'Every tap is saved the moment you make it. If the tablet sleeps or somebody walks off with it, nothing is lost.',
+                'body' => 'Your work is saved the moment you tap. The tablet may go to sleep. Somebody may take it away. Nothing is lost.',
             ],
             5 => [
                 'title' => 'Sign when you finish',
-                'body' => 'Tap Submit, sign your name with your finger, and type your PIN once more. The PIN is what proves the signature is yours on a shared tablet.',
+                'body' => 'Tap Submit. Sign your name with your finger. Then type your PIN again. The tablet is shared, so the PIN is what proves the signature is yours.',
             ],
         ],
 
         'supervisor' => [
             1 => [
                 'title' => 'Your queue is Approvals',
-                'body' => 'Sheets an operator has signed wait for you there, oldest first. Each row shows how many checks failed before you open anything.',
+                'body' => 'Sheets that operators have signed wait for you there, oldest first. Each row tells you how many checks failed before you open it.',
             ],
             2 => [
                 'title' => 'Read the failures first',
-                'body' => 'On a sheet, failed checks are pulled to the top with the operator\'s own words and any photo they took. Look at the photos — that is why they were taken.',
+                'body' => 'Failed checks sit at the top of the sheet. You see the operator\'s own words, and any photo they took. Look at the photos. That is why they were taken.',
             ],
             3 => [
-                'title' => 'Approve locks it; Reject needs a reason',
-                'body' => 'Once you approve, the sheet cannot be edited by anyone. A rejection must say why, and goes straight back to the operator with your reason at the top.',
+                'title' => 'Approving locks the sheet',
+                'body' => 'Once you approve, nobody can edit that sheet again. To send it back you must say why. It goes straight to the operator with your reason at the top.',
             ],
             4 => [
                 'title' => 'You cannot sign off your own work',
-                'body' => 'If you completed a sheet yourself, another supervisor has to approve it. The buttons stay visible and explain why rather than quietly disappearing.',
+                'body' => 'If you filled in a sheet yourself, another supervisor has to approve it. The buttons stay on screen and tell you why, rather than quietly disappearing.',
             ],
         ],
 
         'maintenance_manager' => [
             1 => [
                 'title' => 'The checklists are yours to change',
-                'body' => 'Plant → Checklist Templates. Editing the questions bumps the version; sheets already completed keep the wording they were signed against, so history stays honest.',
+                'body' => 'Go to Plant, then Checklist Templates. Change the questions and the version number goes up. Sheets already signed keep the old wording, so the history stays true.',
             ],
             2 => [
                 'title' => 'Sheets appear on their own',
-                'body' => 'They are generated at 05:00 every working day. Keep Plant → Holidays up to date, or the plant generates sheets nobody completes and your compliance figure drops for no real reason.',
+                'body' => 'The system creates each day\'s sheets at 05:00. Keep Plant, then Holidays, up to date. If you do not, sheets appear on days nobody works. They are never completed, and your figures fall for no real reason.',
             ],
             3 => [
                 'title' => 'What the numbers mean',
-                'body' => 'Compliance is completed ÷ everything owed in the window. Work not yet due is not counted, and a window with nothing due shows a dash rather than 0% or 100% — both would be a lie.',
+                'body' => 'Compliance is the work completed, divided by the work owed. Work not yet due does not count. If nothing was due you see a dash, not 0% and not 100%. Both of those would be untrue.',
             ],
             4 => [
                 'title' => 'Machine codes are permanent',
-                'body' => 'A machine\'s code is what its QR sticker encodes. Changing it invalidates every sticker already fitted, so confirm codes before the first print run.',
+                'body' => 'A machine\'s code is what its sticker holds. Change the code and every sticker already fitted stops working. Agree the codes before you print the first batch.',
             ],
         ],
 
         'quality_assurance' => [
             1 => [
                 'title' => 'You are the third signature',
-                'body' => 'An operator signs, a supervisor approves, and then you verify that the work was really done. Your queue is QA Verification.',
+                'body' => 'An operator signs. A supervisor approves. Then you check that the work was really done. Your list is QA Verification.',
             ],
             2 => [
-                'title' => 'Only after the supervisor',
-                'body' => 'A sheet appears in your queue once it has been signed off, oldest first, with failed-item counts on the row so you know which to open.',
+                'title' => 'You come after the supervisor',
+                'body' => 'A sheet reaches your list once a supervisor has signed it off, oldest first. Each row shows how many checks failed, so you know which to open.',
             ],
             3 => [
-                'title' => 'A finding is optional',
-                'body' => 'Most verifications have nothing to say. When something is worth noting, write it — it is stored on the sheet and anybody who can read the sheet can see it.',
+                'title' => 'A note is optional',
+                'body' => 'Most checks have nothing worth adding. When something is worth saying, write it down. It stays on the sheet, and anyone who can read the sheet can see it.',
             ],
             4 => [
-                'title' => 'You do not complete or approve',
-                'body' => 'That separation is the point of the role. You can read every sheet in the plant and export the reports, but you cannot do the work you are checking.',
+                'title' => 'You do not do the work',
+                'body' => 'That separation is the point of the role. You can read every sheet in the plant, and export the reports. You cannot complete a check, or approve one.',
             ],
         ],
 
         'admin' => [
             1 => [
                 'title' => 'People come first',
-                'body' => 'System → Users. Floor operators need an employee number and a PIN, and no email at all. Supervisors and office staff need a password.',
+                'body' => 'Go to System, then Users. Floor operators need an employee number and a PIN. They do not need an email address. Supervisors and office staff need a password.',
             ],
             2 => [
                 'title' => 'A tablet must be set up once',
-                'body' => 'System → Kiosk Devices. Until a device is enrolled the kiosk refuses to open on it — that is the answer when somebody says a new tablet "doesn\'t work".',
+                'body' => 'Go to System, then Kiosk Devices. Until a device is enrolled, the kiosk will not open on it. That is usually the answer when somebody says a new tablet does not work.',
             ],
             3 => [
                 'title' => 'See what everyone else sees',
-                'body' => 'Use the View as picker at the bottom of the menu to look at the app as an operator, supervisor, manager or QA officer. It only ever removes access, never adds it.',
+                'body' => 'Use View as, at the foot of the menu, to look at the app as another role. It only ever takes access away. It never adds any.',
             ],
             4 => [
                 'title' => 'Before it goes live',
-                'body' => 'Run php artisan security:check on the server. It reports debug mode, cookie security, HTTPS, demo accounts and the admin password, and fails the build if any of them are wrong.',
+                'body' => 'Run php artisan security:check on the server. It reports on debug mode, cookie security, HTTPS, demo accounts and the admin password. It fails if any of them are wrong.',
             ],
         ],
     ],

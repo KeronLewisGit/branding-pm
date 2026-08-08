@@ -129,3 +129,64 @@ it('has real copy behind every card, not a missing translation key', function (s
             ->and(mb_strlen($step['body']))->toBeGreaterThan(40);
     }
 })->with(['operator', 'supervisor', 'maintenance_manager', 'quality_assurance', 'admin']);
+
+it('keeps every sentence short enough to read on a shop floor', function (string $role): void {
+    // The audience is somebody who has never used a computer-based form. The
+    // first draft had sentences of 26 words; this is the guard that stops a
+    // well-meant rewrite quietly putting them back.
+    foreach (Walkthrough::stepsFor($role) as $step) {
+        foreach (preg_split('/(?<=[.!?])\s+/', trim($step['body'])) as $sentence) {
+            expect(str_word_count($sentence))
+                ->toBeLessThanOrEqual(18, "Too long in {$role}: {$sentence}");
+        }
+    }
+})->with(['operator', 'supervisor', 'maintenance_manager', 'quality_assurance', 'admin']);
+
+/*
+|--------------------------------------------------------------------------
+| An administrator reading somebody else's walkthrough
+|--------------------------------------------------------------------------
+*/
+
+it('lets an administrator preview any role, without spending their own', function (string $role): void {
+    $admin = newUser('admin');
+    $admin->markWalkthroughSeen();
+
+    $this->actingAs($admin)->post(route('walkthrough.preview'), ['role' => $role])->assertRedirect();
+
+    $this->actingAs($admin)->get('/dashboard')
+        ->assertOk()
+        ->assertSee(Walkthrough::stepsFor($role)[0]['title'])
+        // Said plainly, or it reads as the administrator's own introduction.
+        ->assertSee(__('app.walkthrough.previewing', ['role' => __('app.roles.'.$role)]));
+})->with(['operator', 'supervisor', 'maintenance_manager', 'quality_assurance', 'admin']);
+
+it('closing a preview does not mark the administrator onboarded', function (): void {
+    $admin = newUser('admin');
+
+    expect($admin->needsWalkthrough())->toBeTrue();
+
+    $this->actingAs($admin)->post(route('walkthrough.preview'), ['role' => 'operator']);
+    $this->actingAs($admin)->post(route('walkthrough.complete'));
+
+    // Looking at an operator's cards must not consume the administrator's own
+    // first-run introduction.
+    expect($admin->fresh()->needsWalkthrough())->toBeTrue()
+        ->and(Walkthrough::isPreviewing())->toBeFalse();
+});
+
+it('keeps the preview to administrators, and to real roles', function (): void {
+    $supervisor = newUser('supervisor');
+
+    $this->actingAs($supervisor)
+        ->post(route('walkthrough.preview'), ['role' => 'operator'])
+        ->assertForbidden();
+
+    $admin = newUser('admin');
+
+    $this->actingAs($admin)
+        ->post(route('walkthrough.preview'), ['role' => 'wizard'])
+        ->assertSessionHasErrors('role');
+
+    expect(Walkthrough::isPreviewing())->toBeFalse();
+});

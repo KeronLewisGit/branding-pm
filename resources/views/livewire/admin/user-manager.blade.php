@@ -128,6 +128,12 @@
                                         />
 
                                         <x-icon-button
+                                            icon="restore"
+                                            :label="__('app.walkthrough.reset_for_user')"
+                                            wire:click="resetWalkthrough({{ $user->id }})"
+                                        />
+
+                                        <x-icon-button
                                             :icon="$user->is_active ? 'deactivate' : 'activate'"
                                             :label="$isSelf
                                                 ? __('app.users.cannot_deactivate_self')

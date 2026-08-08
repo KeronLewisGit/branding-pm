@@ -20,12 +20,29 @@
                 <p class="text-sm text-amber-800">{{ __('app.view_as.active_hint') }}</p>
             </div>
 
-            <form method="POST" action="{{ route('view-as.stop') }}" class="shrink-0">
-                @csrf
-                <x-button type="submit" class="!min-h-11 !text-base">
-                    {{ __('app.view_as.stop') }}
-                </x-button>
-            </form>
+            <div class="flex shrink-0 flex-wrap items-center gap-2">
+                {{--
+                    Reading a role's walkthrough belongs here rather than in
+                    the sidebar: "show me what an operator sees" and "show me
+                    what an operator is told on day one" are the same question,
+                    and the menu is not the place to answer half of it.
+                --}}
+                <form method="POST" action="{{ route('walkthrough.preview') }}">
+                    @csrf
+                    <input type="hidden" name="role" value="{{ \App\Support\ViewAs::role() }}">
+                    <x-button type="submit" variant="ghost"
+                              class="!min-h-11 border-amber-400 !text-base text-amber-900 hover:bg-amber-200">
+                        {{ __('app.walkthrough.preview_from_banner') }}
+                    </x-button>
+                </form>
+
+                <form method="POST" action="{{ route('view-as.stop') }}">
+                    @csrf
+                    <x-button type="submit" class="!min-h-11 !text-base">
+                        {{ __('app.view_as.stop') }}
+                    </x-button>
+                </form>
+            </div>
         </div>
     </div>
 @endif

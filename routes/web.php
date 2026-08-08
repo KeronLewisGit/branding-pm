@@ -153,6 +153,7 @@ Route::middleware(['auth', 'kiosk.idle'])->group(function (): void {
      */
     Route::post('/walkthrough/complete', [WalkthroughController::class, 'complete'])->name('walkthrough.complete');
     Route::post('/walkthrough/replay', [WalkthroughController::class, 'replay'])->name('walkthrough.replay');
+    Route::post('/walkthrough/preview', [WalkthroughController::class, 'preview'])->name('walkthrough.preview');
 
     Route::post('/view-as', [ViewAsController::class, 'start'])->name('view-as.start');
     Route::post('/view-as/stop', [ViewAsController::class, 'stop'])->name('view-as.stop');

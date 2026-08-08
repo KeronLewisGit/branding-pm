@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Support;
 
 use App\Models\User;
+use Illuminate\Support\Facades\Session;
 
 /**
  * The first-run walkthrough: a few cards explaining the app to whoever just
@@ -81,6 +82,55 @@ final class Walkthrough
     }
 
     /**
+     * Session key for an administrator previewing somebody else's
+     * walkthrough.
+     */
+    public const PREVIEW_KEY = 'walkthrough.preview_role';
+
+    public static function previewRole(): ?string
+    {
+        $role = Session::get(self::PREVIEW_KEY);
+
+        return is_string($role) && array_key_exists($role, self::STEP_COUNTS) ? $role : null;
+    }
+
+    public static function isPreviewing(): bool
+    {
+        return self::previewRole() !== null;
+    }
+
+    public static function startPreview(string $role): void
+    {
+        if (array_key_exists($role, self::STEP_COUNTS)) {
+            Session::put(self::PREVIEW_KEY, $role);
+        }
+    }
+
+    public static function stopPreview(): void
+    {
+        Session::forget(self::PREVIEW_KEY);
+    }
+
+    /**
+     * Every role that has a walkthrough, in the order they are offered.
+     *
+     * @return list<string>
+     */
+    public static function availableRoles(): array
+    {
+        return array_reverse(self::ROLE_PRIORITY);
+    }
+
+    /**
+     * The walkthrough actually on screen: the one being previewed if an
+     * administrator asked for it, otherwise the viewer's own.
+     */
+    public static function displayRoleFor(User $user): ?string
+    {
+        return self::previewRole() ?? self::roleFor($user);
+    }
+
+    /**
      * Should this user be shown it right now?
      *
      * Not while an administrator is previewing another role: they have been
@@ -90,8 +140,18 @@ final class Walkthrough
      */
     public static function shouldShow(?User $user): bool
     {
-        return $user !== null
-            && $user->walkthrough_seen_at === null
+        if ($user === null) {
+            return false;
+        }
+
+        // An administrator asked to see a particular role's walkthrough. That
+        // is an explicit request, so it overrides everything below — including
+        // their own "already seen".
+        if (self::isPreviewing()) {
+            return true;
+        }
+
+        return $user->walkthrough_seen_at === null
             && ! ViewAs::active()
             && self::roleFor($user) !== null;
     }
