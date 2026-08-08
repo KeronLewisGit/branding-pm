@@ -3,6 +3,60 @@
 Versions track build milestones: `0.<milestone>.<patch>`. The project reaches
 `1.0.0` when all 8 milestones are complete and the paper forms are retired.
 
+## [0.21.0] — A Work menu, and "view as" for administrators
+
+### Everything is a group now
+Checklist Runs, Approvals, QA Verification, Issues and Reports moved under a
+**Work** header, joining Plant and System. All three are shut by default.
+Dashboard stays a top-level entry — it is the landing page, not a section.
+
+Contracted, the whole sidebar is now: operator 224px, supervisor 268px,
+maintenance manager 320px, administrator 372px. Nothing scrolls for anybody,
+on any screen, in the default state.
+
+The group holding the current page still opens itself, so an operator landing
+on `/runs` sees Work already open — the folding costs them nothing.
+
+### View as
+An administrator can preview the application through another role:
+**operator, supervisor, maintenance manager or quality assurance**. Picker in
+the sidebar footer, a banner across the top while it is on, and one button to
+come back.
+
+The property that makes this safe is that **it can only ever remove access**.
+The effective permission set is the administrator's own intersected with the
+previewed role's — and since an administrator holds everything, that is
+exactly the previewed role's set. There is no path here that grants anything.
+
+Implementation notes worth keeping:
+
+- Hooked into `User::hasPermissionTo()`, **not** a `Gate::before` callback.
+  Spatie registers one of those already, and whichever is registered first
+  wins — ours would never have run. Every path (`can()`, `@can`,
+  `authorize()`, policies) funnels through that one method.
+- `hasPermissionTo` comes from a trait, so `parent::` cannot reach it. It is
+  aliased on the `use HasRoles` statement. Getting this wrong 500s every
+  authenticated page, which is how it was found.
+- All five policies had a `before()` hook waving admins past every check.
+  They now ask `isActingAdmin()` — admin **and** not previewing. Without
+  that, the menu shrinks while the permissions do not, and the preview
+  answers nothing.
+- Start and stop are both gated on the **real** admin role, not the effective
+  one. Gating stop on effective permissions would trap an administrator
+  inside the preview.
+
+It is a preview, not a sandbox: the administrator is still themselves, still
+logged as themselves, and anything they do is genuinely done. It hides
+buttons; it does not pretend to be somebody else. Starting and stopping are
+both written to the activity log.
+
+### Tests
+17 new (172 total, 544 assertions): each role previewed, permissions removed
+but never added, admin screens closing, the policy bypass stopping, full
+restoration, escape mid-preview, refusal for non-admins, refusal of `admin`
+and of made-up roles, and a stale session value being ignored rather than
+stranding somebody.
+
 ## [0.20.2] — Collapsible sub-menus
 
 0.20.1 got an administrator's sidebar from 1116px to 840px, which fits a

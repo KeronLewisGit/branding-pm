@@ -15,7 +15,10 @@ class MachinePolicy
      */
     public function before(User $user): ?bool
     {
-        return $user->hasRole('admin') ? true : null;
+        // `isActingAdmin()`, not `hasRole('admin')`: while an administrator
+        // is previewing another role this must NOT wave them through, or
+        // the preview shows that role's menu over an admin's permissions.
+        return $user->isActingAdmin() ? true : null;
     }
 
     public function viewAny(User $user): bool

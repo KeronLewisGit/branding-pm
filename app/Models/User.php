@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Support\ViewAs;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -14,12 +15,18 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Activitylog\Models\Concerns\LogsActivity;
 use Spatie\Activitylog\Support\LogOptions;
+use Spatie\Permission\Contracts\Permission;
 use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
 {
     use HasFactory;
-    use HasRoles;
+
+    // `hasPermissionTo` comes from a trait, so `parent::` cannot reach it —
+    // it is aliased here and called by the override below.
+    use HasRoles {
+        hasPermissionTo as protected spatieHasPermissionTo;
+    }
     use LogsActivity;
     use Notifiable;
     use SoftDeletes;
@@ -75,6 +82,43 @@ class User extends Authenticatable
             ])
             ->logOnlyDirty()
             ->dontLogEmptyChanges();
+    }
+
+    /**
+     * True only when this user is an administrator AND is not currently
+     * previewing another role.
+     *
+     * The policies' `before()` hooks wave admins past every check. While an
+     * administrator is previewing an operator, waving them past is exactly
+     * what must not happen — the preview would show an operator's menu over
+     * an administrator's permissions, which answers no question at all.
+     */
+    public function isActingAdmin(): bool
+    {
+        return $this->hasRole('admin') && ! ViewAs::active();
+    }
+
+    /**
+     * Permission check, narrowed by "view as" when it is on.
+     *
+     * Overridden here rather than through a `Gate::before` callback because
+     * spatie already registers one, and whichever is registered first wins —
+     * ours would never run. Every path (`can()`, `@can`, `authorize()`,
+     * policies) funnels through `checkPermissionTo()` and then this method,
+     * so this is the one place that cannot be bypassed.
+     *
+     * Only ever subtracts: a permission the previewed role lacks is refused,
+     * and everything else is left to the real check below.
+     *
+     * @param  string|int|\BackedEnum|Permission  $permission
+     */
+    public function hasPermissionTo($permission, $guardName = null): bool
+    {
+        if (is_string($permission) && ! ViewAs::permits($permission)) {
+            return false;
+        }
+
+        return $this->spatieHasPermissionTo($permission, $guardName);
     }
 
     // ── Relationships ────────────────────────────────────────────────
