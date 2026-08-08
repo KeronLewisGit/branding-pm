@@ -53,8 +53,8 @@ final class Compliance
     {
         return ChecklistRun::query()
             ->whereIn('machine_id', $filters->machineIds())
-            ->whereDate('scheduled_for', '>=', $filters->from->toDateString())
-            ->whereDate('scheduled_for', '<=', $filters->to->toDateString());
+            ->where('scheduled_for', '>=', $filters->from->toDateString())
+            ->where('scheduled_for', '<=', $filters->to->toDateString());
     }
 
     /**

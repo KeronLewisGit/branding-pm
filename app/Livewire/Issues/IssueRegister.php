@@ -11,6 +11,7 @@ use App\Models\Location;
 use App\Models\Machine;
 use App\Models\User;
 use App\Support\MachineScope;
+use App\Support\SqlOrder;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -237,13 +238,8 @@ class IssueRegister extends Component
             ])
             // Open before closed, then breakdown first, then oldest — the
             // register reads top-down as "what needs doing next".
-            ->orderByRaw("CASE WHEN status IN ('open', 'acknowledged', 'in_progress') THEN 0 ELSE 1 END")
-            ->orderByRaw("CASE severity
-                WHEN 'breakdown' THEN 0
-                WHEN 'high' THEN 1
-                WHEN 'medium' THEN 2
-                ELSE 3
-            END")
+            ->orderByRaw(...SqlOrder::first('status', array_column(IssueStatus::openStatuses(), 'value')))
+            ->orderByRaw(...SqlOrder::rank('severity', IssueSeverity::mostUrgentFirst()))
             ->orderBy('created_at')
             ->orderBy('id')
             ->paginate(25);

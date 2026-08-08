@@ -140,9 +140,21 @@ class ChecklistRun extends Model
 
     // ── Scopes ───────────────────────────────────────────────────────
 
+    /**
+     * Runs scheduled for a given day.
+     *
+     * Plain `where`, deliberately, not `whereDate`. `scheduled_for` is a MySQL
+     * `DATE` column, so `date(scheduled_for)` is the identity function — it
+     * changes no result, and it makes the predicate non-sargable: MySQL cannot
+     * use `checklist_runs_scheduled_for_index` through a function call. On the
+     * pilot data that is the difference between an index lookup reading 19
+     * rows and a full scan of the table, and this is the busiest table there
+     * is. The date is normalised here so the binding always matches the column
+     * type.
+     */
     public function scopeDueOn(Builder $query, CarbonInterface|string $date): Builder
     {
-        return $query->whereDate('scheduled_for', $date instanceof CarbonInterface ? $date->toDateString() : $date);
+        return $query->where('scheduled_for', $date instanceof CarbonInterface ? $date->toDateString() : $date);
     }
 
     public function scopeForMachine(Builder $query, Machine|int $machine): Builder

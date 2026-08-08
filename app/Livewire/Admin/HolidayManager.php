@@ -281,7 +281,7 @@ class HolidayManager extends Component
                         fn (Builder $query) => $query->whereNull('site_id'),
                         fn (Builder $query) => $query->where('site_id', $holiday->site_id),
                     )
-                    ->whereDate('date', $targetDate)
+                    ->where('date', $targetDate)
                     ->exists();
 
                 if ($exists) {
@@ -348,7 +348,7 @@ class HolidayManager extends Component
             $dateRules[] = function (string $attribute, mixed $value, Closure $fail): void {
                 $duplicate = Holiday::query()
                     ->whereNull('site_id')
-                    ->whereDate('date', (string) $value)
+                    ->where('date', (string) $value)
                     ->when($this->editingId !== null, fn (Builder $query) => $query->whereKeyNot($this->editingId))
                     ->exists();
 

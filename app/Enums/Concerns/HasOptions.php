@@ -27,4 +27,18 @@ trait HasOptions
 
         return $options;
     }
+
+    /**
+     * The backing values, in declaration order.
+     *
+     * Chiefly for the query layer: an `ORDER BY` that ranks a status column
+     * should be derived from the enum, never re-typed as a list of strings in
+     * a SQL fragment where nothing keeps the two in step.
+     *
+     * @return list<string>
+     */
+    public static function values(): array
+    {
+        return array_map(fn (self $case): string => $case->value, self::cases());
+    }
 }

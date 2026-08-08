@@ -110,8 +110,8 @@ final class ComplianceReport implements Report
 
             $summary = Compliance::summarise(
                 Compliance::query($filters)
-                    ->whereDate('scheduled_for', '>=', $cursor->toDateString())
-                    ->whereDate('scheduled_for', '<=', $end->toDateString())
+                    ->where('scheduled_for', '>=', $cursor->toDateString())
+                    ->where('scheduled_for', '<=', $end->toDateString())
             );
 
             $weeks->push([
