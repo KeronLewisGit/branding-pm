@@ -263,6 +263,24 @@ class UserManager extends Component
         session()->flash('flash.success', __('app.users.pin_cleared', ['name' => $user->full_name]));
     }
 
+    /**
+     * Make this person see the walkthrough again next time they sign in.
+     *
+     * The everyday case is an operator who skipped it on day one and is now
+     * struggling — an administrator can put it back without touching their
+     * password, their PIN, or anything on the maintenance record.
+     */
+    public function resetWalkthrough(int $userId): void
+    {
+        $user = User::query()->findOrFail($userId);
+
+        $this->authorize('update', $user);
+
+        $user->resetWalkthrough();
+
+        session()->flash('flash.success', __('app.walkthrough.reset_done', ['name' => $user->full_name]));
+    }
+
     public function toggleActive(int $userId): void
     {
         $user = User::query()->findOrFail($userId);

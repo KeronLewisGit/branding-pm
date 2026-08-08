@@ -12,7 +12,8 @@
 @php($walkthroughUser = auth()->user())
 
 @if (\App\Support\Walkthrough::shouldShow($walkthroughUser))
-    @php($walkthroughRole = \App\Support\Walkthrough::roleFor($walkthroughUser))
+    @php($walkthroughRole = \App\Support\Walkthrough::displayRoleFor($walkthroughUser))
+    @php($walkthroughPreview = \App\Support\Walkthrough::isPreviewing())
     @php($walkthroughSteps = \App\Support\Walkthrough::stepsFor($walkthroughRole))
 
     <div
@@ -25,10 +26,18 @@
         x-on:keydown.escape.window="$refs.skip.click()"
     >
         <div class="w-full max-w-lg rounded-2xl bg-white p-6 text-slate-900 shadow-xl">
-            <p class="text-sm font-semibold uppercase tracking-wider text-slate-500">
-                {{ __('app.walkthrough.welcome', ['name' => $walkthroughUser->full_name]) }}
-                <span class="text-slate-400">· {{ __('app.roles.'.$walkthroughRole) }}</span>
-            </p>
+            @if ($walkthroughPreview)
+                {{-- An administrator is inspecting somebody else's cards. Say
+                     so plainly, or it reads as their own introduction. --}}
+                <p class="rounded-lg bg-amber-100 px-3 py-2 text-sm font-semibold text-amber-900">
+                    {{ __('app.walkthrough.previewing', ['role' => __('app.roles.'.$walkthroughRole)]) }}
+                </p>
+            @else
+                <p class="text-sm font-semibold uppercase tracking-wider text-slate-500">
+                    {{ __('app.walkthrough.welcome', ['name' => $walkthroughUser->full_name]) }}
+                    <span class="text-slate-400">· {{ __('app.roles.'.$walkthroughRole) }}</span>
+                </p>
+            @endif
 
             @foreach ($walkthroughSteps as $index => $walkthroughStep)
                 <div x-show="step === {{ $index }}" x-cloak>
@@ -55,7 +64,7 @@
                 <form method="POST" action="{{ route('walkthrough.complete') }}">
                     @csrf
                     <x-button type="submit" variant="ghost" x-ref="skip" class="!min-h-11 !text-base">
-                        {{ __('app.walkthrough.skip') }}
+                        {{ $walkthroughPreview ? __('app.walkthrough.close_preview') : __('app.walkthrough.skip') }}
                     </x-button>
                 </form>
 
@@ -83,7 +92,7 @@
                     <form method="POST" action="{{ route('walkthrough.complete') }}" x-show="step === total - 1" x-cloak>
                         @csrf
                         <x-button type="submit" class="!min-h-11 !text-base">
-                            {{ __('app.walkthrough.done') }}
+                            {{ $walkthroughPreview ? __('app.walkthrough.close_preview') : __('app.walkthrough.done') }}
                         </x-button>
                     </form>
                 </div>
