@@ -3,6 +3,33 @@
 Versions track build milestones: `0.<milestone>.<patch>`. The project reaches
 `1.0.0` when all 8 milestones are complete and the paper forms are retired.
 
+## [0.31.1] — The activation form was collecting nothing
+
+Found while preparing to test on a real iPad, which is the only place it
+would ever have shown up.
+
+The activation screen gathered its device measurements — screen size,
+viewport, pixel ratio, touch points, timezone, language, platform — with
+Alpine `x-init` attributes. But Alpine is not loaded on that page: it arrives
+bundled inside Livewire's script, and this is a controller-rendered Blade
+page with no Livewire component on it. The only script tag present is the
+Vite bundle, which deliberately does not import Alpine.
+
+So the page rendered correctly, the form submitted, the device enrolled, and
+**every measured field arrived empty**. Nothing failed. The earlier test
+passed because curl supplied those values by hand, which a browser would
+never do.
+
+Replaced with a plain script, matching what the not-enrolled screen next door
+already does. Each reading is wrapped individually: an older tablet missing
+one API must still be able to enrol. A test now asserts the fields are filled
+by a script on the page rather than by a directive that will never run.
+
+The kiosk layout's clock has the same dependency but degrades correctly — it
+server-renders the time and simply does not tick on these two pages.
+
+**281 tests, 1,013 assertions.**
+
 ## [0.31.0] — Supervisors can set up a device
 
 A tablet gets dropped mid-shift, the supervisor fetches the spare, and waiting

@@ -23,7 +23,7 @@
             <x-alert type="error" class="mb-6">{{ session('error') }}</x-alert>
         @endif
 
-        <form method="POST" action="{{ route('kiosk.activate.store') }}" class="space-y-6" x-data>
+        <form method="POST" action="{{ route('kiosk.activate.store') }}" class="space-y-6" data-activate-form>
             @csrf
             <input type="hidden" name="machine" value="{{ $machine?->code }}">
 
@@ -33,14 +33,20 @@
                 authorised on the strength of it — it is so a human reading
                 the fleet list can tell one black tablet from another.
                 See App\Support\DeviceReport.
+
+                Plain JavaScript, NOT Alpine. This is a controller-rendered
+                Blade page with no Livewire component on it, and Alpine only
+                arrives bundled inside Livewire's script — which is never
+                injected here. `x-init` on these fields looked right, rendered
+                fine, and posted nothing at all.
             --}}
-            <input type="hidden" name="device[screen]" x-init="$el.value = `${screen.width} x ${screen.height}`">
-            <input type="hidden" name="device[viewport]" x-init="$el.value = `${innerWidth} x ${innerHeight}`">
-            <input type="hidden" name="device[pixel_ratio]" x-init="$el.value = String(devicePixelRatio || 1)">
-            <input type="hidden" name="device[touch_points]" x-init="$el.value = String(navigator.maxTouchPoints || 0)">
-            <input type="hidden" name="device[timezone]" x-init="$el.value = Intl.DateTimeFormat().resolvedOptions().timeZone || ''">
-            <input type="hidden" name="device[language]" x-init="$el.value = navigator.language || ''">
-            <input type="hidden" name="device[platform]" x-init="$el.value = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || ''">
+            <input type="hidden" name="device[screen]" data-device="screen">
+            <input type="hidden" name="device[viewport]" data-device="viewport">
+            <input type="hidden" name="device[pixel_ratio]" data-device="pixel_ratio">
+            <input type="hidden" name="device[touch_points]" data-device="touch_points">
+            <input type="hidden" name="device[timezone]" data-device="timezone">
+            <input type="hidden" name="device[language]" data-device="language">
+            <input type="hidden" name="device[platform]" data-device="platform">
 
             <div class="field">
                 <x-label for="name">{{ __('app.kiosk_devices.name') }}</x-label>
@@ -83,7 +89,7 @@
                     {{ __('app.kiosk.activate.detected') }}
                 </p>
                 <p class="text-base text-slate-400">
-                    {{ $detectedType->label() }}<span x-text="` · ${screen.width} × ${screen.height}`"></span>
+                    {{ $detectedType->label() }}<span data-device-readout></span>
                 </p>
                 <p class="mt-2 text-sm text-slate-500">{{ __('app.kiosk.activate.detected_hint') }}</p>
             </div>
@@ -93,4 +99,60 @@
             </x-button>
         </form>
     </div>
+
+    {{--
+        Fills the hidden fields above, and shows the person what is about to
+        be recorded rather than collecting it behind their back.
+
+        Wrapped in try/catch per field: an older tablet missing one of these
+        APIs must still be able to enrol. A device that cannot report its
+        pixel ratio is not a device we refuse to set up.
+    --}}
+    <script>
+        (function () {
+            var form = document.querySelector('[data-activate-form]');
+
+            if (!form) {
+                return;
+            }
+
+            var readings = {
+                screen: function () { return screen.width + ' x ' + screen.height; },
+                viewport: function () { return window.innerWidth + ' x ' + window.innerHeight; },
+                pixel_ratio: function () { return String(window.devicePixelRatio || 1); },
+                touch_points: function () { return String(navigator.maxTouchPoints || 0); },
+                timezone: function () { return Intl.DateTimeFormat().resolvedOptions().timeZone || ''; },
+                language: function () { return navigator.language || ''; },
+                platform: function () {
+                    return (navigator.userAgentData && navigator.userAgentData.platform)
+                        || navigator.platform || '';
+                }
+            };
+
+            Object.keys(readings).forEach(function (key) {
+                var field = form.querySelector('[data-device="' + key + '"]');
+
+                if (!field) {
+                    return;
+                }
+
+                try {
+                    field.value = readings[key]();
+                } catch (e) {
+                    field.value = '';
+                }
+            });
+
+            var readout = document.querySelector('[data-device-readout]');
+
+            if (readout) {
+                try {
+                    readout.textContent = ' · ' + screen.width + ' × ' + screen.height
+                        + (navigator.maxTouchPoints > 0 ? ' · {{ __('app.kiosk_devices.touchscreen') }}' : '');
+                } catch (e) {
+                    // Leave the server-detected label standing on its own.
+                }
+            }
+        })();
+    </script>
 @endcomponent

@@ -282,3 +282,26 @@ it('points every machine sticker at that machine', function (): void {
 
     expect(route('kiosk.machine', ['code' => $machine->code]))->toEndWith('/m/matan');
 });
+
+it('collects the device measurements without depending on Alpine', function (): void {
+    /*
+     * The activation screen is a controller-rendered Blade page with no
+     * Livewire component on it — and Alpine only ever arrives bundled inside
+     * Livewire's script, which is therefore never injected here.
+     *
+     * The first version used `x-init` on the hidden fields. It rendered
+     * perfectly, the form submitted, the device enrolled, and every measured
+     * field arrived empty. Nothing failed; the data was simply absent. Found
+     * only when preparing to test on a real iPad.
+     */
+    $html = $this->actingAs(kioskAdmin())->get('/kiosk/activate')->assertOk()->getContent();
+
+    foreach (['screen', 'viewport', 'pixel_ratio', 'touch_points', 'timezone', 'language', 'platform'] as $field) {
+        expect($html)->toContain('name="device['.$field.']"');
+    }
+
+    // The fields must be filled by a plain script on the page, not by an
+    // Alpine directive that will never run.
+    expect($html)->toContain('data-activate-form')
+        ->and($html)->not->toContain('x-init="$el.value');
+});
