@@ -1,0 +1,4 @@
+# Database dumps. Never committed: they contain every operator's name, PIN
+# hash and password hash, and the whole compliance record.
+*
+!.gitignore

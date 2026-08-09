@@ -21,6 +21,8 @@ auditable history behind it.
 - [Local setup — Docker (optional)](#local-setup--docker-optional)
 - [`.env` reference](#env-reference)
 - [Database: migrate and seed](#database-migrate-and-seed)
+- [Mail](#mail)
+- [Backups](#backups)
 - [Scheduler](#scheduler)
 - [Queue worker](#queue-worker)
 - [Running the tests](#running-the-tests)
@@ -179,6 +181,39 @@ Open <http://localhost:8025> (or `http://<pilot-host>:8025`) to read it.
 
 On a native install without Docker, leave `MAIL_MAILER=log` and read
 `storage/logs/laravel.log`.
+
+### Backups
+
+The `backup` service dumps the database every night at `BACKUP_TIME` (default
+`02:30` plant time) and keeps `BACKUP_RETENTION_DAYS` of them (default 14).
+
+Dumps land in **`storage/backups/`** — on the host, not in a Docker volume.
+That is the point: `docker compose down -v` destroys named volumes, so a
+backup kept in one would be destroyed by the same command that destroys the
+database it protects. They are gitignored; a dump contains every operator's
+name and every password and PIN hash.
+
+Each dump is gzipped, checked with `gzip -t`, size-checked (a suspiciously
+small dump is refused rather than allowed to replace a good one), and written
+alongside a `.sha256`.
+
+```bash
+php artisan backup:status            # newest backup, age, size, checksum
+docker compose run --rm --entrypoint /usr/local/bin/backup.sh backup once
+```
+
+`backup:status` **exits 1 when the newest backup is stale**, so it can be
+monitored rather than remembered. `security:check` reports the same thing.
+
+**Restoring:**
+
+```bash
+gunzip -c storage/backups/branding_pm-YYYY-MM-DD_HHMMSS.sql.gz \
+  | docker compose exec -T mysql mysql -uroot -p"$DB_ROOT_PASSWORD" branding_pm
+```
+
+Restore into a scratch database first and compare row counts. A backup nobody
+has restored is not yet a backup.
 
 **On go-live**, point `MAIL_HOST` / `MAIL_PORT` at the company relay, set
 `MAIL_USERNAME`, `MAIL_PASSWORD` and `MAIL_SCHEME`, and use a `MAIL_FROM_ADDRESS`
@@ -375,9 +410,10 @@ return the file.
 and browsers block `getUserMedia` on insecure origins, so photo capture simply
 will not work over plain HTTP.
 
-**8. Backups** — `mysqldump` nightly plus `storage/app/public` (signatures and
-photos). Signature images are part of the audit record; a database backup
-without them is not a complete record.
+**8. Backups** — under Docker the `backup` service already does the database
+nightly (see [Backups](#backups)). You still need `storage/app` (signatures and
+photos) in whatever backs up the host: signature images are part of the audit
+record, and a database backup without them is not a complete record.
 
 ### Apache
 

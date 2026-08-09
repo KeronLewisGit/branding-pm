@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
+use Illuminate\Support\Facades\File;
 
 /*
 |--------------------------------------------------------------------------
@@ -12,6 +13,24 @@ use Database\Seeders\RolesAndPermissionsSeeder;
 | The settings that cannot be enforced from inside the code, only verified:
 | a value in .env, a URL scheme, an account somebody forgot to remove.
 */
+
+/**
+ * A directory holding one backup taken a moment ago.
+ *
+ * The security check wants a *recent* dump, and pointing it at the real
+ * storage/backups would make these tests pass or fail depending on whether
+ * the machine running them happens to have taken one.
+ */
+function freshBackupFixture(): string
+{
+    $path = storage_path('framework/testing/prod-backups');
+
+    File::deleteDirectory($path);
+    File::makeDirectory($path, 0755, true);
+    File::put($path.'/branding_pm-fixture.sql.gz', gzencode(str_repeat('-- dump ', 5000)));
+
+    return $path;
+}
 
 it('defaults secure cookies to on in production and off elsewhere', function (): void {
     // config/session.php resolves this from APP_ENV, so a production host
@@ -49,6 +68,7 @@ it('passes its own security check when configured for production', function (): 
         'checklists.signature_disk' => 'local',
         'mail.default' => 'smtp',
         'mail.from.address' => 'no-reply@pm.example.com',
+        'backups.path' => freshBackupFixture(),
     ]);
 
     $this->artisan('security:check')->assertSuccessful();
@@ -66,6 +86,7 @@ it('fails the security check on the things that expose a production host', funct
         'checklists.signature_disk' => 'local',
         'mail.default' => 'smtp',
         'mail.from.address' => 'no-reply@pm.example.com',
+        'backups.path' => freshBackupFixture(),
     ], $overrides));
 
     $this->artisan('security:check')
@@ -79,6 +100,8 @@ it('fails the security check on the things that expose a production host', funct
     'no app key' => [['app.key' => ''], 'APP_KEY'],
     // A reset email written to a file leaves a locked-out user locked out.
     'mail going to a log file' => [['mail.default' => 'log'], 'Mail'],
+    // The compliance record with no copy of it.
+    'no backups' => [['backups.path' => '/nonexistent-backup-path'], 'Backups'],
 ]);
 
 it('fails the security check while demo accounts are still active in production', function (): void {
@@ -96,6 +119,7 @@ it('fails the security check while demo accounts are still active in production'
         'checklists.signature_disk' => 'local',
         'mail.default' => 'smtp',
         'mail.from.address' => 'no-reply@pm.example.com',
+        'backups.path' => freshBackupFixture(),
     ]);
 
     $this->artisan('security:check')

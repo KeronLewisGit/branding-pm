@@ -354,18 +354,42 @@ replacement sticker in the same visit.
 Back up two things; either alone is useless:
 
 1. **The database** — the entire record.
+
+   Under Docker this is **already running**: the `backup` service dumps it
+   nightly at `BACKUP_TIME` (default 02:30 plant time) into `storage/backups/`
+   on the host, keeps `BACKUP_RETENTION_DAYS` (default 14), and writes a
+   `.sha256` beside each one. Confirm it with:
+
+   ```bash
+   php artisan backup:status     # exits 1 if the newest dump is stale
+   ```
+
+   On a native install without Docker, run the equivalent from cron:
    ```bash
    mysqldump --single-transaction --routines branding_pm | gzip > branding-pm-$(date +%F).sql.gz
    ```
-2. **`storage/app/public`** — signatures and photos. The database references
-   them by path; without the files, approved runs lose the signatures that
-   made them approvable.
+2. **`storage/app`** — signatures and photos. The database references them by
+   path; without the files, approved runs lose the signatures that made them
+   approvable. This is **not** covered by the `backup` service; it has to be
+   part of whatever backs up the host.
 
 Also keep `.env` somewhere safe and separate: `APP_KEY` decrypts sessions and
 keys the run-sheet verification hashes. Restore the database without the
 original `APP_KEY` and every printed sheet's verification code stops matching.
 
-Test a restore before you need one.
+Do not keep the dumps only on the same machine as the database. A failed disk
+or a stolen host takes both. Copy `storage/backups/` somewhere else on a
+schedule of its own.
+
+**Test a restore before you need one** — into a scratch database, comparing
+row counts against the live one:
+
+```bash
+gunzip -c storage/backups/branding_pm-YYYY-MM-DD_HHMMSS.sql.gz \
+  | docker compose exec -T mysql mysql -uroot -p"$DB_ROOT_PASSWORD" restore_test
+```
+
+A backup nobody has restored is not yet a backup.
 
 ---
 
