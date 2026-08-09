@@ -47,4 +47,33 @@ return [
 
     'max_age_hours' => (int) env('BACKUP_MAX_AGE_HOURS', 36),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Off-site copies
+    |--------------------------------------------------------------------------
+    |
+    | The `backup-offsite` container copies each dump to a network share and
+    | writes its result to `.offsite-status.json` in the backup directory.
+    | That file is the only thing the application knows about the share: the
+    | app container deliberately does not mount it, because a mount that can
+    | fail must not be able to stop the app from booting.
+    |
+    | Freshness is judged on when that file was last WRITTEN, never on what it
+    | says. If the share is unreachable, Docker cannot mount the volume and
+    | the container never starts — so the script never runs, never records a
+    | failure, and yesterday's file sits there still saying "ok". An age check
+    | catches that; reading the message would not.
+    |
+    | `share` is only used to decide whether off-site is expected at all. With
+    | it unset, a missing status file is "not configured" rather than a fault.
+    |
+    */
+
+    'offsite' => [
+        'share' => env('BACKUP_OFFSITE_SHARE', ''),
+        'status_file' => '.offsite-status.json',
+        'retention_days' => (int) env('BACKUP_OFFSITE_RETENTION_DAYS', 30),
+        'max_age_hours' => (int) env('BACKUP_OFFSITE_MAX_AGE_HOURS', 36),
+    ],
+
 ];

@@ -205,6 +205,51 @@ docker compose run --rm --entrypoint /usr/local/bin/backup.sh backup once
 `backup:status` **exits 1 when the newest backup is stale**, so it can be
 monitored rather than remembered. `security:check` reports the same thing.
 
+#### Copying them off the machine
+
+Backups on the same disk as the database survive an accidental
+`docker compose down -v`. They do not survive a failed disk, a fire or a
+theft. The `backup-offsite` service copies each dump to a network share and
+**verifies it by reading the file back from the share** and comparing
+checksums — a network copy that half-succeeds leaves a file with the right
+name and the wrong contents, which comparing sizes would not catch.
+
+Set four values in `.env` (forward slashes, not the backslashes of a UNC
+path):
+
+```ini
+BACKUP_OFFSITE_SHARE=//fileserver/backups/branding-pm
+BACKUP_OFFSITE_USERNAME=svc-pmbackup
+BACKUP_OFFSITE_PASSWORD=…
+BACKUP_OFFSITE_TIME=03:30
+```
+
+Then start it:
+
+```bash
+docker compose --profile offsite up -d
+```
+
+It runs an hour after the dump and keeps `BACKUP_OFFSITE_RETENTION_DAYS`
+(default 30 — longer than the host's 14, because this is the archive).
+
+**Why the profile.** Docker mounts the share when the container starts, so a
+wrong password or an unreachable file server makes that mount fail. Without
+the profile, that failure would stop `docker compose up` — and with it the
+whole application — over a secondary copy. It is also a separate service from
+`backup` so that a file server outage never prevents the nightly dump.
+
+**Give the service account write access to that share and nothing else.** A
+dump holds every operator's name and every password and PIN hash; it does not
+belong on a share the whole company can read.
+
+**When it fails, it fails invisibly**, so this is monitored on *freshness*,
+not on what it last reported: an unreachable share means the container never
+starts, so it never runs to record its own failure and the last good status
+sits there reading "ok". `backup:status` and `security:check` both go by when
+the copier last ran, and both fail once that exceeds
+`BACKUP_OFFSITE_MAX_AGE_HOURS` (default 36).
+
 **Restoring:**
 
 ```bash

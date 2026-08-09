@@ -43,7 +43,7 @@ class BackupStatus extends Command
 
         $newest = $backups[0];
         $age = CarbonImmutable::createFromTimestamp($newest['mtime']);
-        $hours = $age->diffInHours(CarbonImmutable::now());
+        $hours = (int) $age->diffInHours(CarbonImmutable::now());
         $stale = $hours > $maxAge;
 
         $this->newLine();
@@ -66,7 +66,17 @@ class BackupStatus extends Command
         // has rotted or been truncated since.
         $this->components->twoColumnDetail('      Integrity', $this->verify($newest['file']));
 
+        $offsiteFailed = $this->reportOffsite($path);
+
         $this->newLine();
+
+        if ($offsiteFailed) {
+            $this->components->error(
+                'Backups exist but are not leaving this machine. A failed disk takes both copies.'
+            );
+
+            return self::FAILURE;
+        }
 
         if ($stale) {
             $this->components->error(
@@ -79,6 +89,59 @@ class BackupStatus extends Command
         $this->components->info('Backups are current.');
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Report on the copies sent to the network share.
+     *
+     * Returns true when off-site is configured and something is wrong with
+     * it. Judged on **when the status file was last written**, not on what it
+     * says: an unreachable share stops the container mounting at all, so the
+     * script never runs to record its own failure and the last good file sits
+     * there reading "ok".
+     */
+    private function reportOffsite(string $path): bool
+    {
+        $configured = trim((string) config('backups.offsite.share')) !== '';
+        $file = rtrim($path, '/\\').DIRECTORY_SEPARATOR.config('backups.offsite.status_file');
+
+        if (! is_file($file)) {
+            $this->components->twoColumnDetail(
+                ($configured ? '<fg=red>MISSING</>' : '      ').'  Off-site',
+                $configured
+                    ? 'a share is configured but nothing has been copied — is `docker compose --profile offsite up -d` running?'
+                    : 'not configured (set BACKUP_OFFSITE_* in .env)'
+            );
+
+            return $configured;
+        }
+
+        $status = json_decode((string) file_get_contents($file), true);
+        $ranAt = CarbonImmutable::createFromTimestamp((int) filemtime($file));
+        $hours = (int) $ranAt->diffInHours(CarbonImmutable::now());
+        $limit = (int) config('backups.offsite.max_age_hours');
+
+        $failed = ! is_array($status) || ($status['failed'] ?? 1) > 0;
+        $stale = $hours > $limit;
+
+        $detail = is_array($status)
+            ? ($status['held_offsite'] ?? '?').' on '.($status['destination'] ?? 'the share')
+                .', last run '.$ranAt->diffForHumans()
+            : 'the status file could not be read';
+
+        if ($stale) {
+            // The container is not running, or cannot mount the share.
+            $detail .= ' — nothing has run for '.$hours.'h (limit '.$limit.'h)';
+        } elseif ($failed && is_array($status)) {
+            $detail .= ' — '.($status['message'] ?? 'failed');
+        }
+
+        $this->components->twoColumnDetail(
+            (($stale || $failed) ? '<fg=red>FAILING</>' : '<fg=green>OK</>').'  Off-site',
+            $detail
+        );
+
+        return $stale || $failed;
     }
 
     /**

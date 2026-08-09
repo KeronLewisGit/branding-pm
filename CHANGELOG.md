@@ -3,6 +3,60 @@
 Versions track build milestones: `0.<milestone>.<patch>`. The project reaches
 `1.0.0` when all 8 milestones are complete and the paper forms are retired.
 
+## [0.28.0] — Backups leave the machine
+
+Nightly dumps kept beside the database survive an accidental
+`docker compose down -v`. They do not survive a failed disk, a fire or a
+theft. A `backup-offsite` service now copies each one to a network share.
+
+### Verified from the far end
+Each copy is checked by **reading the file back from the share** and
+comparing its SHA-256 against the local one. A network copy that
+half-succeeds leaves a file with the right name, the right date and the wrong
+contents — comparing sizes would not catch it, and checksumming the source
+against itself would not either. Transfers are written `.partial` and renamed
+only once verified, so an interrupted copy never occupies the real filename
+and never counts as done.
+
+Copies are skipped when the share already holds an identical file, so a
+fortnight of dumps is not re-sent nightly.
+
+### Its failure mode is silence, so freshness is the signal
+An unreachable share means Docker cannot mount the volume, so the container
+**never starts** — which means the script never runs to record its own
+failure, and yesterday's status file sits there still reading `"ok"`.
+
+`backup:status` and `security:check` therefore judge off-site health on **when
+the copier last ran**, never on what it reported. Both fail past
+`BACKUP_OFFSITE_MAX_AGE_HOURS` (default 36). This is guarded by a test that
+feeds them a three-day-old status file saying everything is fine.
+
+### Kept away from the application
+Two separations, both deliberate:
+
+- **Its own service, not part of `backup`.** A file server outage must never
+  prevent the nightly dump being taken.
+- **Behind a compose profile** (`docker compose --profile offsite up -d`).
+  Docker mounts the share at container start, so a wrong password would fail
+  the mount — and unprofiled, that would stop `docker compose up` and with it
+  the whole application, over a secondary copy.
+
+The app container does not mount the share at all. It learns everything from
+a small status file the copier writes into the backup directory, so a mount
+that can fail can never stop the application booting.
+
+### Proved against a real SMB server
+Built and tested against a throwaway Samba container rather than shipped on
+inspection: two dumps copied and verified, a second run correctly copying
+nothing, the files confirmed present on the share, and the unreachable-share
+path exercised by stopping it — which is how the silent-failure gap above was
+found and closed.
+
+Off-site keeps 30 days by default against the host's 14: it is the archive,
+and it is the copy that survives losing the machine.
+
+**253 tests, 933 assertions.**
+
 ## [0.27.0] — Nightly database backups
 
 This database is the plant's compliance record and it had no copy. Recovering

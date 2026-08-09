@@ -377,9 +377,41 @@ Also keep `.env` somewhere safe and separate: `APP_KEY` decrypts sessions and
 keys the run-sheet verification hashes. Restore the database without the
 original `APP_KEY` and every printed sheet's verification code stops matching.
 
-Do not keep the dumps only on the same machine as the database. A failed disk
-or a stolen host takes both. Copy `storage/backups/` somewhere else on a
-schedule of its own.
+### Off-site copies
+
+Dumps kept only on the pilot host do not survive a failed disk, a fire or a
+theft. The `backup-offsite` service copies them nightly to a network share,
+verifying each by reading it back from the share and comparing checksums.
+
+```ini
+BACKUP_OFFSITE_SHARE=//fileserver/backups/branding-pm   # forward slashes
+BACKUP_OFFSITE_USERNAME=svc-pmbackup
+BACKUP_OFFSITE_PASSWORD=…
+BACKUP_OFFSITE_TIME=03:30
+BACKUP_OFFSITE_RETENTION_DAYS=30
+```
+
+```bash
+docker compose --profile offsite up -d
+```
+
+Three things worth knowing before you rely on it:
+
+- **The service account needs write access to that share and nothing else.**
+  A dump holds every password and PIN hash in the plant.
+- **It is behind a compose profile on purpose.** Docker mounts the share at
+  container start, so a bad credential or an unreachable server fails the
+  mount — and unprofiled, that would stop the whole stack over a secondary
+  copy. Check it started: `docker compose ps backup-offsite`.
+- **Its failure mode is silence.** An unreachable share means the container
+  never starts, so nothing records the failure. `backup:status` and
+  `security:check` therefore judge it on when the copier last *ran*, and both
+  fail past `BACKUP_OFFSITE_MAX_AGE_HOURS` (default 36). Monitor
+  `backup:status`; do not rely on somebody noticing.
+
+The share is still on the same site. If the requirement is to survive losing
+the building, that needs a second destination — the same service handles any
+path Docker can mount, so a cloud-backed share works without code changes.
 
 **Test a restore before you need one** — into a scratch database, comparing
 row counts against the live one:
