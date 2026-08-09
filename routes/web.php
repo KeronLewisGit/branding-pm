@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
+use App\Http\Controllers\Kiosk\KioskActivationController;
 use App\Http\Controllers\Kiosk\KioskEnrolmentController;
 use App\Http\Controllers\Kiosk\KioskSessionController;
 use App\Http\Controllers\MediaController;
@@ -151,6 +152,15 @@ Route::get('/kiosk/link/{device}', [KioskEnrolmentController::class, 'enrolViaLi
     ->name('kiosk.enrol.link');
 
 Route::middleware(['auth', 'permission:kiosk.manage'])->group(function (): void {
+    /*
+     * Self-service activation from a machine's printed QR sticker. Reached
+     * from the not-enrolled screen, so `auth` bounces an unauthenticated
+     * scanner to the login page and returns them here afterwards — which is
+     * what makes "scan, log in, and it works" a single journey.
+     */
+    Route::get('/kiosk/activate', [KioskActivationController::class, 'create'])->name('kiosk.activate');
+    Route::post('/kiosk/activate', [KioskActivationController::class, 'store'])->name('kiosk.activate.store');
+
     Route::get('/kiosk/enrol/{device}', [KioskEnrolmentController::class, 'enrol'])->name('kiosk.enrol');
     Route::post('/kiosk/unenrol', [KioskEnrolmentController::class, 'unenrol'])->name('kiosk.unenrol');
 });

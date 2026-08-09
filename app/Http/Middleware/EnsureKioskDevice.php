@@ -52,6 +52,11 @@ class EnsureKioskDevice
             return response()->view('kiosk.not-enrolled', [
                 'deviceType' => $deviceType,
                 'mayBeTablet' => $deviceType->mayBeATabletInDisguise($userAgent),
+                // The machine whose sticker was scanned, so activation can
+                // return the device to it afterwards. Passed on as the raw
+                // route parameter and resolved against the machines table by
+                // KioskActivationController — it is never trusted here.
+                'machineCode' => $this->scannedMachineCode($request),
             ], Response::HTTP_FORBIDDEN);
         }
 
@@ -70,6 +75,21 @@ class EnsureKioskDevice
         $device = $request->attributes->get('kioskDevice');
 
         return $device instanceof KioskDevice ? $device : null;
+    }
+
+    /**
+     * The `{code}` from `/m/{code}`, when that is the route being blocked.
+     *
+     * Only read from the route parameter, never from the query string or a
+     * header: this ends up in a link on the 403 page, and the one thing it
+     * must not become is somewhere an attacker can put a value of their
+     * choosing in front of an administrator about to tap it.
+     */
+    private function scannedMachineCode(Request $request): ?string
+    {
+        $code = $request->route('code');
+
+        return is_string($code) && $code !== '' ? $code : null;
     }
 
     private function resolveDevice(Request $request): ?KioskDevice

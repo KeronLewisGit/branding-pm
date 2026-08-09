@@ -97,6 +97,24 @@
                                             {{ __('app.kiosk_devices.kind_mismatch', ['detected' => $device->detectedType()->label()]) }}
                                         </p>
                                     @endif
+
+                                    {{--
+                                        What the hardware reported when it was activated —
+                                        enough to tell one black tablet from another in a
+                                        list of them. Client-supplied and forgeable, so it
+                                        is shown and never acted on.
+                                    --}}
+                                    @if ($summary = $device->deviceSummary())
+                                        <p class="mt-1 text-xs text-slate-500">{{ $summary }}</p>
+                                    @endif
+
+                                    @if ($device->enrolled_at)
+                                        <p class="mt-0.5 text-xs text-slate-500">
+                                            {{ __('app.kiosk_devices.enrolled_by') }}:
+                                            {{ $device->enrolledBy?->full_name ?? '—' }},
+                                            {{ $device->enrolled_at->timezone(config('app.display_timezone'))->format('j M Y') }}
+                                        </p>
+                                    @endif
                                 </td>
 
                                 <td>{{ $device->location?->name ?? __('app.kiosk_devices.any_location') }}</td>

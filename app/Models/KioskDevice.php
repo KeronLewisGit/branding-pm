@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Enums\KioskDeviceKind;
+use App\Support\DeviceReport;
 use App\Support\DeviceType;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -25,6 +26,10 @@ class KioskDevice extends Model
         'location_id',
         'last_seen_at',
         'last_user_agent',
+        'device_info',
+        'enrolled_at',
+        'enrolled_by_id',
+        'enrolled_ip',
         'is_active',
     ];
 
@@ -43,6 +48,8 @@ class KioskDevice extends Model
         return [
             'kind' => KioskDeviceKind::class,
             'last_seen_at' => 'datetime',
+            'enrolled_at' => 'datetime',
+            'device_info' => 'array',
             'is_active' => 'boolean',
         ];
     }
@@ -51,6 +58,23 @@ class KioskDevice extends Model
      * What the last request from this device claimed to be, or Unknown if it
      * has never been used. Display only — see KioskDeviceKind::matches().
      */
+    /**
+     * Who turned this browser into a kiosk. Null for devices enrolled by
+     * signed link, where nobody was authenticated on the tablet.
+     */
+    public function enrolledBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'enrolled_by_id');
+    }
+
+    /**
+     * A short human label for what the hardware appears to be.
+     */
+    public function deviceSummary(): string
+    {
+        return DeviceReport::summarise($this->device_info);
+    }
+
     public function detectedType(): DeviceType
     {
         return DeviceType::detect($this->last_user_agent);

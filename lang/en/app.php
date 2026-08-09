@@ -883,6 +883,12 @@ return [
     // which one applies.
     'kiosk_devices' => [
         'title' => 'Kiosk Devices',
+        'name' => 'Name for this device',
+        'touchscreen' => 'touchscreen',
+        'suggested_name' => ':device at :machine',
+        'enrolled_by' => 'Activated by',
+        'enrolled_never' => 'Not activated from a machine sticker',
+        'device_details' => 'Device details',
         'description' => 'A device must be set up once before it can run the checklists. After that it stays enrolled and operators sign in with a PIN only. Tablets, laptops, desktops and phones can all be kiosks.',
         'add_device' => 'Add a device',
         'edit_device' => 'Edit device',
@@ -979,6 +985,26 @@ return [
          * person reading this can very often fix it themselves, whereas on
          * the floor the honest advice is to go and find someone.
          */
+        /*
+         * Self-service activation from a machine's QR sticker. The wording
+         * assumes somebody standing at the machine holding the device, not an
+         * administrator at a desk.
+         */
+        'activate' => [
+            'cta' => 'Set this device up',
+            'cta_hint' => 'You will need to sign in as an administrator.',
+            'title' => 'Set this device up as a kiosk',
+            'intro' => 'This device will be able to open the checklists. Operators will sign in on it with a PIN.',
+            'intro_machine' => 'Once this is done, this device opens the checklists for :machine — and scanning that sticker again will come straight here.',
+            'name_hint' => 'Something you would recognise in a list. Where it lives is more useful than what it is.',
+            'existing' => 'Replacing a device that is already listed?',
+            'existing_none' => 'No — this is a new device',
+            'existing_hint' => 'Choose the old one to take over its name, its place and its history.',
+            'detected' => 'What this device looks like',
+            'detected_hint' => 'Read from the browser, so it can be wrong. You can correct it on the Kiosk Devices screen.',
+            'submit' => 'Set it up',
+        ],
+
         'not_enrolled' => [
             'title' => [
                 'tablet' => 'This tablet is not set up as a kiosk',

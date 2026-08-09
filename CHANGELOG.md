@@ -3,6 +3,58 @@
 Versions track build milestones: `0.<milestone>.<patch>`. The project reaches
 `1.0.0` when all 8 milestones are complete and the paper forms are retired.
 
+## [0.30.0] — One sticker sets the device up, then runs the checklist
+
+Machine QR stickers already existed and already pointed at `/m/{code}`. On an
+enrolled tablet that opened the checklists; on anything else it was a 403 that
+said "this device is not set up as a kiosk" and stopped there. Setting a
+device up meant an administrator at a desk generating a separate enrolment
+link.
+
+The same sticker now closes the loop:
+
+1. Scan it on a new tablet — the not-enrolled screen offers **Set this device
+   up**.
+2. `auth` sends whoever tapped it to the login screen, remembering where they
+   were going.
+3. They sign in and Laravel returns them to the activation screen.
+4. They name the device and confirm.
+5. They land on the checklists **for the machine whose sticker they scanned**
+   — and that sticker goes straight there from then on.
+
+Replacing a broken tablet is handled: the new device can take over an existing
+one's identity, keeping its name, place and history rather than leaving a dead
+row beside a new one. A new device inherits the scanned machine's location,
+and its kind is guessed from the User-Agent for the administrator to correct.
+
+**Restricted to `kiosk.manage`** — the permission that has always governed
+enrolment, and one only administrators hold. Enrolment permanently grants a
+browser the machine grid and the PIN pad, so a photographed sticker must not
+be enough to turn a personal phone into a kiosk. Every role is covered by a
+test. The signed-link route remains for enrolling a tablet without typing an
+admin password in front of the shop floor.
+
+### On MAC addresses
+**A web application cannot obtain one, and this does not.** There is no
+browser API that exposes a MAC — deliberately, since a permanent hardware
+identifier would be a tracking vector no vendor allows. It is also a
+link-layer address that never travels in an HTTP request, so it is gone long
+before the request arrives. Reading the ARP table server-side only sees the
+same network segment, and under Docker the source is the bridge gateway. A
+MAC for network inventory comes from the DHCP server or the switch.
+
+What is recorded instead, on the device row and in the activity log: screen
+size, viewport, pixel ratio, touch points, timezone, language, platform,
+User-Agent, the Client Hints a browser offers (including handset model where
+available), the detected device type, the IP at enrolment, and **who
+activated it and when**. All of it is client-supplied and forgeable, so it is
+shown on the fleet list and never used for any access decision.
+
+The durable identity remains the enrolment token — which, unlike a MAC, can
+be revoked and rotated, and is not spoofable in ten seconds on any laptop.
+
+**278 tests, 996 assertions.**
+
 ## [0.29.0] — Signatures are backed up too, and two things found while doing it
 
 ### The files, not just the database

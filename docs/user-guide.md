@@ -151,6 +151,25 @@ You do everything an operator does, plus you sign off their work. You log in
 with an **email address and password**, or with your **employee number and
 password**, at the normal login screen — not the kiosk tablet.
 
+## Setting up a new tablet or phone from a machine sticker
+
+Every machine has a QR sticker. Point a tablet's camera at it:
+
+- **A tablet that is already set up** goes straight to that machine's
+  checklists. That is the normal, everyday use.
+- **A tablet that is not set up yet** says so, and offers **Set this device
+  up**. Tap it, sign in as an administrator, give the device a name you would
+  recognise in a list, and confirm. It lands on that machine's checklists, and
+  from then on the sticker takes it there directly.
+
+Only an administrator can set a device up. That is deliberate: once a device
+is set up, anybody holding it reaches the machine list and the PIN pad, so a
+photographed sticker must not be enough to turn a personal phone into a kiosk.
+
+Replacing a broken tablet? On the setup screen, choose the old device from
+**Replacing a device that is already listed** — the new one takes over its
+name, its place and its history instead of leaving a dead entry behind.
+
 ## If you forget your password
 
 On the login screen, click **Forgotten your password?** and type your company
