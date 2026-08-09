@@ -3,6 +3,45 @@
 Versions track build milestones: `0.<milestone>.<patch>`. The project reaches
 `1.0.0` when all 8 milestones are complete and the paper forms are retired.
 
+## [0.31.0] — Supervisors can set up a device
+
+A tablet gets dropped mid-shift, the supervisor fetches the spare, and waiting
+for somebody from the office before the checks can carry on is how a shift
+ends up back on paper.
+
+### A narrower permission, not a wider role
+The obvious change — grant supervisors `kiosk.manage` — would also have handed
+them the whole Kiosk Devices screen: renaming devices, rotating tokens,
+revoking and deleting them. Setting up one tablet should not carry the power
+to delete the fleet.
+
+So there is a new **`kiosk.activate`**, granted from supervisor upward and so
+also held by maintenance managers, who are the people most often standing at
+a machine with a tablet. `kiosk.manage` is unchanged and still administrators
+only.
+
+| | `kiosk.activate` | `kiosk.manage` |
+|---|---|---|
+| operator | — | — |
+| quality assurance | — | — |
+| supervisor | **yes** | — |
+| maintenance manager | **yes** | — |
+| admin | yes | yes |
+
+Operators and QA officers still cannot: enrolment permanently grants a browser
+the machine grid and the PIN pad, so a photographed sticker must not turn a
+personal phone into a kiosk. Every role is covered by a test, and another
+asserts that a supervisor holding `kiosk.activate` is still refused the fleet
+screen.
+
+Verified against the running pilot: a supervisor gets **200** on the
+activation screen and **403** on Kiosk Devices.
+
+Run `php artisan db:seed --class=RolesAndPermissionsSeeder` on an existing
+install to grant the new permission. It is idempotent.
+
+**280 tests, 1,003 assertions.**
+
 ## [0.30.0] — One sticker sets the device up, then runs the checklist
 
 Machine QR stickers already existed and already pointed at `/m/{code}`. On an

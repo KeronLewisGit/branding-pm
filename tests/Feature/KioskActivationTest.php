@@ -60,10 +60,12 @@ it('sends an unauthenticated scanner to log in, and back again afterwards', func
 |--------------------------------------------------------------------------
 */
 
-it('lets nobody but a holder of kiosk.manage activate a device', function (string $role, bool $allowed): void {
-    // Enrolment permanently grants a browser the machine grid and the PIN
-    // pad. If an operator could do this from a sticker, anybody who could
-    // photograph one could turn their own phone into a kiosk.
+it('lets a holder of kiosk.activate set a device up, and nobody else', function (string $role, bool $allowed): void {
+    // A tablet gets dropped mid-shift and the supervisor fetches the spare;
+    // waiting for an administrator to come to the floor is how a shift ends
+    // up back on paper. Operators and QA officers still cannot: enrolment
+    // permanently grants the machine grid and the PIN pad, so a photographed
+    // sticker must not turn a personal phone into a kiosk.
     $user = User::factory()->create();
     $user->assignRole($role);
 
@@ -72,11 +74,42 @@ it('lets nobody but a holder of kiosk.manage activate a device', function (strin
     $allowed ? $response->assertOk() : $response->assertForbidden();
 })->with([
     'operator' => ['operator', false],
-    'supervisor' => ['supervisor', false],
-    'maintenance manager' => ['maintenance_manager', false],
     'quality assurance' => ['quality_assurance', false],
+    'supervisor' => ['supervisor', true],
+    'maintenance manager' => ['maintenance_manager', true],
     'admin' => ['admin', true],
 ]);
+
+it('does not hand the fleet screen to a supervisor along with it', function (): void {
+    // The point of a separate permission. Setting up the tablet in your hand
+    // must not also grant renaming, revoking and deleting devices.
+    $supervisor = User::factory()->create();
+    $supervisor->assignRole('supervisor');
+
+    expect($supervisor->can('kiosk.activate'))->toBeTrue()
+        ->and($supervisor->can('kiosk.manage'))->toBeFalse();
+
+    $this->actingAs($supervisor)->get('/admin/kiosk')->assertForbidden();
+});
+
+it('lets a supervisor complete the whole journey from the sticker', function (): void {
+    $machine = Machine::factory()->create(['code' => 'matan']);
+    $supervisor = User::factory()->create();
+    $supervisor->assignRole('supervisor');
+
+    $this->actingAs($supervisor)
+        ->post('/kiosk/activate', ['machine' => 'matan', 'name' => 'Spare tablet'])
+        ->assertRedirect(route('kiosk.machine', ['code' => 'matan']));
+
+    $device = KioskDevice::sole();
+
+    expect($device->enrolled_by_id)->toBe($supervisor->id);
+
+    // And the sticker works on it from then on.
+    $this->withCookies([EnsureKioskDevice::COOKIE => $device->token])
+        ->get('/m/'.$machine->code)
+        ->assertOk();
+});
 
 it('refuses the POST to somebody without the permission', function (): void {
     $operator = User::factory()->create();

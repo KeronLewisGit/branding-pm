@@ -42,16 +42,25 @@ use Illuminate\View\View;
  *
  * ## Who may do it
  *
- * `kiosk.manage`, the same permission that has always governed enrolment, and
- * one only administrators hold. This is not a formality: enrolment grants a
- * browser the machine grid and the PIN pad permanently. Without that gate,
- * anybody who could photograph a sticker could make their own phone a kiosk.
+ * `kiosk.activate` — held by supervisors, maintenance managers and
+ * administrators. Deliberately **not** `kiosk.manage`, which governs the
+ * fleet screen (renaming, rotating tokens, revoking, deleting) and stays with
+ * administrators. Setting up the tablet in your hand is a shop-floor act: a
+ * tablet gets dropped mid-shift, a supervisor fetches the spare, and waiting
+ * for an administrator to come to the floor is how a shift ends up back on
+ * paper. Granting the whole of `kiosk.manage` to allow that would hand a
+ * supervisor the power to delete the fleet.
  *
- * A tablet still cannot be enrolled by someone who is merely holding it. That
- * is the point of the signed-link route in KioskEnrolmentController, which
- * remains the way to enrol without typing an admin password on a shared
- * device in front of the shop floor. This route is for the case where the
- * administrator is the person holding the tablet.
+ * It is still a real gate. Enrolment permanently grants a browser the machine
+ * grid and the PIN pad, so operators and QA officers cannot do this: without
+ * that line, anybody who could photograph a sticker could make their own
+ * phone a kiosk.
+ *
+ * A tablet still cannot be enrolled by someone merely holding it. That is the
+ * point of the signed-link route in KioskEnrolmentController, which remains
+ * the way to enrol without typing a password on a shared device in front of
+ * the shop floor. This route is for when the person holding the tablet is
+ * entitled to set it up.
  */
 class KioskActivationController extends Controller
 {
@@ -60,7 +69,7 @@ class KioskActivationController extends Controller
      */
     public function create(Request $request): View
     {
-        abort_unless($request->user()?->can('kiosk.manage') === true, 403);
+        abort_unless($request->user()?->can('kiosk.activate') === true, 403);
 
         $machine = $this->machineFrom($request);
         $userAgent = (string) $request->userAgent();
@@ -83,7 +92,7 @@ class KioskActivationController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
-        abort_unless($request->user()?->can('kiosk.manage') === true, 403);
+        abort_unless($request->user()?->can('kiosk.activate') === true, 403);
 
         $validated = $request->validate([
             'device_id' => ['nullable', Rule::exists('kiosk_devices', 'id')],

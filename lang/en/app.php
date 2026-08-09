@@ -992,7 +992,7 @@ return [
          */
         'activate' => [
             'cta' => 'Set this device up',
-            'cta_hint' => 'You will need to sign in as an administrator.',
+            'cta_hint' => 'You will need to sign in as a supervisor or an administrator.',
             'title' => 'Set this device up as a kiosk',
             'intro' => 'This device will be able to open the checklists. Operators will sign in on it with a PIN.',
             'intro_machine' => 'Once this is done, this device opens the checklists for :machine — and scanning that sticker again will come straight here.',
