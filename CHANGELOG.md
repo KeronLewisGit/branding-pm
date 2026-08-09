@@ -3,6 +3,57 @@
 Versions track build milestones: `0.<milestone>.<patch>`. The project reaches
 `1.0.0` when all 8 milestones are complete and the paper forms are retired.
 
+## [0.27.0] — Nightly database backups
+
+This database is the plant's compliance record and it had no copy. Recovering
+it after an accidental `migrate:fresh` was only possible because MySQL's
+binary log happened to be enabled and happened to still hold the history —
+neither of which is a backup.
+
+### The service
+A `backup` container dumps the database nightly at `BACKUP_TIME` (default
+02:30 plant time) and keeps `BACKUP_RETENTION_DAYS` (default 14).
+
+Built from the **same `mysql` image as the server**, so `mysqldump` is always
+version-matched, and kept separate from `php` so backups do not depend on the
+application being healthy — a backup that only runs when the app is well is
+the one you find missing when it is not.
+
+Dumps land in **`storage/backups/` on the host, not in a Docker volume**.
+`docker compose down -v` destroys named volumes, so a backup kept in one would
+be destroyed by the same command that destroys the database it protects. They
+are gitignored: a dump holds every operator's name and every password and PIN
+hash.
+
+### Refusing to keep a bad dump
+The way these fail is quietly, so each dump must clear four hurdles before it
+is allowed to replace anything:
+
+- `--single-transaction`, so the snapshot is consistent without locking the
+  shop floor out mid-shift;
+- written as `.partial` and renamed only on success, so an interrupted dump is
+  never mistaken for a good one;
+- `gzip -t` over the whole stream, which catches truncation by a full disk;
+- a size floor — a suspiciously small dump is **refused**, because mysqldump
+  writing an error and exiting 0 must not silently overwrite yesterday's good
+  backup.
+
+A `.sha256` is written beside each one.
+
+### Noticing when it stops
+`php artisan backup:status` reports the newest dump, its age, size and
+checksum — and **exits 1 when it is stale**, so it can be monitored rather
+than remembered. `security:check` gained a matching **Backups** entry, which
+fails in production when there is no recent dump.
+
+### Verified, not assumed
+The backup was restored into a scratch database and compared row by row
+against the live one — 359 runs, 1,929 items, 1,082 parts, 2,388 activity-log
+entries, all matching. Pruning was exercised with a 20-day-old file, and the
+size floor by dumping an empty database.
+
+**246 tests, 919 assertions.**
+
 ## [0.26.0] — Password reset by email, and a mail server to carry it
 
 Until now, an office user who forgot their password needed an administrator —

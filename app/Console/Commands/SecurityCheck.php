@@ -45,6 +45,7 @@ class SecurityCheck extends Command
         $this->checkHttps($production);
         $this->checkSignatureDisk();
         $this->checkMailer($production);
+        $this->checkBackups($production);
         $this->checkDemoAccounts($production);
         $this->checkAdminPassword();
 
@@ -195,6 +196,42 @@ class SecurityCheck extends Command
         }
 
         $this->addPass('Mail', $mailer.' via '.config('mail.mailers.'.$mailer.'.host', 'n/a'));
+    }
+
+    /**
+     * Availability is a security property too: this database is the plant's
+     * compliance record, and losing it is not recoverable by other means.
+     *
+     * The check is for a *recent* backup, not merely a configured one — the
+     * usual failure is a backup container nobody restarted, which looks
+     * exactly like a working setup until the day it matters.
+     */
+    private function checkBackups(bool $production): void
+    {
+        $path = (string) config('backups.path');
+        $files = is_dir($path) ? (glob(rtrim($path, '/\\').DIRECTORY_SEPARATOR.'*.sql.gz') ?: []) : [];
+
+        if ($files === []) {
+            $production
+                ? $this->addFail('Backups', 'none found in '.$path.' — the compliance record has no copy')
+                : $this->addWarn('Backups', 'none found in '.$path.' — run `docker compose up -d backup`');
+
+            return;
+        }
+
+        $newest = max(array_map('filemtime', $files));
+        $hours = (int) floor((time() - $newest) / 3600);
+        $limit = (int) config('backups.max_age_hours');
+
+        if ($hours > $limit) {
+            $message = 'newest is '.$hours.'h old (limit '.$limit.'h) — backups have stopped';
+
+            $production ? $this->addFail('Backups', $message) : $this->addWarn('Backups', $message);
+
+            return;
+        }
+
+        $this->addPass('Backups', count($files).' kept, newest '.$hours.'h old');
     }
 
     /**

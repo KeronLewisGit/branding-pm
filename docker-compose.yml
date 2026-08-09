@@ -63,6 +63,33 @@ services:
             timeout: 5s
             retries: 10
 
+    # Nightly database backup.
+    #
+    # Built from the same mysql image as the server so mysqldump is always
+    # version-matched, and kept separate from `php` so backups do not depend
+    # on the application being healthy.
+    #
+    # Dumps land in ./storage/backups on the HOST, not in a named volume:
+    # `docker compose down -v` destroys the database volume, and a backup
+    # stored in one would go with it.
+    backup:
+        image: mysql:8
+        restart: unless-stopped
+        environment:
+            MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-secret}
+            DB_DATABASE: ${DB_DATABASE:-branding_pm}
+            DB_HOST: mysql
+            BACKUP_TIME: ${BACKUP_TIME:-02:30}
+            BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-14}
+            TZ: ${APP_DISPLAY_TIMEZONE:-UTC}
+        entrypoint: ['/usr/local/bin/backup.sh', 'loop']
+        volumes:
+            - ./docker/backup/backup.sh:/usr/local/bin/backup.sh:ro
+            - ./storage/backups:/backups
+        depends_on:
+            mysql:
+                condition: service_healthy
+
     # Mail server for the pilot. Mailpit accepts SMTP on 1025 and shows every
     # message in a web inbox on 8025 — nothing leaves the machine.
     #
