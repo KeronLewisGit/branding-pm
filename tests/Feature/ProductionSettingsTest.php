@@ -144,3 +144,35 @@ it('warns rather than fails outside production', function (): void {
     $this->artisan('security:check')->assertSuccessful();
     $this->artisan('security:check --strict')->assertFailed();
 });
+
+it('fails when signatures are still sitting on the public disk', function (): void {
+    // The config saying "local" is not the same as the disk being clean.
+    // Signatures written before that setting changed stay on the public disk,
+    // and public/storage is a symlink — so they are fetchable with no login.
+    // One was found that way: HTTP 200, and no database row referenced it.
+    $this->seed(RolesAndPermissionsSeeder::class);
+
+    $stray = storage_path('app/public/'.config('checklists.signature_path').'/runs/9999');
+    File::makeDirectory($stray, 0755, true);
+    File::put($stray.'/operator-leaked.png', 'not really a png');
+
+    try {
+        config([
+            'app.debug' => false,
+            'app.env' => 'production',
+            'app.key' => 'base64:'.base64_encode(random_bytes(32)),
+            'app.url' => 'https://pm.example.com',
+            'session.secure' => true,
+            'checklists.signature_disk' => 'local',
+            'mail.default' => 'smtp',
+            'mail.from.address' => 'no-reply@pm.example.com',
+            'backups.path' => freshBackupFixture(),
+        ]);
+
+        $this->artisan('security:check')
+            ->expectsOutputToContain('PUBLIC disk')
+            ->assertFailed();
+    } finally {
+        File::deleteDirectory(storage_path('app/public/'.config('checklists.signature_path').'/runs/9999'));
+    }
+});

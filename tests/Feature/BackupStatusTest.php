@@ -37,8 +37,23 @@ afterEach(function (): void {
 /**
  * A plausible dump: gzip content, a checksum beside it, and an age.
  */
+function fakeFileArchive(string $path, int $hoursOld): string
+{
+    $file = $path.DIRECTORY_SEPARATOR.'storage-fixture.tar.gz';
+
+    File::put($file, gzencode(str_repeat('signatures/runs/1/operator.png', 200)));
+    touch($file, now()->subHours($hoursOld)->getTimestamp());
+
+    return $file;
+}
+
 function fakeBackup(string $path, string $name, int $hoursOld, bool $withChecksum = true): string
 {
+    // Every dump is accompanied by its night's signatures unless a test is
+    // specifically about them being absent. Refreshed on each call so the
+    // archive tracks the NEWEST dump, which is what staleness is judged on.
+    fakeFileArchive($path, $hoursOld);
+
     $file = $path.DIRECTORY_SEPARATOR.$name;
 
     File::put($file, gzencode(str_repeat('-- INSERT INTO checklist_runs …', 2000)));
@@ -244,4 +259,89 @@ it('ships a copier that verifies from the share, not from the source', function 
         ->toContain('.partial')                      // never occupy the real name mid-transfer
         ->toContain('write_status')                  // so the app can see the result
         ->toContain('touch "${OFFSITE_DIR}/.write-probe"');   // a dropped mount still looks like a directory
+});
+
+/*
+|--------------------------------------------------------------------------
+| The signatures beside the dump
+|--------------------------------------------------------------------------
+| checklist_runs stores signature PATHS. Restore the database without the
+| files and every approved run points at an image that is not there — the
+| approval is no longer evidenced by anything.
+*/
+
+it('fails when there are dumps but no signatures archived', function (): void {
+    File::put($this->backupPath.'/branding_pm-a.sql.gz', gzencode(str_repeat('x', 30000)));
+    touch($this->backupPath.'/branding_pm-a.sql.gz', now()->subHour()->getTimestamp());
+
+    $this->artisan('backup:status')
+        ->expectsOutputToContain('no storage archive')
+        ->assertFailed();
+});
+
+it('fails when the signatures archive has fallen behind the dumps', function (): void {
+    // A fresh dump beside a week-old archive is not a usable pair: runs
+    // signed in between reference files the archive does not hold.
+    // The dump first, then the archive aged back — the helper refreshes it.
+    fakeBackup($this->backupPath, 'branding_pm-a.sql.gz', hoursOld: 1);
+    fakeFileArchive($this->backupPath, hoursOld: 200);
+
+    $this->artisan('backup:status')
+        ->expectsOutputToContain('the dumps have one and the files do not')
+        ->assertFailed();
+});
+
+it('passes when the dump and its signatures are from the same night', function (): void {
+    fakeFileArchive($this->backupPath, hoursOld: 1);
+    fakeBackup($this->backupPath, 'branding_pm-a.sql.gz', hoursOld: 1);
+
+    $this->artisan('backup:status')->assertSuccessful();
+});
+
+it('ships a backup script that archives the files after the database', function (): void {
+    // Order is a correctness property, not a preference. Database first means
+    // every path in the dump is already on disk when the archive is taken.
+    // Files first would let a run signed in between reference a signature the
+    // archive does not contain.
+    $script = file_get_contents(base_path('docker/backup/backup.sh'));
+
+    $dumpAt = strpos($script, 'mv "$tmp" "$file"');
+    $filesAt = strpos($script, 'take_files ||');
+
+    expect($filesAt)->toBeGreaterThan($dumpAt)
+        ->and($script)->toContain('tar -tzf')          // read the archive back
+        ->and($script)->toContain('storage-');
+});
+
+it('copies the file archives off-site too, not just the database', function (): void {
+    // A share holding dumps but no signatures is an incomplete audit record
+    // in the one place it most needs to be complete.
+    expect(file_get_contents(base_path('docker/backup/offsite.sh')))
+        ->toContain('"$LOCAL_DIR"/*.tar.gz');
+});
+
+it('keeps signature images out of git', function (): void {
+    // These are the audit record — somebody's actual handwritten signature —
+    // and they are operational data, not source. Laravel's stock ignore files
+    // for storage/app were missing, so every signature written during the
+    // pilot had been committed to the repository. They belong in the nightly
+    // archive, not in a clone.
+    $tracked = shell_exec('git -C '.escapeshellarg(base_path()).' ls-files storage/app');
+
+    $images = array_values(array_filter(
+        explode('
+', trim((string) $tracked)),
+        fn (string $line): bool => $line !== '' && ! str_ends_with($line, '.gitignore'),
+    ));
+
+    expect($images)->toBe([], 'Signature images are tracked in git: '.implode(', ', $images));
+});
+
+it('ignores newly written signatures on both disks', function (): void {
+    $check = fn (string $path): string => trim((string) shell_exec(
+        'git -C '.escapeshellarg(base_path()).' check-ignore '.escapeshellarg($path).' || echo NOT_IGNORED'
+    ));
+
+    expect($check('storage/app/signatures/runs/1/probe.png'))->not->toBe('NOT_IGNORED')
+        ->and($check('storage/app/public/signatures/runs/1/probe.png'))->not->toBe('NOT_IGNORED');
 });

@@ -66,9 +66,30 @@ class BackupStatus extends Command
         // has rotted or been truncated since.
         $this->components->twoColumnDetail('      Integrity', $this->verify($newest['file']));
 
+        $filesFailed = $this->reportFiles($path, $maxAge);
         $offsiteFailed = $this->reportOffsite($path);
 
         $this->newLine();
+
+        // Most fundamental failure first. If nothing has been backed up for
+        // days then the files and the share are downstream of that, and
+        // reporting them instead would name a symptom rather than the cause.
+        if ($stale) {
+            $this->components->error(
+                "The newest backup is {$hours} hours old (limit {$maxAge}). Backups have stopped running."
+            );
+
+            return self::FAILURE;
+        }
+
+        if ($filesFailed) {
+            $this->components->error(
+                'The database is backed up but its signatures are not. Restored alone, '
+                .'every approved run loses the signature that made it approvable.'
+            );
+
+            return self::FAILURE;
+        }
 
         if ($offsiteFailed) {
             $this->components->error(
@@ -78,17 +99,47 @@ class BackupStatus extends Command
             return self::FAILURE;
         }
 
-        if ($stale) {
-            $this->components->error(
-                "The newest backup is {$hours} hours old (limit {$maxAge}). Backups have stopped running."
-            );
-
-            return self::FAILURE;
-        }
-
         $this->components->info('Backups are current.');
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Report on the `storage/app` archive — the signatures and fault photos.
+     *
+     * A database dump on its own is not the audit record. The runs table
+     * stores signature *paths*; restore it without the files and every
+     * approved run points at an image that no longer exists. So a fresh dump
+     * beside a week-old file archive is a failure, not a detail — the pair is
+     * what gets restored, and they have to be from the same night.
+     */
+    private function reportFiles(string $path, int $maxAge): bool
+    {
+        $archives = glob(rtrim($path, '/\\').DIRECTORY_SEPARATOR.'storage-*.tar.gz') ?: [];
+
+        if ($archives === []) {
+            $this->components->twoColumnDetail(
+                '<fg=red>MISSING</>  Signatures',
+                'no storage archive — is ./storage/app mounted into the backup container?'
+            );
+
+            return true;
+        }
+
+        usort($archives, fn (string $a, string $b): int => filemtime($b) <=> filemtime($a));
+
+        $newest = $archives[0];
+        $at = CarbonImmutable::createFromTimestamp((int) filemtime($newest));
+        $hours = (int) $at->diffInHours(CarbonImmutable::now());
+        $stale = $hours > $maxAge;
+
+        $this->components->twoColumnDetail(
+            ($stale ? '<fg=red>STALE</>' : '<fg=green>OK</>').'  Signatures',
+            basename($newest).'  ('.$at->diffForHumans().', '.$this->humanBytes((int) filesize($newest)).')'
+                .($stale ? ' — the dumps have one and the files do not' : '')
+        );
+
+        return $stale;
     }
 
     /**
