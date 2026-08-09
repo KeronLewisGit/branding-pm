@@ -374,7 +374,10 @@ class KioskDeviceManager extends Component
     public function render(): View
     {
         $devices = KioskDevice::query()
-            ->with('location:id,name')
+            // `enrolledBy` is eager-loaded because the list shows who
+            // activated each device; without it this is a query per row, and
+            // `preventLazyLoading` would (rightly) throw outside production.
+            ->with(['location:id,name', 'enrolledBy:id,full_name'])
             ->when($this->search !== '', function (Builder $query): void {
                 $term = '%'.addcslashes($this->search, '\\%_').'%';
 

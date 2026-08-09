@@ -41,7 +41,29 @@
             {{ __('app.kiosk.not_enrolled.help.'.$key) }}
         </p>
 
-        <div class="mt-8 w-full max-w-xs">
+        {{--
+            The way out of what used to be a dead end.
+
+            "Activate" is behind `auth` + `kiosk.manage`, so tapping it sends
+            whoever is holding the device to the login screen and brings them
+            back here afterwards. An operator who taps it gets the login page
+            and then a 403 — they cannot enrol anything, which is the point.
+
+            Carrying the scanned machine code means the device lands on that
+            machine's checklists once it is activated, rather than on the grid
+            with the sticker still to be scanned again.
+        --}}
+        <div class="mt-8 flex w-full max-w-xs flex-col gap-3">
+            <x-button
+                href="{{ route('kiosk.activate', array_filter(['machine' => $machineCode ?? null])) }}"
+                size="kiosk"
+                class="w-full"
+            >
+                {{ __('app.kiosk.activate.cta') }}
+            </x-button>
+
+            <p class="text-base text-slate-400">{{ __('app.kiosk.activate.cta_hint') }}</p>
+
             <x-button href="{{ route('login') }}" variant="ghost" size="kiosk" class="w-full">
                 {{ __('app.auth.login') }}
             </x-button>
