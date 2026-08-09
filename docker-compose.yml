@@ -63,6 +63,32 @@ services:
             timeout: 5s
             retries: 10
 
+    # Mail server for the pilot. Mailpit accepts SMTP on 1025 and shows every
+    # message in a web inbox on 8025 — nothing leaves the machine.
+    #
+    # This is deliberate, not a stand-in that was never replaced. The plant
+    # network has no mail relay of its own, and a password reset that silently
+    # vanishes into a misconfigured smarthost is worse than one you can watch
+    # arrive. Point MAIL_HOST/MAIL_PORT at the company relay on go-live and
+    # this service can be dropped; nothing in the application refers to it.
+    mailpit:
+        image: axllent/mailpit:latest
+        ports:
+            # Inbox. Same host as the app, so http://<host>:8025 on the pilot.
+            - '${MAIL_UI_PORT:-8025}:8025'
+        environment:
+            MP_MAX_MESSAGES: 500
+            # Retain what has been read; the inbox is a support tool here, not
+            # a test fixture that wants wiping between runs.
+            MP_DATABASE: /data/mailpit.db
+        volumes:
+            - mailpit-data:/data
+        healthcheck:
+            test: ['CMD', 'wget', '-qO-', 'http://localhost:8025/api/v1/info']
+            interval: 10s
+            timeout: 5s
+            retries: 5
+
     scheduler:
         build:
             context: .
@@ -77,4 +103,5 @@ services:
 
 volumes:
     mysql-data:
+    mailpit-data:
     vendor:

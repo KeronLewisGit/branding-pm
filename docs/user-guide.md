@@ -151,6 +151,21 @@ You do everything an operator does, plus you sign off their work. You log in
 with an **email address and password**, or with your **employee number and
 password**, at the normal login screen — not the kiosk tablet.
 
+## If you forget your password
+
+On the login screen, click **Forgotten your password?** and type your company
+email address. You will be sent a link that lets you set a new one. The link
+works **once**, and stops working after an hour. If it has expired, ask for
+another.
+
+The screen says the same thing whether or not the address is one we know —
+that is deliberate, so the form cannot be used to find out who works here. If
+nothing arrives, check your junk folder first, then ask an administrator.
+
+If you do **not** have a company email address, this cannot help you. An
+administrator sets your password for you on the users screen. Operators who
+sign in with a PIN are in this position — see [For the operator](#for-the-operator).
+
 ## Your job in this system
 
 An operator finishes a sheet and signs it. It then waits for you. Until you

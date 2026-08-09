@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Notifications\ResetPassword;
 use App\Support\ViewAs;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -202,5 +203,36 @@ class User extends Authenticatable
     public function canLoginWithPassword(): bool
     {
         return $this->password !== null;
+    }
+
+    /**
+     * Can this person reset their own password by email, unaided?
+     *
+     * Three things have to be true, and in this plant none of them can be
+     * assumed:
+     *
+     *   - **They have an email address.** Most floor operators do not. Theirs
+     *     is a PIN on a shared tablet, and a PIN is cleared by an
+     *     administrator on the users screen, not by email.
+     *   - **They already sign in with a password.** A reset restores a way in
+     *     that somebody had; it must not hand a password login to an account
+     *     that only ever had a PIN.
+     *   - **The account is active.** A deactivated account is deactivated.
+     */
+    public function canResetPasswordByEmail(): bool
+    {
+        return $this->is_active
+            && $this->canLoginWithPassword()
+            && $this->email !== null
+            && $this->email !== '';
+    }
+
+    /**
+     * Send the reset link using this application's own copy rather than
+     * Laravel's stock consumer-app wording.
+     */
+    public function sendPasswordResetNotification(#[\SensitiveParameter] $token): void
+    {
+        $this->notify(new ResetPassword($token));
     }
 }
