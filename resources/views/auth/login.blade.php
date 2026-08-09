@@ -43,7 +43,14 @@
             @enderror
         </div>
 
-        <x-checkbox id="remember" name="remember">{{ __('app.auth.remember_me') }}</x-checkbox>
+        <div class="flex flex-wrap items-center justify-between gap-3">
+            <x-checkbox id="remember" name="remember">{{ __('app.auth.remember_me') }}</x-checkbox>
+
+            <a href="{{ route('password.request') }}"
+               class="text-base font-medium text-sky-700 underline underline-offset-2 hover:text-sky-800">
+                {{ __('app.auth.forgot_link') }}
+            </a>
+        </div>
 
         <x-button type="submit" class="w-full">{{ __('app.auth.login') }}</x-button>
     </form>

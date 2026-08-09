@@ -162,10 +162,30 @@ App on <http://localhost:8080>.
 | `php` | PHP 8.3-FPM with the required extensions |
 | `nginx` | Web server, document root `/var/www/html/public`, host port 8080 |
 | `mysql` | MySQL 8, utf8mb4, named volume, no host port published |
+| `mailpit` | Mail server. SMTP on 1025, inbox at <http://localhost:8025> |
 | `scheduler` | Runs `php artisan schedule:work` — the cron replacement |
 
 The `scheduler` service means run generation works out of the box under Docker.
 On a native install you must add the [cron line](#scheduler) yourself.
+
+### Mail
+
+Password reset is the only thing this system emails. Under Docker, `mailpit`
+accepts it and shows it in a web inbox — **nothing leaves the machine**, which
+is what the pilot wants: a reset you can watch arrive beats one that vanishes
+into a misconfigured relay.
+
+Open <http://localhost:8025> (or `http://<pilot-host>:8025`) to read it.
+
+On a native install without Docker, leave `MAIL_MAILER=log` and read
+`storage/logs/laravel.log`.
+
+**On go-live**, point `MAIL_HOST` / `MAIL_PORT` at the company relay, set
+`MAIL_USERNAME`, `MAIL_PASSWORD` and `MAIL_SCHEME`, and use a `MAIL_FROM_ADDRESS`
+on a domain the relay will vouch for — an unroutable from-address is the usual
+reason these land in junk. Then drop the `mailpit` service; nothing in the
+application refers to it. `php artisan security:check` fails if a production
+install is still writing reset emails to a log file.
 
 ---
 

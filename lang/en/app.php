@@ -53,6 +53,41 @@ return [
         'throttle' => 'Too many login attempts. Please try again in :seconds seconds.',
         'kiosk_prompt' => 'Completing a checklist at a machine?',
         'kiosk_link' => 'Go to the shop-floor kiosk',
+
+        // Password reset by email. Office users only — a floor operator signs
+        // in with a PIN, which an administrator clears from the users screen.
+        'email' => 'Email address',
+        'forgot_link' => 'Forgotten your password?',
+        'forgot_title' => 'Reset your password',
+        'forgot_intro' => 'Type your company email address. We will send you a link to set a new password.',
+        'forgot_submit' => 'Send me the link',
+        'forgot_no_email' => 'No company email address? Your password can only be reset by an administrator. Ask your supervisor.',
+        'back_to_login' => 'Back to sign in',
+
+        /*
+         * Deliberately the same message whether the address is known or not.
+         * Anything else makes this form a way to test who works here.
+         */
+        'reset_link_sent' => 'If that address belongs to an account that signs in with a password, the link is on its way. It may take a minute to arrive. Check your junk folder.',
+
+        'reset_title' => 'Set a new password',
+        'reset_intro' => 'Choose a password you have not used here before.',
+        'new_password' => 'New password',
+        'new_password_hint' => 'At least 8 characters.',
+        'confirm_password' => 'Type it again',
+        'reset_submit' => 'Save the new password',
+        'reset_done' => 'Your password has been changed. Sign in with it now.',
+        'reset_failed' => 'That link has already been used, or it has expired. Ask for a new one.',
+        'reset_not_allowed' => 'This account cannot be reset by email. Ask your supervisor or an administrator.',
+
+        // The email itself.
+        'reset_email_subject' => 'Set a new password',
+        'reset_email_greeting' => 'Hello :name,',
+        'reset_email_intro' => 'Somebody asked to reset the password for your account on the Preventive Maintenance system.',
+        'reset_email_button' => 'Set a new password',
+        'reset_email_expiry' => 'This link works once, and stops working after :minutes minutes.',
+        'reset_email_ignore' => 'If this was not you, you do not need to do anything. Your password has not changed. Tell your supervisor if you keep getting these.',
+        'reset_email_salutation' => 'Branding & Signage — Preventive Maintenance',
     ],
 
     // Run status — enum RunStatus (§3). Always shown with the coloured dot,

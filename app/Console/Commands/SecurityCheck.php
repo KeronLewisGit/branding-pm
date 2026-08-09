@@ -44,6 +44,7 @@ class SecurityCheck extends Command
         $this->checkSecureCookies($production);
         $this->checkHttps($production);
         $this->checkSignatureDisk();
+        $this->checkMailer($production);
         $this->checkDemoAccounts($production);
         $this->checkAdminPassword();
 
@@ -161,6 +162,39 @@ class SecurityCheck extends Command
         $disk === 'public'
             ? $this->addFail('Signature storage', 'on the public disk — signatures become guessable, unauthenticated URLs')
             : $this->addPass('Signature storage', $disk.' (served only through MediaController)');
+    }
+
+    /**
+     * Password reset is the only thing this system emails, and it is the way
+     * back in for anybody who locks themselves out.
+     *
+     * `log` and `array` do not fail, warn or bounce — the reset screen says
+     * the link is on its way and the message goes to a file nobody reads. The
+     * symptom reaches you as "the reset email never arrives", which is a long
+     * way from the cause.
+     */
+    private function checkMailer(bool $production): void
+    {
+        $mailer = (string) config('mail.default');
+        $from = (string) config('mail.from.address');
+
+        if (in_array($mailer, ['log', 'array'], true)) {
+            $production
+                ? $this->addFail('Mail', $mailer.' — password reset emails are written to a file, not sent, so a locked-out user stays locked out')
+                : $this->addWarn('Mail', $mailer.' — reset emails go to storage/logs, not to anybody');
+
+            return;
+        }
+
+        // A from-address on a domain the relay will not vouch for is the usual
+        // reason these arrive in junk, or not at all.
+        if ($production && (str_ends_with($from, '.local') || str_contains($from, 'example.com'))) {
+            $this->addWarn('Mail', $mailer.', but MAIL_FROM_ADDRESS is '.$from.' — use a real address the relay will accept');
+
+            return;
+        }
+
+        $this->addPass('Mail', $mailer.' via '.config('mail.mailers.'.$mailer.'.host', 'n/a'));
     }
 
     /**

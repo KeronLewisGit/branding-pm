@@ -3,6 +3,53 @@
 Versions track build milestones: `0.<milestone>.<patch>`. The project reaches
 `1.0.0` when all 8 milestones are complete and the paper forms are retired.
 
+## [0.26.0] — Password reset by email, and a mail server to carry it
+
+Until now, an office user who forgot their password needed an administrator —
+and the administrator who forgot theirs needed a developer with tinker.
+
+### The reset
+**Forgotten your password?** on the sign-in screen asks for a company email
+address and sends a link. The link works **once** and expires after an hour.
+
+Two properties the obvious implementation gives away, kept deliberately:
+
+- **It never says whether an address is known.** Sent, unknown address,
+  deactivated account and PIN-only operator all produce the same message.
+  Otherwise the form is a way to test who works here, which on a site this
+  size is a real disclosure.
+- **It does not sign you in.** You prove you hold the new password by using
+  it — so a forwarded reset email is not a session.
+
+Eligibility is re-checked when the token is **spent**, not trusted from when
+it was sent: deactivating somebody no longer leaves a working key in their
+inbox for the rest of the hour. Resets are written to the activity log, since
+"who changed this account's password, and when" is a question this system is
+expected to answer. Both endpoints are throttled at 6/minute per IP on top of
+the broker's own per-address limit.
+
+**Floor operators are not the audience** and the page says so rather than
+failing them after a try: they sign in by PIN on a shared tablet, most have no
+email address, and an administrator clears a PIN from the users screen.
+
+### The mail server
+A `mailpit` service accepts SMTP on 1025 and shows every message in a web
+inbox at <http://localhost:8025>. Nothing leaves the machine — which is what
+the pilot wants, since the plant network has no relay of its own and a reset
+that vanishes into a misconfigured smarthost is worse than one you can watch
+arrive. Go-live points `MAIL_HOST`/`MAIL_PORT` at the company relay and drops
+the service; nothing in the application refers to it.
+
+`security:check` gained a **Mail** check: writing reset emails to a log file
+fails in production, and a `.local` or `example.com` from-address warns — an
+unroutable sender is the usual reason these land in junk.
+
+The email's copy lives in `lang/en/app.php` like every other string, replacing
+Laravel's stock "You are receiving this email because we received a password
+reset request for your account".
+
+**234 tests, 895 assertions.**
+
 ## [0.25.0] — The settings table is gone
 
 `settings` was a second, silent configuration surface. Ten rows were seeded —

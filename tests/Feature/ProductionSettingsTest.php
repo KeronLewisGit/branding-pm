@@ -47,6 +47,8 @@ it('passes its own security check when configured for production', function (): 
         'app.url' => 'https://pm.example.com',
         'session.secure' => true,
         'checklists.signature_disk' => 'local',
+        'mail.default' => 'smtp',
+        'mail.from.address' => 'no-reply@pm.example.com',
     ]);
 
     $this->artisan('security:check')->assertSuccessful();
@@ -62,6 +64,8 @@ it('fails the security check on the things that expose a production host', funct
         'app.url' => 'https://pm.example.com',
         'session.secure' => true,
         'checklists.signature_disk' => 'local',
+        'mail.default' => 'smtp',
+        'mail.from.address' => 'no-reply@pm.example.com',
     ], $overrides));
 
     $this->artisan('security:check')
@@ -73,6 +77,8 @@ it('fails the security check on the things that expose a production host', funct
     'plain http' => [['app.url' => 'http://pm.example.com'], 'APP_URL'],
     'signatures public' => [['checklists.signature_disk' => 'public'], 'Signature storage'],
     'no app key' => [['app.key' => ''], 'APP_KEY'],
+    // A reset email written to a file leaves a locked-out user locked out.
+    'mail going to a log file' => [['mail.default' => 'log'], 'Mail'],
 ]);
 
 it('fails the security check while demo accounts are still active in production', function (): void {
@@ -88,6 +94,8 @@ it('fails the security check while demo accounts are still active in production'
         'app.url' => 'https://pm.example.com',
         'session.secure' => true,
         'checklists.signature_disk' => 'local',
+        'mail.default' => 'smtp',
+        'mail.from.address' => 'no-reply@pm.example.com',
     ]);
 
     $this->artisan('security:check')
