@@ -151,16 +151,23 @@ Route::get('/kiosk/link/{device}', [KioskEnrolmentController::class, 'enrolViaLi
     ->middleware('signed')
     ->name('kiosk.enrol.link');
 
-Route::middleware(['auth', 'permission:kiosk.manage'])->group(function (): void {
-    /*
-     * Self-service activation from a machine's printed QR sticker. Reached
-     * from the not-enrolled screen, so `auth` bounces an unauthenticated
-     * scanner to the login page and returns them here afterwards — which is
-     * what makes "scan, log in, and it works" a single journey.
-     */
+/*
+ * Self-service activation from a machine's printed QR sticker. Reached from
+ * the not-enrolled screen, so `auth` bounces an unauthenticated scanner to
+ * the login page and returns them here afterwards — which is what makes
+ * "scan, log in, and it works" a single journey.
+ *
+ * Gated on `kiosk.activate`, NOT `kiosk.manage`: setting up the tablet in
+ * your hand is a shop-floor act a supervisor needs when one is replaced
+ * mid-shift, while renaming, revoking and deleting devices stays with
+ * administrators on the fleet screen below.
+ */
+Route::middleware(['auth', 'permission:kiosk.activate'])->group(function (): void {
     Route::get('/kiosk/activate', [KioskActivationController::class, 'create'])->name('kiosk.activate');
     Route::post('/kiosk/activate', [KioskActivationController::class, 'store'])->name('kiosk.activate.store');
+});
 
+Route::middleware(['auth', 'permission:kiosk.manage'])->group(function (): void {
     Route::get('/kiosk/enrol/{device}', [KioskEnrolmentController::class, 'enrol'])->name('kiosk.enrol');
     Route::post('/kiosk/unenrol', [KioskEnrolmentController::class, 'unenrol'])->name('kiosk.unenrol');
 });

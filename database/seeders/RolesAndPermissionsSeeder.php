@@ -43,6 +43,21 @@ class RolesAndPermissionsSeeder extends Seeder
         'role.manage',
         'setting.manage',
         'kiosk.manage',
+
+        /*
+         * Deliberately separate from `kiosk.manage`.
+         *
+         * `kiosk.activate` is "turn the device in my hand into a kiosk, from
+         * the sticker on the machine" — a shop-floor act, done standing at
+         * the machine, and one a supervisor needs when a tablet is replaced
+         * mid-shift and no administrator is on site.
+         *
+         * `kiosk.manage` is the fleet screen: renaming devices, rotating
+         * tokens, revoking and deleting them. That stays with administrators.
+         * Granting a supervisor the whole of `kiosk.manage` to let them set
+         * up one tablet would hand them all of it.
+         */
+        'kiosk.activate',
     ];
 
     /**
@@ -69,6 +84,10 @@ class RolesAndPermissionsSeeder extends Seeder
             'issue.assign',
             'issue.resolve',
             'report.view',
+            // Cumulative, so maintenance managers get this too — which is
+            // right: they are the people most often at a machine with a
+            // tablet in hand.
+            'kiosk.activate',
         ],
         'maintenance_manager' => [
             'machine.manage',

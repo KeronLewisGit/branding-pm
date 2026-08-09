@@ -330,12 +330,18 @@ machine.view  machine.manage
 template.view  template.manage
 part.manage  schedule.manage  holiday.manage
 report.view  export.data
-user.manage  role.manage  setting.manage  kiosk.manage
+user.manage  role.manage  setting.manage  kiosk.manage  kiosk.activate
 ```
+
+`kiosk.activate` (added after the original contract) is narrower than
+`kiosk.manage` on purpose: it is "set up the device in my hand from the
+sticker on the machine", which a supervisor needs on the floor.
+`kiosk.manage` remains the fleet screen — renaming, rotating tokens, revoking
+and deleting — and remains admin-only.
 
 Grants (cumulative — each role gets everything the one above it has):
 - operator: `run.view run.start run.complete run.submit issue.view issue.create machine.view template.view`
-- supervisor: + `run.approve run.reject issue.assign issue.resolve report.view`
+- supervisor: + `run.approve run.reject issue.assign issue.resolve report.view kiosk.activate`
 - maintenance_manager: + `machine.manage template.manage part.manage schedule.manage holiday.manage export.data run.amend`
 - admin: all permissions.
 
