@@ -184,8 +184,25 @@ On a native install without Docker, leave `MAIL_MAILER=log` and read
 
 ### Backups
 
-The `backup` service dumps the database every night at `BACKUP_TIME` (default
-`02:30` plant time) and keeps `BACKUP_RETENTION_DAYS` of them (default 14).
+The `backup` service runs every night at `BACKUP_TIME` (default `02:30` plant
+time) and keeps `BACKUP_RETENTION_DAYS` of each (default 14). It takes **two**
+things:
+
+| | |
+|---|---|
+| `branding_pm-<stamp>.sql.gz` | the database |
+| `storage-<stamp>.tar.gz` | `storage/app` — signatures and fault photos |
+
+Both, because neither alone is the audit record: `checklist_runs` stores
+signature *paths*, so a database restored without the files leaves every
+approved run pointing at an image that is not there.
+
+**The database is dumped first, then the files** — and that order is a
+correctness property, not a preference. Nothing deletes a signature, so every
+path in the dump is guaranteed to be on disk when the archive is taken a
+moment later. The other order would let a run signed in between reference a
+file the archive does not contain, and you would find that out on the day you
+restored.
 
 Dumps land in **`storage/backups/`** — on the host, not in a Docker volume.
 That is the point: `docker compose down -v` destroys named volumes, so a
@@ -257,8 +274,15 @@ gunzip -c storage/backups/branding_pm-YYYY-MM-DD_HHMMSS.sql.gz \
   | docker compose exec -T mysql mysql -uroot -p"$DB_ROOT_PASSWORD" branding_pm
 ```
 
-Restore into a scratch database first and compare row counts. A backup nobody
-has restored is not yet a backup.
+Then the signatures from the **same timestamp**:
+
+```bash
+tar -xzf storage/backups/storage-YYYY-MM-DD_HHMMSS.tar.gz -C storage/app
+```
+
+Restore the database into a scratch one first and compare row counts, and take
+both halves from the same night. A backup nobody has restored is not yet a
+backup.
 
 **On go-live**, point `MAIL_HOST` / `MAIL_PORT` at the company relay, set
 `MAIL_USERNAME`, `MAIL_PASSWORD` and `MAIL_SCHEME`, and use a `MAIL_FROM_ADDRESS`

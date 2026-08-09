@@ -86,6 +86,9 @@ services:
         volumes:
             - ./docker/backup/backup.sh:/usr/local/bin/backup.sh:ro
             - ./storage/backups:/backups
+            # Signatures and fault photos. Read-only: this container's job is
+            # to copy them, and it must not be able to damage the originals.
+            - ./storage/app:/appdata:ro
         depends_on:
             mysql:
                 condition: service_healthy

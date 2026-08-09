@@ -160,9 +160,53 @@ class SecurityCheck extends Command
     {
         $disk = (string) config('checklists.signature_disk');
 
-        $disk === 'public'
-            ? $this->addFail('Signature storage', 'on the public disk — signatures become guessable, unauthenticated URLs')
-            : $this->addPass('Signature storage', $disk.' (served only through MediaController)');
+        if ($disk === 'public') {
+            $this->addFail('Signature storage', 'on the public disk — signatures become guessable, unauthenticated URLs');
+
+            return;
+        }
+
+        /*
+         * The config being right is not the same as the disk being clean.
+         * Signatures written before this setting changed are still sitting on
+         * the public disk, and `public/storage` is a symlink — so they are
+         * fetchable by URL with no login, and this check passed anyway
+         * because it only ever read the config.
+         *
+         * One was found that way: an orphan no database row referenced,
+         * returning HTTP 200 to anybody who asked.
+         */
+        $public = storage_path('app/public/'.trim((string) config('checklists.signature_path'), '/'));
+        $strays = is_dir($public) ? $this->countFiles($public) : 0;
+
+        if ($strays > 0) {
+            $this->addFail(
+                'Signature storage',
+                $disk.', but '.$strays.' signature(s) are still on the PUBLIC disk at '
+                .$public.' — fetchable with no login. Move them.'
+            );
+
+            return;
+        }
+
+        $this->addPass('Signature storage', $disk.' (served only through MediaController)');
+    }
+
+    private function countFiles(string $directory): int
+    {
+        $count = 0;
+
+        $files = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($directory, \FilesystemIterator::SKIP_DOTS)
+        );
+
+        foreach ($files as $file) {
+            if ($file->isFile() && $file->getFilename() !== '.gitignore') {
+                $count++;
+            }
+        }
+
+        return $count;
     }
 
     /**

@@ -64,7 +64,10 @@ replicate() {
         return 1
     fi
 
-    for src in "$LOCAL_DIR"/*.sql.gz; do
+    # Both halves of a backup: the dump and the signatures it references.
+    # Copying only the database would put an incomplete audit record on
+    # the share, which is the one place it needs to be complete.
+    for src in "$LOCAL_DIR"/*.sql.gz "$LOCAL_DIR"/*.tar.gz; do
         [ -e "$src" ] || continue
 
         local name dest want got
@@ -113,12 +116,12 @@ replicate() {
     # Off-site keeps a longer history than the host: it is the archive, and it
     # is the copy that survives losing the machine.
     local pruned
-    pruned=$(find "$OFFSITE_DIR" -maxdepth 1 -name '*.sql.gz' -mtime "+${RETENTION_DAYS}" -print -delete 2>/dev/null | wc -l)
+    pruned=$(find "$OFFSITE_DIR" -maxdepth 1 \( -name '*.sql.gz' -o -name '*.tar.gz' \) -mtime "+${RETENTION_DAYS}" -print -delete 2>/dev/null | wc -l)
     find "$OFFSITE_DIR" -maxdepth 1 -name '*.sha256' -mtime "+${RETENTION_DAYS}" -delete 2>/dev/null
     find "$OFFSITE_DIR" -maxdepth 1 -name '*.partial' -mtime +1 -delete 2>/dev/null
     [ "$pruned" -gt 0 ] && log "pruned ${pruned} off-site backup(s) older than ${RETENTION_DAYS} days"
 
-    held=$(find "$OFFSITE_DIR" -maxdepth 1 -name '*.sql.gz' 2>/dev/null | wc -l)
+    held=$(find "$OFFSITE_DIR" -maxdepth 1 \( -name '*.sql.gz' -o -name '*.tar.gz' \) 2>/dev/null | wc -l)
 
     if [ "$failed" -gt 0 ]; then
         write_status "$copied" "$verified" "$failed" "$held" "${failed} file(s) failed to copy or verify"

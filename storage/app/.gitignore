@@ -1,0 +1,6 @@
+# Operational data, never source. This holds signature images and fault
+# photos — the audit record, and somebody's actual handwritten signature.
+# It is backed up by the `backup` service, not by being committed.
+*
+!public/
+!.gitignore

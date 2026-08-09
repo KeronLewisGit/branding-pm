@@ -370,8 +370,16 @@ Back up two things; either alone is useless:
    ```
 2. **`storage/app`** — signatures and photos. The database references them by
    path; without the files, approved runs lose the signatures that made them
-   approvable. This is **not** covered by the `backup` service; it has to be
-   part of whatever backs up the host.
+   approvable.
+
+   The `backup` service covers this too: each night it writes
+   `storage-<stamp>.tar.gz` beside the dump, taken **after** the database so
+   every path in the dump is certain to be in the archive. Restore the pair
+   from the same timestamp:
+
+   ```bash
+   tar -xzf storage/backups/storage-<stamp>.tar.gz -C storage/app
+   ```
 
 Also keep `.env` somewhere safe and separate: `APP_KEY` decrypts sessions and
 keys the run-sheet verification hashes. Restore the database without the

@@ -3,6 +3,54 @@
 Versions track build milestones: `0.<milestone>.<patch>`. The project reaches
 `1.0.0` when all 8 milestones are complete and the paper forms are retired.
 
+## [0.29.0] — Signatures are backed up too, and two things found while doing it
+
+### The files, not just the database
+The nightly job now writes `storage-<stamp>.tar.gz` beside the dump, holding
+`storage/app` — signatures and fault photos. Neither half is the audit record
+alone: `checklist_runs` stores signature *paths*, so a database restored
+without the files leaves every approved run pointing at an image that is not
+there.
+
+**The database is dumped first, then the files**, and the order is a
+correctness property. Nothing in this system deletes a signature, so every
+path in the dump is certain to be on disk when the archive is taken moments
+later. The other order would let a run signed in between reference a file the
+archive does not hold — discovered on the day somebody restored.
+
+Verified by cross-checking every signature path in the database against the
+archive's contents. The off-site copier carries the archives too; a share
+holding dumps without signatures is an incomplete record in the one place it
+needs to be complete. `backup:status` reports the archive and **fails when it
+falls behind the dumps**, because a fresh dump beside a week-old archive is
+not a usable pair.
+
+### Found: a signature readable by anyone, with no login
+While cataloguing `storage/app`, one signature was still on the **public**
+disk from before signatures moved to the private one. `public/storage` is a
+symlink, so it answered **HTTP 200** to an unauthenticated request. No
+database row referenced it — an orphan nobody would have missed.
+
+`security:check` passed it every time, because it only ever read the config.
+It now **looks at the disk**: config saying `local` while files sit on the
+public disk is exactly the gap that hid this. The file was moved to the
+private disk rather than deleted, and the URL now 404s.
+
+### Found: every signature was committed to git
+Laravel's stock ignore files for `storage/app` were missing, so all **11**
+signature images had been committed to the repository — the audit record, and
+people's actual handwritten signatures, travelling with every clone.
+
+The ignore files are restored and the images untracked; they remain on disk
+and in the nightly archive, where they belong. Two tests now fail if a
+signature is ever tracked again.
+
+**They are still in git history.** Removing them from past commits needs a
+history rewrite, which is destructive to anything already cloned — left as a
+decision rather than done quietly.
+
+**261 tests, 947 assertions.**
+
 ## [0.28.0] — Backups leave the machine
 
 Nightly dumps kept beside the database survive an accidental
