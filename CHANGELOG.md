@@ -3,6 +3,32 @@
 Versions track build milestones: `0.<milestone>.<patch>`. The project reaches
 `1.0.0` when all 8 milestones are complete and the paper forms are retired.
 
+## [0.25.0] — The settings table is gone
+
+`settings` was a second, silent configuration surface. Ten rows were seeded —
+shift boundaries, kiosk idle timeout, PIN attempts and lockout, grace period,
+compliance target, display timezone — and **nothing ever read one of them**.
+The values in force come from `config/checklists.php` and
+`config('app.display_timezone')`, backed by environment variables.
+
+Two of the rows were worse than duplicates: `shift.*` and
+`reports.compliance_target_percent` had no implementation anywhere, in config
+or in code.
+
+The danger was that it read as authoritative. Somebody editing
+`kiosk.idle_timeout_seconds` would reasonably expect the kiosk to change, and
+nothing would happen — and the seeder's own comment referred to "the settings
+screen", which was never built.
+
+All ten rows were still at their seeded defaults, so nothing configured was
+lost. Removed: the `settings` table, `App\Models\Setting`, `SettingSeeder`,
+and its registration in `DatabaseSeeder`. The migration's `down()` restores
+the table, should a settings screen ever be built — though configuration the
+scheduler and queue must read belongs in config, not in a row somebody can
+edit into an invalid state.
+
+**217 tests, 847 assertions.**
+
 ## [0.24.0] — Query review: a wrong sort, and 26 lost indexes
 
 ### Fixed: an unrecognised issue status sorted to the top, not the bottom

@@ -28,7 +28,6 @@ class DatabaseSeeder extends Seeder
             MachineSeeder::class,
             ChecklistTemplateSeeder::class,
             HolidaySeeder::class,
-            SettingSeeder::class,
             AdminUserSeeder::class,
         ]);
     }
