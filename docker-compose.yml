@@ -90,6 +90,36 @@ services:
             mysql:
                 condition: service_healthy
 
+    # Copies the nightly dumps to the network share.
+    #
+    # Behind the `offsite` profile, so it only starts when you ask for it:
+    #
+    #     docker compose --profile offsite up -d
+    #
+    # That is not decoration. The CIFS volume below is mounted by Docker at
+    # container start, and a wrong password or an unreachable file server
+    # makes that mount fail. Without the profile, a broken share would stop
+    # `docker compose up` — and with it, the whole application — over a
+    # secondary copy. Behind it, the worst case is no off-site copy, which
+    # `backup:status` then reports.
+    #
+    # It is also a separate service from `backup` for the same reason: the
+    # nightly dump must still be taken when the file server is down.
+    backup-offsite:
+        image: mysql:8
+        restart: unless-stopped
+        profiles: ['offsite']
+        environment:
+            BACKUP_OFFSITE_TIME: ${BACKUP_OFFSITE_TIME:-03:30}
+            BACKUP_OFFSITE_RETENTION_DAYS: ${BACKUP_OFFSITE_RETENTION_DAYS:-30}
+            BACKUP_OFFSITE_LABEL: ${BACKUP_OFFSITE_SHARE:-network share}
+            TZ: ${APP_DISPLAY_TIMEZONE:-UTC}
+        entrypoint: ['/usr/local/bin/offsite.sh', 'loop']
+        volumes:
+            - ./docker/backup/offsite.sh:/usr/local/bin/offsite.sh:ro
+            - ./storage/backups:/backups
+            - offsite:/offsite
+
     # Mail server for the pilot. Mailpit accepts SMTP on 1025 and shows every
     # message in a web inbox on 8025 — nothing leaves the machine.
     #
@@ -132,3 +162,20 @@ volumes:
     mysql-data:
     mailpit-data:
     vendor:
+
+    # The network share, mounted by Docker as a CIFS filesystem.
+    #
+    # Credentials come from .env (which is gitignored) and never from this
+    # file, which is committed — anything written here is a published
+    # credential. Give the service account write access to the share and
+    # nothing else; it holds every password and PIN hash in the plant.
+    #
+    # vers=3.0 is the floor worth accepting: SMB1 is deprecated, unencrypted
+    # and disabled by default on current Windows Server. If the share refuses
+    # 3.0, fix the share rather than lowering this.
+    offsite:
+        driver: local
+        driver_opts:
+            type: cifs
+            device: ${BACKUP_OFFSITE_SHARE:-//localhost/nonexistent}
+            o: username=${BACKUP_OFFSITE_USERNAME:-},password=${BACKUP_OFFSITE_PASSWORD:-},vers=${BACKUP_OFFSITE_SMB_VERSION:-3.0},uid=0,gid=0,file_mode=0640,dir_mode=0750

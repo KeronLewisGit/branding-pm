@@ -232,6 +232,53 @@ class SecurityCheck extends Command
         }
 
         $this->addPass('Backups', count($files).' kept, newest '.$hours.'h old');
+
+        $this->checkOffsite($production, $path);
+    }
+
+    /**
+     * A backup on the same disk as the database survives an accidental
+     * `down -v`. It does not survive a failed disk, a fire or a theft.
+     *
+     * Judged on when the copier last *ran*, not on what it reported: an
+     * unreachable share stops the container mounting at all, so it never runs
+     * to record its own failure and the last good status sits there reading
+     * "ok". Only checked when a share is actually configured.
+     */
+    private function checkOffsite(bool $production, string $path): void
+    {
+        if (trim((string) config('backups.offsite.share')) === '') {
+            $this->addWarn('Off-site copies', 'no share configured — a failed disk takes the backups with the database');
+
+            return;
+        }
+
+        $status = rtrim($path, '/\\').DIRECTORY_SEPARATOR.config('backups.offsite.status_file');
+
+        if (! is_file($status)) {
+            $production
+                ? $this->addFail('Off-site copies', 'a share is configured but nothing has been copied to it')
+                : $this->addWarn('Off-site copies', 'a share is configured but nothing has been copied yet');
+
+            return;
+        }
+
+        $hours = (int) floor((time() - filemtime($status)) / 3600);
+        $limit = (int) config('backups.offsite.max_age_hours');
+        $report = json_decode((string) file_get_contents($status), true);
+        $failed = ! is_array($report) || ($report['failed'] ?? 1) > 0;
+
+        if ($hours > $limit || $failed) {
+            $message = $hours > $limit
+                ? 'the copier has not run for '.$hours.'h (limit '.$limit.'h) — is the share reachable?'
+                : (string) ($report['message'] ?? 'the last run failed');
+
+            $production ? $this->addFail('Off-site copies', $message) : $this->addWarn('Off-site copies', $message);
+
+            return;
+        }
+
+        $this->addPass('Off-site copies', ($report['held_offsite'] ?? '?').' on the share, last run '.$hours.'h ago');
     }
 
     /**
