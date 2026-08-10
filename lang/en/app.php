@@ -746,6 +746,12 @@ return [
         'no_runs' => 'No checklist runs found.',
         'no_runs_due' => 'Nothing due for this machine today.',
         'progress' => ':done of :total',
+
+        // Shown on an overdue sheet BEFORE it is opened, and again as an
+        // uneditable stamp once it is signed. Both are derived from
+        // scheduled_for and submitted_at, so neither can be edited away.
+        'late_warning' => 'This checklist is overdue. Completing it now will be recorded as completed late.',
+        'late_stamp' => 'Completed late — due :due, signed :signed (:days day(s) late).',
         'notes' => 'Notes',
         'notes_placeholder' => 'Anything worth recording about this maintenance…',
         'used_parts' => 'Used Parts',
@@ -962,6 +968,7 @@ return [
         'all_locations' => 'All locations',
         'due_today' => 'Due today',
         'nothing_due' => 'No checklists due for this machine today.',
+        'overdue_heading' => 'Overdue — needs attention',
         'enter_pin' => 'Enter your PIN',
         'pin' => 'PIN',
         'employee_number' => 'Employee number',

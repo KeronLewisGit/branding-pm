@@ -95,6 +95,23 @@
         </tr>
     </table>
 
+    {{--
+        Late stamp. On the printed sheet above all, because this is the copy
+        that ends up in the file and outlives the screen it was signed on.
+        Derived from scheduled_for and submitted_at, so it cannot contradict
+        the two dates printed in the table directly above it.
+    --}}
+    @php($lateDays = $run->completedLateByDays())
+    @if ($lateDays !== null)
+        <p style="margin:0 0 4mm; padding:2mm 3mm; border:0.4mm solid #b45309; background:#fef3c7; color:#78350f; font-size:9pt; font-weight:bold;">
+            {{ __('app.runs.late_stamp', [
+                'due' => $run->scheduled_for->format('j M Y'),
+                'signed' => $run->submitted_at->timezone($displayTz)->format('j M Y'),
+                'days' => $lateDays,
+            ]) }}
+        </p>
+    @endif
+
     {{-- Two-column task list, numbered as on the form --}}
     <div class="section">
         <div class="section-title">{{ __('app.templates.items') }}</div>

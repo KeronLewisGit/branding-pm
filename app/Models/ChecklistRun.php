@@ -7,6 +7,7 @@ namespace App\Models;
 use App\Enums\RunItemStatus;
 use App\Enums\RunStatus;
 use App\Enums\Shift;
+use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -174,6 +175,33 @@ class ChecklistRun extends Model
         ]);
     }
 
+    /**
+     * Open runs from before `$date` — work an operator can still rescue.
+     *
+     * `in_progress` and `rejected` ONLY, deliberately narrower than `open()`:
+     *
+     * - `pending` is excluded because `checklists:mark-missed` flips every
+     *   untouched pending run to `missed` once its grace period expires. An
+     *   old pending run is therefore a run the hourly command has not reached
+     *   yet, not work anybody is waiting on.
+     * - `missed` is excluded because a gap in the record IS the record.
+     *   Re-opening one weeks later would rewrite a compliance figure that has
+     *   already been reported.
+     *
+     * What is left is the work that genuinely strands: a sheet somebody
+     * started and never signed, and a sheet a supervisor sent back for
+     * rework. Both are invisible on the kiosk without this.
+     */
+    public function scopeOverdueOpenBefore(Builder $query, CarbonInterface|string $date): Builder
+    {
+        return $query
+            ->where('scheduled_for', '<', $date instanceof CarbonInterface ? $date->toDateString() : $date)
+            ->whereIn('status', [
+                RunStatus::InProgress->value,
+                RunStatus::Rejected->value,
+            ]);
+    }
+
     public function scopeAwaitingApproval(Builder $query): Builder
     {
         return $query->where('status', RunStatus::Submitted->value);
@@ -185,6 +213,37 @@ class ChecklistRun extends Model
     }
 
     // ── Accessors ────────────────────────────────────────────────────
+
+    /**
+     * How many days after its scheduled day this sheet was signed off, or
+     * null when it was signed on time or is not signed at all.
+     *
+     * DERIVED, never stored, and that is the point: the late note on a sheet
+     * has to be one an operator cannot edit away, and the surest way to get
+     * that is for there to be nothing to edit. `scheduled_for` is set by the
+     * generator and `submitted_at` by the server clock at submission; an
+     * operator can reach neither, so the note cannot disagree with the record
+     * it describes. A stored flag would be one more column to keep true.
+     *
+     * The two dates are handled differently ON PURPOSE, matching
+     * ChecksCompletedReport: `scheduled_for` is a calendar date cast to
+     * midnight UTC and must NOT be shifted into the plant zone — doing so
+     * reads every run a day early in UTC-4. `submitted_at` is a real instant
+     * and MUST be, or a sheet signed at 8pm on the due day counts as late.
+     */
+    public function completedLateByDays(): ?int
+    {
+        if ($this->submitted_at === null || $this->scheduled_for === null) {
+            return null;
+        }
+
+        $tz = (string) config('app.display_timezone', 'UTC');
+
+        $due = CarbonImmutable::parse($this->scheduled_for->toDateString());
+        $signed = CarbonImmutable::parse($this->submitted_at->timezone($tz)->toDateString());
+
+        return $signed->greaterThan($due) ? (int) $due->diffInDays($signed) : null;
+    }
 
     /**
      * Progress for the "7 of 9" indicator. `done` counts every item that is

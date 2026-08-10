@@ -27,7 +27,63 @@
             </div>
         </div>
 
-        @if ($runsByShift->isEmpty())
+        {{--
+            Open work from before today: started and never signed, or sent
+            back by a supervisor. Above today's sheets because it is the older
+            debt, and banded red because the machine tile that led here is red
+            for exactly these.
+        --}}
+        @if ($overdueRuns->isNotEmpty())
+            <div class="mb-8">
+                <div class="mb-3 flex min-h-[72px] items-center gap-4 rounded-2xl bg-red-700 px-6 text-white">
+                    <svg class="h-9 w-9 shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                        <path fill-rule="evenodd" d="M9.401 3.003c1.155-2 4.043-2 5.197 0l7.355 12.748c1.154 2-.29 4.5-2.599 4.5H4.645c-2.309 0-3.752-2.5-2.598-4.5L9.4 3.003ZM12 8.25a.75.75 0 0 1 .75.75v3.75a.75.75 0 0 1-1.5 0V9a.75.75 0 0 1 .75-.75Zm0 8.25a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Z" clip-rule="evenodd" />
+                    </svg>
+                    <p class="text-3xl font-black uppercase tracking-widest">{{ __('app.kiosk.overdue_heading') }}</p>
+                </div>
+
+                <div class="space-y-4">
+                    @foreach ($overdueRuns as $run)
+                        <a
+                            href="{{ route('runs.show', $run) }}"
+                            wire:key="overdue-run-{{ $run->id }}"
+                            class="block rounded-2xl border-2 border-red-500 bg-slate-900 p-6 active:bg-slate-800"
+                        >
+                            <div class="flex flex-wrap items-start justify-between gap-3">
+                                <div class="min-w-0">
+                                    <p class="text-2xl font-bold text-white">{{ $run->template->name }}</p>
+                                    <p class="mt-1 text-base font-semibold uppercase tracking-wide text-slate-400">
+                                        {{ __('app.templates.work_category') }}: {{ $run->template->work_category->label() }}
+                                    </p>
+                                </div>
+
+                                {{-- The due date IS the point of this card, so it
+                                     is the loudest thing on it after the name. --}}
+                                <span class="shrink-0 rounded-xl bg-red-600 px-4 py-2 text-xl font-black uppercase tracking-wider text-white">
+                                    {{ $run->scheduled_for->format('D j M') }}
+                                </span>
+                            </div>
+
+                            <p class="mt-3 text-lg text-slate-300">{{ $run->template->work_description }}</p>
+
+                            <div class="mt-5 flex flex-wrap items-center justify-between gap-3 text-lg">
+                                <x-status-dot :status="$run->status" class="text-slate-100" />
+                                <span class="font-semibold tabular-nums text-slate-100">
+                                    {{ __('app.runs.progress', ['done' => $run->items_done_count, 'total' => $run->items_total_count]) }}
+                                </span>
+                            </div>
+
+                            {{-- Said before they open it, not after they sign it. --}}
+                            <p class="mt-4 rounded-xl bg-red-950 px-4 py-3 text-base font-semibold text-red-100">
+                                {{ __('app.runs.late_warning') }}
+                            </p>
+                        </a>
+                    @endforeach
+                </div>
+            </div>
+        @endif
+
+        @if ($runsByShift->isEmpty() && $overdueRuns->isEmpty())
             {{-- Nothing due today — say so plainly, never a blank screen --}}
             <div class="rounded-2xl border border-slate-700 bg-slate-900 p-10 text-center">
                 <p class="text-2xl font-bold text-white">{{ __('app.kiosk.nothing_due') }}</p>
@@ -43,6 +99,15 @@
                 </div>
             </div>
         @else
+            {{-- Overdue work but nothing due today. Still say so: an operator
+                 who only sees the red band cannot tell whether today's sheets
+                 are missing or simply not due. --}}
+            @if ($runsByShift->isEmpty())
+                <div class="rounded-2xl border border-slate-700 bg-slate-900 p-6 text-center">
+                    <p class="text-xl font-semibold text-slate-100">{{ __('app.kiosk.nothing_due') }}</p>
+                </div>
+            @endif
+
             @foreach (['day', 'night', 'all'] as $shiftValue)
                 @continue(! $runsByShift->has($shiftValue))
                 @php($shiftRuns = $runsByShift->get($shiftValue))
