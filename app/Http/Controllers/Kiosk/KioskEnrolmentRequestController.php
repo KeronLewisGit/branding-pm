@@ -13,7 +13,6 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Str;
-use Illuminate\View\View;
 
 /**
  * "Ask for this browser to become a kiosk", for people who may not enrol one
@@ -48,17 +47,6 @@ class KioskEnrolmentRequestController extends Controller
      * passed through three hands does not carry a live claim.
      */
     public const CLAIM_LIFETIME_MINUTES = 60 * 24 * 14;
-
-    public function create(Request $request): View
-    {
-        return view('kiosk.request', [
-            // An operator on an already-enrolled browser has nothing to ask
-            // for; the nav does not offer this, but a bookmark might.
-            'alreadyEnrolled' => EnsureKioskDevice::enrolledDevice($request) !== null,
-            'pending' => $this->currentRequest($request),
-            'suggestedName' => $this->suggestName($request),
-        ]);
-    }
 
     public function store(Request $request): RedirectResponse
     {
@@ -189,27 +177,5 @@ class KioskEnrolmentRequestController extends Controller
             ->with('device')
             ->where('claim_token', $token)
             ->first();
-    }
-
-    /**
-     * A name a supervisor can recognise, so the request does not arrive called
-     * "Tablet". Overridable by the operator, and again by the reviewer.
-     */
-    private function suggestName(Request $request): string
-    {
-        $type = \App\Support\DeviceType::detect($request->userAgent());
-
-        /*
-         * Capitalised here, not in the language file. Those labels are written
-         * lower case because they are used mid-sentence ("this tablet is not
-         * enrolled"); dropped into a name field as-is they produced
-         * "tablet — Darnell Joseph", which reads like a bug rather than a
-         * suggestion. An unrecognised User-Agent gives "Device", which is
-         * honest about knowing nothing.
-         */
-        return __('app.kiosk_requests.suggested_name', [
-            'type' => Str::ucfirst($type->label()),
-            'user' => $request->user()?->full_name ?? '',
-        ]);
     }
 }

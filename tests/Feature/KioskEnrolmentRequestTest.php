@@ -331,3 +331,42 @@ it('keeps the review queue top-level for a supervisor, who has no System group',
         ->assertSee(route('kiosk.requests'))
         ->assertDontSee(__('app.nav.group_system'));
 });
+
+it('ships Alpine on every office-layout page, or the menu eats the screen', function (): void {
+    /*
+     * The regression. `layouts.app` sizes its sidebar through `x-bind:class`,
+     * and Alpine arrives ONLY bundled inside Livewire's injected script. A
+     * plain controller view on that layout therefore booted no Alpine, the
+     * aside kept its static `w-full` and `md:!flex`, and the page rendered as
+     * a full-width menu with a blank screen behind it.
+     *
+     * Nothing about that is visible to `assertSee` — the markup is all there,
+     * it is simply laid out wrong — so this asserts the script instead. Any
+     * office page added without Livewire fails here rather than on a tablet.
+     */
+    $operator = requestUser('operator');
+
+    $officePages = [
+        'kiosk.request' => route('kiosk.request'),
+        'kiosk.requests' => route('kiosk.requests'),
+        'runs.index' => route('runs.index'),
+    ];
+
+    $supervisor = requestUser('supervisor');
+
+    foreach ($officePages as $name => $url) {
+        $actor = $name === 'kiosk.requests' ? $supervisor : $operator;
+
+        $html = $this->actingAs($actor)->get($url)->assertOk()->getContent();
+
+        /*
+         * `wire:snapshot`, not the script tag. Livewire injects its assets
+         * once per process and skips every page after the first, so asserting
+         * on the <script> passes or fails according to test ORDER. Being a
+         * Livewire component is the real invariant anyway: that is what pulls
+         * the script in, in a browser where each page is its own request.
+         */
+        expect(str_contains($html, 'wire:snapshot'))
+            ->toBeTrue("{$name} renders on layouts.app without Livewire, so Alpine never boots and the sidebar fills the screen");
+    }
+});

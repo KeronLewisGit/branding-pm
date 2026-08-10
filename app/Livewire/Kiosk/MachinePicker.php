@@ -6,14 +6,13 @@ namespace App\Livewire\Kiosk;
 
 use App\Enums\IssueSeverity;
 use App\Enums\IssueStatus;
+use App\Http\Middleware\EnsureKioskDevice;
 use App\Models\ChecklistRun;
 use App\Models\Issue;
 use App\Models\Machine;
-use App\Support\MachineScope;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Url;
 use Livewire\Component;
@@ -24,8 +23,8 @@ use Livewire\Component;
  *
  * Access: the route sits behind the `kiosk` middleware (registered device
  * cookie), and before PIN entry there is NO authenticated user — the tablet
- * itself is the principal. When a real user IS signed in (e.g. a supervisor
- * browsing the kiosk), their MachineScope applies.
+ * itself is the principal. What the grid shows follows the DEVICE for that
+ * reason, and never the signed-in user; see machineQuery().
  */
 #[Layout('layouts::kiosk')]
 class MachinePicker extends Component
@@ -64,13 +63,36 @@ class MachinePicker extends Component
         ]);
     }
 
+    /**
+     * Scoped to the DEVICE, not to whoever happens to be signed in on it.
+     *
+     * This screen is only ever reached through the `kiosk` middleware, so the
+     * context is a tablet anybody on the floor may walk up to — not one
+     * person's worklist. It used to apply `MachineScope::for(auth()->user())`
+     * whenever a user was present, which was invisible while the only way
+     * onto a kiosk was unauthenticated: no user, so every active machine.
+     *
+     * Once the office chrome grew a way into kiosk mode, people started
+     * arriving here already signed in, and an operator with no default site
+     * and no machine assignments — which is every account nobody has filled
+     * in, because no screen sets `default_site_id` — was shown an empty
+     * plant on a tablet bolted to a machine they could see in front of them.
+     *
+     * A device pinned to a location shows that site. An unpinned one shows
+     * the plant, exactly as an unauthenticated kiosk always has.
+     */
     private function machineQuery(): Builder
     {
-        $user = Auth::user();
+        $siteId = EnsureKioskDevice::enrolledDevice(request())?->location?->site_id;
 
-        // Pre-PIN kiosk sessions have no user; the device shows every active
-        // machine (that is the point of a shared shop-floor tablet).
-        return $user !== null ? MachineScope::for($user) : Machine::query();
+        if ($siteId === null) {
+            return Machine::query();
+        }
+
+        return Machine::query()->whereHas(
+            'location',
+            fn (Builder $query) => $query->where('site_id', $siteId),
+        );
     }
 
     /**

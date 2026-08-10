@@ -6,15 +6,15 @@
     office context. The kiosk layout would be a promise the browser cannot
     keep.
 
-    @component rather than <x-app-layout> because layouts/app.blade.php is a
-    plain slot-based view, the same as dashboard.blade.php.
+    A Livewire component, not a controller view: layouts.app sizes its sidebar
+    through x-bind:class and Alpine ships only inside Livewire's script, so a
+    plain Blade page here rendered a full-width menu over a blank screen. See
+    App\Livewire\Kiosk\RequestKiosk.
 --}}
-@component('layouts.app')
-    @slot('title', __('app.kiosk_requests.title'))
-
-    @slot('header')
+<div>
+    <x-slot:header>
         <x-page-header :title="__('app.kiosk_requests.title')" />
-    @endslot
+    </x-slot:header>
 
     <div class="mx-auto w-full max-w-2xl">
         {{-- What happens after they press the button. x-page-header renders a
@@ -98,4 +98,4 @@
             </x-card>
         @endif
     </div>
-@endcomponent
+</div>
