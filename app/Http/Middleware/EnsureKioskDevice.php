@@ -36,7 +36,7 @@ class EnsureKioskDevice
 
     public function handle(Request $request, Closure $next): Response
     {
-        $device = $this->resolveDevice($request);
+        $device = self::resolveDevice($request);
 
         if ($device === null) {
             // Absent, unknown, or deactivated device — plain instructions,
@@ -78,6 +78,32 @@ class EnsureKioskDevice
     }
 
     /**
+     * The enrolled device for this browser, resolved from the cookie.
+     *
+     * `device()` reads what the `kiosk` middleware already put on the request,
+     * which is right inside the kiosk and useless outside it: office pages run
+     * the `auth` group, never `kiosk`, so that attribute is simply absent and
+     * `device()` reports "not enrolled" on a browser that is. The office nav
+     * needs the real answer to decide whether "Kiosk mode" enters the kiosk or
+     * offers to set one up.
+     *
+     * Memoised on the request, so a layout can ask without costing a query per
+     * call, and so this agrees with the middleware when both run.
+     */
+    public static function enrolledDevice(Request $request): ?KioskDevice
+    {
+        if ($request->attributes->has('kioskDevice')) {
+            return self::device($request);
+        }
+
+        $device = self::resolveDevice($request);
+
+        $request->attributes->set('kioskDevice', $device);
+
+        return $device;
+    }
+
+    /**
      * The `{code}` from `/m/{code}`, when that is the route being blocked.
      *
      * Only read from the route parameter, never from the query string or a
@@ -92,7 +118,7 @@ class EnsureKioskDevice
         return is_string($code) && $code !== '' ? $code : null;
     }
 
-    private function resolveDevice(Request $request): ?KioskDevice
+    private static function resolveDevice(Request $request): ?KioskDevice
     {
         $token = $request->cookie(self::COOKIE);
 

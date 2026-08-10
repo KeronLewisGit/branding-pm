@@ -108,7 +108,35 @@
                 @php
                     // Icons are decorative — every entry is named in text beside it.
                     $ico = fn (string $d) => '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">'.$d.'</svg>';
+
+                    /*
+                     * Where "Kiosk mode" goes, and whether it appears at all.
+                     *
+                     * Getting to the kiosk used to mean scanning a machine's
+                     * QR sticker or typing the URL — there was no link to it
+                     * anywhere in the app. An operator sat in front of an
+                     * enrolled browser had no way to reach the thing the
+                     * browser was enrolled for.
+                     *
+                     * Enrolled browser → straight into the kiosk. Not enrolled
+                     * → the activation screen, but only for somebody who may
+                     * actually enrol a device (`kiosk.activate`, supervisor and
+                     * up). Otherwise the entry is hidden rather than shown
+                     * leading to a 403: an operator cannot enrol a device, and
+                     * a dead menu item teaches them to distrust the menu.
+                     */
+                    $kioskEnrolled = \App\Http\Middleware\EnsureKioskDevice::enrolledDevice(request()) !== null;
+                    $kioskTarget = $kioskEnrolled
+                        ? route('kiosk.home')
+                        : (auth()->user()?->can('kiosk.activate') ? route('kiosk.activate') : null);
                 @endphp
+
+                @if ($kioskTarget !== null)
+                    <x-nav-link :href="$kioskTarget" :active="false">
+                        <x-slot:icon>{!! $ico('<rect x="4" y="2" width="16" height="20" rx="2"/><line x1="10" y1="18" x2="14" y2="18"/>') !!}</x-slot:icon>
+                        {{ $kioskEnrolled ? __('app.nav.kiosk_mode') : __('app.nav.kiosk_mode_setup') }}
+                    </x-nav-link>
+                @endif
 
                 {{--
                     Group 1 — the work. No heading on purpose: for an operator

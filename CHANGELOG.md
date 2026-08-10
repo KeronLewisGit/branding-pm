@@ -3,6 +3,46 @@
 Versions track build milestones: `0.<milestone>.<patch>`. The project reaches
 `1.0.0` when all 8 milestones are complete and the paper forms are retired.
 
+## [0.38.0] — A way into kiosk mode that does not involve typing a URL
+
+There was no link to the kiosk anywhere in the application. You reached it by
+scanning a machine's QR sticker or by typing the address — so an operator
+sitting at an enrolled browser had no way to reach the very thing that browser
+was enrolled for, and the only kiosk entry in the menu was the fleet admin
+screen, visible to `kiosk.manage` holders alone.
+
+The sidebar now carries one entry that resolves to whichever answer is true:
+
+| Browser | Who | Entry |
+|---|---|---|
+| Enrolled | anyone signed in | **Kiosk mode** → the kiosk |
+| Not enrolled | holds `kiosk.activate` | **Set up kiosk mode** → activation |
+| Not enrolled | operator | hidden |
+
+Hidden rather than shown-and-refused for the last case. An operator holds no
+`kiosk.activate`, so the only thing that entry could offer them is a 403, and
+a dead menu item teaches people to distrust the menu.
+
+### The bug this nearly shipped with
+
+The obvious call, `EnsureKioskDevice::device()`, reads an attribute the
+`kiosk` middleware puts on the request. Office pages run the `auth` group and
+never `kiosk`, so that attribute is always absent there: it would have
+reported "not enrolled" on every browser, and the entry would never have
+appeared for the operators it is for — while looking entirely correct in
+review. `enrolledDevice()` resolves from the cookie instead, memoised on the
+request so a layout can ask without a query per call, and there is a test that
+fails if it regresses to the attribute.
+
+A deactivated device is not an enrolled browser, matching the middleware, so
+a revoked tablet is never sent into a screen that will refuse it.
+
+**Not addressed:** an operator cannot enrol a device themselves, because
+`kiosk.activate` is a supervisor-and-up permission. That is a security posture
+question rather than a UI one — see the note in the pull request.
+
+303 tests, 1062 assertions.
+
 ## [0.37.1] — Even pacing between shift groups, and a shorter overdue list
 
 **The gap between shift groups lived on the shift banner.** `mt-8` sat on the
