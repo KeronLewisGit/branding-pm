@@ -442,6 +442,23 @@ without any HTTPS setup. Over a LAN IP — `http://192.168.x.x` — it does not,
 on any browser. If you want to exercise offline behaviour before you have
 certificates, do it on the machine running the app.
 
+**A desktop icon.** `scripts/install-desktop-shortcut.ps1` writes a "Branding
+PM" shortcut to the desktop, pointing at `scripts/start-branding-pm.ps1`:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\install-desktop-shortcut.ps1
+```
+
+The launcher starts Docker Desktop if it is not running, brings the stack up,
+waits for `/up` to actually answer, and only then opens the kiosk in a
+chrome-less window. That last step matters: compose returning is not the same
+as Laravel being ready, and a browser opened too early shows a connection
+error that reads like a broken install. `-AllUsers` puts the icon on the
+Public desktop for a shared PC.
+
+On operator devices, prefer installing the PWA (below) — the launcher is for
+whichever machine actually runs Docker.
+
 To run it fullscreen with no browser chrome:
 
 ```
