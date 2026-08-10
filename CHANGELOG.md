@@ -3,6 +3,46 @@
 Versions track build milestones: `0.<milestone>.<patch>`. The project reaches
 `1.0.0` when all 8 milestones are complete and the paper forms are retired.
 
+## [0.39.1] — The kiosk round trip, which did not previously exist
+
+A review of the whole kiosk journey after 0.38.0 and 0.39.0 added ways *in*.
+There were no ways back out, and one way in had quietly broken a redirect.
+
+**Submitting a sheet threw a kiosk operator into the office.** The post-submit
+redirect tested `session('kiosk.device_id')`, which only the PIN pad writes —
+so it asked "did this person use the PIN pad" when the question is "is this
+browser a kiosk". Those were the same thing until the office nav grew a way
+into kiosk mode: an operator already signed in with a password never touches
+the PIN pad, carried no such key, and on signing a sheet was dropped into the
+office runs list, mid-shift, on a tablet. It now tests the device cookie, the
+thing that actually decides.
+
+**Nothing ever left the kiosk.** No screen linked back to the office, and the
+only thing that ever ended a PIN session was the two-minute idle timer — so an
+operator finishing early either stood at the tablet waiting or walked away
+with their session open. The header now carries the right exit for the session
+it is in, and the two are not interchangeable:
+
+- **PIN session → Finish.** Releases the session and leaves the device
+  enrolled, because a shared tablet is being handed to the next person.
+- **Password session → Leave kiosk.** Returns them to the office still signed
+  in. Logging them out would be a strange punishment for looking at the kiosk.
+- **Nobody signed in → nothing.** No session to end, no office to go back to.
+
+**The run sheet had no way out of it at all.** Opening the wrong one left
+browser-back as the only escape, on a tablet deliberately run without browser
+chrome. There is now a back link, pointing at the machine on a kiosk and the
+runs list in the office — the same device-cookie test as the redirect, so an
+office user is never sent to a screen that will tell them their tablet is not
+enrolled.
+
+Checked and cleared rather than changed: `kiosk.idle` keys on
+`kiosk.authenticated_at` and so leaves password sessions alone, which is why
+an operator can browse the kiosk without being dropped every two minutes; and
+`layouts::kiosk` is the project's own namespace convention, not a typo.
+
+326 tests, 1129 assertions.
+
 ## [0.39.0] — Operators can ask for a kiosk, supervisors decide
 
 `kiosk.activate` stays where it was. Enrolling a device is a trust decision,

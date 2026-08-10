@@ -757,6 +757,7 @@ return [
         // Shown on an overdue sheet BEFORE it is opened, and again as an
         // uneditable stamp once it is signed. Both are derived from
         // scheduled_for and submitted_at, so neither can be edited away.
+        'back_to_runs' => 'All checklists',
         'late_warning' => 'This checklist is overdue. Completing it now will be recorded as completed late.',
         'late_stamp' => 'Completed late — due :due, signed :signed (:days day(s) late).',
         'notes' => 'Notes',
@@ -989,6 +990,11 @@ return [
         'signed_in_as' => 'Signed in as :name',
         'release' => 'Done — return to kiosk',
         'released' => 'Session ended. The tablet is back at the kiosk.',
+        // Two different exits. 'finish' ends a PIN session and hands the
+        // tablet to the next person; 'leave' returns somebody who signed in
+        // with their own password to the office, still signed in.
+        'finish' => 'Finish',
+        'leave' => 'Leave kiosk',
         'idle_warning' => 'Still there? This session will end in :seconds seconds.',
         'idle_released' => 'Session ended after inactivity.',
 

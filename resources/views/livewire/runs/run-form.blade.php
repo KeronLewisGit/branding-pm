@@ -33,6 +33,25 @@
 
 <div class="mx-auto w-full max-w-3xl pb-24">
 
+    {{--
+        Back. The sheet had no way out of it at all: opening the wrong one
+        left browser-back as the only escape, and a kiosk tablet is run
+        without browser chrome.
+
+        Where back goes is the device, not the session — the same test the
+        post-submit redirect uses. An office user has no device cookie and
+        must not be sent to a machine screen that will tell them their tablet
+        is not enrolled.
+    --}}
+    @php
+        $kioskDevice = \App\Http\Middleware\EnsureKioskDevice::enrolledDevice(request());
+    @endphp
+
+    <a href="{{ $kioskDevice !== null ? route('kiosk.machine', ['code' => $run->machine->code]) : route('runs.index') }}"
+       class="mb-4 inline-flex min-h-14 items-center gap-2 rounded-xl px-2 text-base font-semibold text-slate-300 active:text-white">
+        &larr; {{ $kioskDevice !== null ? $run->machine->name : __('app.runs.back_to_runs') }}
+    </a>
+
     {{-- ── Banners ─────────────────────────────────────────────── --}}
 
     @if ($run->status === RunStatus::Rejected)
