@@ -3,6 +3,49 @@
 Versions track build milestones: `0.<milestone>.<patch>`. The project reaches
 `1.0.0` when all 8 milestones are complete and the paper forms are retired.
 
+## [0.39.0] — Operators can ask for a kiosk, supervisors decide
+
+`kiosk.activate` stays where it was. Enrolling a device is a trust decision,
+and 0.38.0 left an operator at an unenrolled tablet with nothing in the menu
+at all — no permission, no route, nothing to do but go and find somebody.
+Being stuck is what people work around, by borrowing a login or by going back
+to paper.
+
+An operator now sees **Request kiosk mode**. They name the device, say why,
+and a supervisor approves or declines it from a queue with a pending count in
+the sidebar. A decline needs a reason: a refusal with none is one that gets
+asked again tomorrow.
+
+### Why a claim token, and not just an approval
+
+Enrolment works by setting a cookie, and a cookie can only be set on the
+browser making the request. A supervisor approving at their own desk therefore
+*cannot* enrol the operator's tablet — approval alone is not enough, on any
+design. The asking browser is issued a `claim_token` when it requests;
+approval creates the device and links it; the tablet later redeems the token
+and receives the real device cookie. Nothing else can redeem it, and the claim
+cookie proves only that this browser asked, never that it was approved — the
+`kiosk` middleware does not look at it at all.
+
+The device records the **reviewer** as `enrolled_by`, not the operator who
+redeemed it. The fleet list has to name whoever made the trust decision.
+
+Refused claims are deliberately indistinguishable: no claim, not yet approved,
+already redeemed and device-since-revoked all return the same message, so a
+browser holding a stale token learns nothing about whether the request was
+ever real.
+
+The review queue is gated on `kiosk.activate`, **not** `kiosk.manage`.
+Approving is the act of turning a device into a kiosk, which is the
+supervisor's power; `kiosk.manage` is the admin fleet screen. Putting the
+queue there would have hidden it from every supervisor able to clear it.
+
+One open request per browser, because asking twice is what somebody does when
+nothing visibly happened the first time, and a queue holding the same tablet
+four times is one a supervisor stops reading.
+
+318 tests, 1107 assertions.
+
 ## [0.38.0] — A way into kiosk mode that does not involve typing a URL
 
 There was no link to the kiosk anywhere in the application. You reached it by
