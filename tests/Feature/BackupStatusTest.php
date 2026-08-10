@@ -26,6 +26,7 @@ beforeEach(function (): void {
         // Off-site defaults to unconfigured, so the existing cases test the
         // local backups alone. The off-site cases opt in.
         'backups.offsite.share' => '',
+        'backups.offsite.username' => '',
         'backups.offsite.max_age_hours' => 36,
     ]);
 });
@@ -201,8 +202,26 @@ it('says nothing is wrong when no share is configured', function (): void {
         ->assertSuccessful();
 });
 
+it('treats a share without credentials as unfinished, not broken', function (): void {
+    /*
+     * The share is usually chosen days before the credentials arrive and the
+     * service can start. Reporting that as a failure means the check fails
+     * for the whole of that gap — and a check that cries wolf is one nobody
+     * reads on the day it matters.
+     */
+    config(['backups.offsite.share' => '//LH-ARCHIVE/Archive/branding-pm']);
+    fakeBackup($this->backupPath, 'branding_pm-a.sql.gz', hoursOld: 1);
+
+    $this->artisan('backup:status')
+        ->expectsOutputToContain('awaiting credentials')
+        ->assertSuccessful();
+});
+
 it('fails when a share is configured but nothing has ever been copied', function (): void {
-    config(['backups.offsite.share' => '//fileserver/backups']);
+    config([
+        'backups.offsite.share' => '//fileserver/backups',
+        'backups.offsite.username' => 'svc-pmbackup',
+    ]);
     fakeBackup($this->backupPath, 'branding_pm-a.sql.gz', hoursOld: 1);
 
     $this->artisan('backup:status')
@@ -211,7 +230,7 @@ it('fails when a share is configured but nothing has ever been copied', function
 });
 
 it('passes when copies are reaching the share', function (): void {
-    config(['backups.offsite.share' => '//fileserver/backups']);
+    config(['backups.offsite.share' => '//fileserver/backups', 'backups.offsite.username' => 'svc-pmbackup']);
     fakeBackup($this->backupPath, 'branding_pm-a.sql.gz', hoursOld: 1);
     offsiteStatus($this->backupPath, hoursOld: 1);
 
@@ -222,7 +241,7 @@ it('fails on a stale status file even though it still says ok', function (): voi
     // THE case this is for. An unreachable share means the container cannot
     // mount and never starts, so nothing rewrites this file. Reading its
     // message would report success while backups sat on one disk for days.
-    config(['backups.offsite.share' => '//fileserver/backups']);
+    config(['backups.offsite.share' => '//fileserver/backups', 'backups.offsite.username' => 'svc-pmbackup']);
     fakeBackup($this->backupPath, 'branding_pm-a.sql.gz', hoursOld: 1);
     offsiteStatus($this->backupPath, hoursOld: 72, failed: 0);
 
@@ -232,7 +251,7 @@ it('fails on a stale status file even though it still says ok', function (): voi
 });
 
 it('fails when the last run reported a failure', function (): void {
-    config(['backups.offsite.share' => '//fileserver/backups']);
+    config(['backups.offsite.share' => '//fileserver/backups', 'backups.offsite.username' => 'svc-pmbackup']);
     fakeBackup($this->backupPath, 'branding_pm-a.sql.gz', hoursOld: 1);
     offsiteStatus($this->backupPath, hoursOld: 1, failed: 2);
 
@@ -242,7 +261,7 @@ it('fails when the last run reported a failure', function (): void {
 });
 
 it('fails on a status file it cannot parse', function (): void {
-    config(['backups.offsite.share' => '//fileserver/backups']);
+    config(['backups.offsite.share' => '//fileserver/backups', 'backups.offsite.username' => 'svc-pmbackup']);
     fakeBackup($this->backupPath, 'branding_pm-a.sql.gz', hoursOld: 1);
     File::put($this->backupPath.'/.offsite-status.json', 'not json');
 

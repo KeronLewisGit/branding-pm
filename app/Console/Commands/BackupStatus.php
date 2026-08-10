@@ -153,15 +153,24 @@ class BackupStatus extends Command
      */
     private function reportOffsite(string $path): bool
     {
-        $configured = trim((string) config('backups.offsite.share')) !== '';
+        $share = trim((string) config('backups.offsite.share'));
+
+        // Half-set-up on purpose: the share is chosen, the credentials are not
+        // in yet. Calling that a fault means the check cries wolf for however
+        // many days that takes, and a check that cries wolf gets ignored.
+        $pending = $share !== '' && trim((string) config('backups.offsite.username')) === '';
+        $configured = $share !== '' && ! $pending;
+
         $file = rtrim($path, '/\\').DIRECTORY_SEPARATOR.config('backups.offsite.status_file');
 
         if (! is_file($file)) {
             $this->components->twoColumnDetail(
                 ($configured ? '<fg=red>MISSING</>' : '      ').'  Off-site',
-                $configured
-                    ? 'a share is configured but nothing has been copied — is `docker compose --profile offsite up -d` running?'
-                    : 'not configured (set BACKUP_OFFSITE_* in .env)'
+                match (true) {
+                    $pending => $share.' — awaiting credentials, not running yet',
+                    $configured => 'a share is configured but nothing has been copied — is `docker compose --profile offsite up -d` running?',
+                    default => 'not configured (set BACKUP_OFFSITE_* in .env)',
+                }
             );
 
             return $configured;

@@ -176,9 +176,14 @@ volumes:
     # vers=3.0 is the floor worth accepting: SMB1 is deprecated, unencrypted
     # and disabled by default on current Windows Server. If the share refuses
     # 3.0, fix the share rather than lowering this.
+    #
+    # `domain` defaults to WORKGROUP, which is correct for a standalone NAS and
+    # always a valid option value. A domain-joined Windows file server needs
+    # the real domain in BACKUP_OFFSITE_DOMAIN — authentication fails with a
+    # bare "permission denied" otherwise, which reads like a wrong password.
     offsite:
         driver: local
         driver_opts:
             type: cifs
             device: ${BACKUP_OFFSITE_SHARE:-//localhost/nonexistent}
-            o: username=${BACKUP_OFFSITE_USERNAME:-},password=${BACKUP_OFFSITE_PASSWORD:-},vers=${BACKUP_OFFSITE_SMB_VERSION:-3.0},uid=0,gid=0,file_mode=0640,dir_mode=0750
+            o: username=${BACKUP_OFFSITE_USERNAME:-},password=${BACKUP_OFFSITE_PASSWORD:-},domain=${BACKUP_OFFSITE_DOMAIN:-WORKGROUP},vers=${BACKUP_OFFSITE_SMB_VERSION:-3.0},uid=0,gid=0,file_mode=0640,dir_mode=0750

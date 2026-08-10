@@ -291,8 +291,17 @@ class SecurityCheck extends Command
      */
     private function checkOffsite(bool $production, string $path): void
     {
-        if (trim((string) config('backups.offsite.share')) === '') {
+        $share = trim((string) config('backups.offsite.share'));
+
+        if ($share === '') {
             $this->addWarn('Off-site copies', 'no share configured — a failed disk takes the backups with the database');
+
+            return;
+        }
+
+        // Share chosen, credentials not in yet. Not a fault; not finished.
+        if (trim((string) config('backups.offsite.username')) === '') {
+            $this->addWarn('Off-site copies', $share.' — awaiting credentials, not copying yet');
 
             return;
         }
