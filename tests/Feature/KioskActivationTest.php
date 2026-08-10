@@ -305,3 +305,65 @@ it('collects the device measurements without depending on Alpine', function (): 
     expect($html)->toContain('data-activate-form')
         ->and($html)->not->toContain('x-init="$el.value');
 });
+
+/*
+|--------------------------------------------------------------------------
+| The payload a browser actually sends
+|--------------------------------------------------------------------------
+| The activation form has a <select> for "replacing a device?" with an empty
+| first option, so `device_id` is ALWAYS posted — as "" when the answer is no.
+| Every test above omitted the key entirely, which no browser does, and that
+| gap hid a 500 on the real device: `exclude_with:device_id` saw the key as
+| present, dropped `name` from the validated data, and the next line read it.
+*/
+
+it('creates a device when the select posts an empty device_id', function (): void {
+    Machine::factory()->create(['code' => 'matan']);
+
+    // Exactly what Safari sends when "No — this is a new device" is chosen.
+    $this->actingAs(kioskAdmin())
+        ->post('/kiosk/activate', [
+            'machine' => 'matan',
+            'device_id' => '',
+            'name' => 'iPhone at the guillotine',
+        ])
+        ->assertRedirect(route('kiosk.machine', ['code' => 'matan']))
+        ->assertSessionHasNoErrors();
+
+    expect(KioskDevice::sole()->name)->toBe('iPhone at the guillotine');
+});
+
+it('still demands a name when the select is empty and the box is blank', function (): void {
+    Machine::factory()->create(['code' => 'matan']);
+
+    $this->actingAs(kioskAdmin())
+        ->post('/kiosk/activate', ['machine' => 'matan', 'device_id' => '', 'name' => ''])
+        ->assertSessionHasErrors('name');
+
+    expect(KioskDevice::count())->toBe(0);
+});
+
+it('takes over the chosen device when the select posts a real id alongside a name', function (): void {
+    // The browser posts both fields every time, so the name box is populated
+    // even when an existing device is chosen. It must be ignored, not applied.
+    Machine::factory()->create(['code' => 'matan']);
+    $existing = KioskDevice::factory()->create(['name' => 'Guillotine tablet']);
+
+    $this->actingAs(kioskAdmin())
+        ->post('/kiosk/activate', [
+            'machine' => 'matan',
+            'device_id' => (string) $existing->id,
+            'name' => 'Whatever was left in the box',
+        ])
+        ->assertRedirect(route('kiosk.machine', ['code' => 'matan']))
+        ->assertSessionHasNoErrors();
+
+    expect(KioskDevice::count())->toBe(1)
+        ->and($existing->fresh()->name)->toBe('Guillotine tablet');
+});
+
+it('rejects a device_id that does not exist', function (): void {
+    $this->actingAs(kioskAdmin())
+        ->post('/kiosk/activate', ['device_id' => '99999', 'name' => 'Tablet'])
+        ->assertSessionHasErrors('device_id');
+});
