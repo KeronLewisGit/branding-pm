@@ -3,6 +3,32 @@
 Versions track build milestones: `0.<milestone>.<patch>`. The project reaches
 `1.0.0` when all 8 milestones are complete and the paper forms are retired.
 
+## [0.36.1] — The walkthrough's Skip and Back were invisible on the kiosk
+
+`.kiosk .btn-ghost` paints `slate-100` text, on the assumption that a ghost
+button sits on the dark kiosk shell. The first-run walkthrough is a white card
+over that shell, so both of its ghost buttons rendered white on white — about
+**1.1:1** contrast, which is not "hard to read" but *gone*. An operator's only
+way out of their own introduction was to page through every card to the end
+and press Done. Confirmed by rendering the real markup against the built CSS,
+not by reading the cascade.
+
+Fixed by scoping rather than by patching the buttons: `.kiosk .light-panel
+.btn-ghost` re-asserts the light styling for anything inside a light-surfaced
+panel, so the next light island on the kiosk cannot inherit the same bug.
+`slate-700` on white is 8.6:1.
+
+The same buttons carried `!min-h-11 !text-base` — 44px tall at 16px, under the
+56px and `text-lg` minimums in `docs/BUILD-CONTRACT.md` §8, and shrunk with
+`!` so nothing could override them back. Removed; `.btn` is already compliant.
+The card people meet before they have ever used the system was the one place
+breaking the tablet-target rule.
+
+All five roles' cards were checked and none are empty: operator 5, supervisor
+4, maintenance manager 4, quality assurance 4, admin 4.
+
+286 tests, 1029 assertions.
+
 ## [0.36.0] — One tree that runs under Docker and uploads to shared hosting
 
 Verified rather than assumed. The source carries no absolute container paths

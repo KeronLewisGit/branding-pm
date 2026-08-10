@@ -228,6 +228,21 @@
     .kiosk .tap-row {
         @apply text-slate-100;
     }
+
+    /*
+     * A light-surfaced panel inside the kiosk — the first-run walkthrough is
+     * the only one today.
+     *
+     * The overrides above assume a ghost button sits on the dark shell. On a
+     * white card that same rule paints slate-100 text on white, roughly 1.1:1
+     * contrast, and the control vanishes: Skip and Back were both invisible
+     * on a tablet, so the only way out of the walkthrough was to page through
+     * to the end. Re-assert the light styling for anything inside, rather
+     * than hand-writing a dark variant of the card.
+     */
+    .kiosk .light-panel .btn-ghost {
+        @apply border-slate-300 text-slate-700 hover:bg-slate-100 active:bg-slate-200;
+    }
 }
 
 /* Respect the OS reduced-motion setting everywhere. */
