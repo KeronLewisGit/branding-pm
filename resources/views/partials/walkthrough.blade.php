@@ -25,7 +25,7 @@
         {{-- Escape dismisses, like every other modal in the app. --}}
         x-on:keydown.escape.window="$refs.skip.click()"
     >
-        <div class="w-full max-w-lg rounded-2xl bg-white p-6 text-slate-900 shadow-xl">
+        <div class="light-panel w-full max-w-lg rounded-2xl bg-white p-6 text-slate-900 shadow-xl">
             @if ($walkthroughPreview)
                 {{-- An administrator is inspecting somebody else's cards. Say
                      so plainly, or it reads as their own introduction. --}}
@@ -63,7 +63,7 @@
                      decided they do not need it. --}}
                 <form method="POST" action="{{ route('walkthrough.complete') }}">
                     @csrf
-                    <x-button type="submit" variant="ghost" x-ref="skip" class="!min-h-11 !text-base">
+                    <x-button type="submit" variant="ghost" x-ref="skip">
                         {{ $walkthroughPreview ? __('app.walkthrough.close_preview') : __('app.walkthrough.skip') }}
                     </x-button>
                 </form>
@@ -72,7 +72,6 @@
                     <x-button
                         type="button"
                         variant="ghost"
-                        class="!min-h-11 !text-base"
                         x-show="step > 0"
                         x-cloak
                         x-on:click="step--"
@@ -82,7 +81,6 @@
 
                     <x-button
                         type="button"
-                        class="!min-h-11 !text-base"
                         x-show="step < total - 1"
                         x-on:click="step++"
                     >
@@ -91,7 +89,7 @@
 
                     <form method="POST" action="{{ route('walkthrough.complete') }}" x-show="step === total - 1" x-cloak>
                         @csrf
-                        <x-button type="submit" class="!min-h-11 !text-base">
+                        <x-button type="submit">
                             {{ $walkthroughPreview ? __('app.walkthrough.close_preview') : __('app.walkthrough.done') }}
                         </x-button>
                     </form>
