@@ -28,6 +28,8 @@ return [
         // 'Set up kiosk' offers to enrol the one you are sitting at.
         'kiosk_mode' => 'Kiosk mode',
         'kiosk_mode_setup' => 'Set up kiosk mode',
+        'kiosk_mode_request' => 'Request kiosk mode',
+        'kiosk_requests' => 'Kiosk requests',
         'machines' => 'Machines',
         'locations' => 'Locations',
         'parts' => 'Parts',
@@ -1278,4 +1280,59 @@ return [
         'monthly_day_range' => 'The day of month must be between 1 and 28.',
     ],
 
+
+    /*
+    |--------------------------------------------------------------------------
+    | Kiosk enrolment requests
+    |--------------------------------------------------------------------------
+    | An operator asking for the browser in front of them to become a kiosk,
+    | because enrolling one is a trust decision that stays with supervisors.
+    */
+    'kiosk_requests' => [
+        'title' => 'Request kiosk mode',
+        'intro' => 'Ask for this device to be set up as a kiosk. A supervisor approves it, then you finish the setup here.',
+        'device_name' => 'What is this device called?',
+        'device_name_hint' => 'Something a supervisor will recognise on a list — where it lives, or which machine it sits at.',
+        'note' => 'Why do you need it? (optional)',
+        'note_hint' => 'Anything that helps whoever reviews this.',
+        'submit' => 'Send request',
+        'submitted' => 'Request sent. A supervisor will review it.',
+        'already_pending' => 'You have already asked for this device. A supervisor still has to review it.',
+        'already_enrolled' => 'This device is already set up as a kiosk.',
+        'suggested_name' => ':type — :user',
+
+        'waiting_title' => 'Waiting for approval',
+        'waiting_body' => 'You asked :when. Come back to this page once a supervisor has approved it.',
+
+        'approved_title' => 'Approved — one step left',
+        'approved_body' => 'Finish the setup on this device. It has to be done here, on the device itself.',
+        'claim' => 'Finish setup on this device',
+        'nothing_to_claim' => 'There is nothing to set up on this device yet.',
+
+        'declined_title' => 'Your request was not approved',
+        'declined_retry' => 'You can ask again if something has changed.',
+
+        'queue_title' => 'Kiosk requests',
+        'queue_intro' => 'Operators asking for a device to be set up as a kiosk.',
+        'queue_empty_title' => 'No requests waiting',
+        'queue_empty_description' => 'When an operator asks for a device to become a kiosk, it appears here.',
+        'asked_by' => 'Asked by :name, :when',
+        'approve' => 'Approve',
+        'approve_name_hint' => 'This is the name the device is listed under. Change it if the suggestion will not make sense later.',
+        'confirm_approve' => 'Approve and create device',
+        'approved_flash' => 'Approved. The operator finishes the setup on their own device.',
+        'decline' => 'Decline',
+        'decline_reason' => 'Why not?',
+        'decline_reason_hint' => 'Shown to whoever asked. A refusal with no reason is one that gets asked again tomorrow.',
+        'confirm_decline' => 'Decline request',
+        'declined_flash' => 'Request declined.',
+        'recent_title' => 'Recently decided',
+        'recent_intro' => 'The last ten, so a decision can be checked without a report.',
+        'reviewed_by' => 'Reviewed by :name, :when',
+
+        'status_pending' => 'Waiting for approval',
+        'status_approved' => 'Approved, not yet set up',
+        'status_declined' => 'Declined',
+        'status_claimed' => 'Set up',
+    ],
 ];

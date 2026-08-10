@@ -118,23 +118,52 @@
                      * enrolled browser had no way to reach the thing the
                      * browser was enrolled for.
                      *
-                     * Enrolled browser → straight into the kiosk. Not enrolled
-                     * → the activation screen, but only for somebody who may
-                     * actually enrol a device (`kiosk.activate`, supervisor and
-                     * up). Otherwise the entry is hidden rather than shown
-                     * leading to a 403: an operator cannot enrol a device, and
-                     * a dead menu item teaches them to distrust the menu.
+                     * Enrolled browser → straight into the kiosk. Otherwise it
+                     * depends on what this person may do: somebody holding
+                     * `kiosk.activate` sets the device up themselves, and an
+                     * operator — who holds no such permission, because
+                     * enrolling is a trust decision — asks for one instead.
+                     *
+                     * Nobody is shown an entry that only leads to a 403. An
+                     * operator once saw nothing here at all, which left them
+                     * at an unenrolled tablet with no move but to find a
+                     * supervisor; being stuck is what people work around.
                      */
                     $kioskEnrolled = \App\Http\Middleware\EnsureKioskDevice::enrolledDevice(request()) !== null;
-                    $kioskTarget = $kioskEnrolled
-                        ? route('kiosk.home')
-                        : (auth()->user()?->can('kiosk.activate') ? route('kiosk.activate') : null);
+                    $mayActivateKiosk = auth()->user()?->can('kiosk.activate') === true;
+
+                    [$kioskTarget, $kioskLabel] = match (true) {
+                        $kioskEnrolled => [route('kiosk.home'), __('app.nav.kiosk_mode')],
+                        $mayActivateKiosk => [route('kiosk.activate'), __('app.nav.kiosk_mode_setup')],
+                        default => [route('kiosk.request'), __('app.nav.kiosk_mode_request')],
+                    };
+
+                    /*
+                     * Pending requests, for the people who can clear them. One
+                     * count query per page for supervisors only — an operator
+                     * never runs it.
+                     */
+                    $kioskRequestCount = $mayActivateKiosk
+                        ? \App\Models\KioskEnrolmentRequest::query()->pending()->count()
+                        : 0;
                 @endphp
 
-                @if ($kioskTarget !== null)
-                    <x-nav-link :href="$kioskTarget" :active="false">
-                        <x-slot:icon>{!! $ico('<rect x="4" y="2" width="16" height="20" rx="2"/><line x1="10" y1="18" x2="14" y2="18"/>') !!}</x-slot:icon>
-                        {{ $kioskEnrolled ? __('app.nav.kiosk_mode') : __('app.nav.kiosk_mode_setup') }}
+                <x-nav-link :href="$kioskTarget" :active="request()->routeIs('kiosk.request')">
+                    <x-slot:icon>{!! $ico('<rect x="4" y="2" width="16" height="20" rx="2"/><line x1="10" y1="18" x2="14" y2="18"/>') !!}</x-slot:icon>
+                    {{ $kioskLabel }}
+                </x-nav-link>
+
+                @if ($mayActivateKiosk)
+                    <x-nav-link :href="route('kiosk.requests')" :active="request()->routeIs('kiosk.requests')">
+                        <x-slot:icon>{!! $ico('<path d="M9 12l2 2 4-4"/><rect x="3" y="4" width="18" height="16" rx="2"/>') !!}</x-slot:icon>
+                        {{ __('app.nav.kiosk_requests') }}
+                        @if ($kioskRequestCount > 0)
+                            {{-- The count is the reason to look. Without it the
+                                 queue is a screen nobody opens. --}}
+                            <span class="ml-auto rounded-full bg-sky-600 px-2 py-0.5 text-xs font-bold text-white [.is-collapsed_&]:hidden">
+                                {{ $kioskRequestCount }}
+                            </span>
+                        @endif
                     </x-nav-link>
                 @endif
 

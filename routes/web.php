@@ -7,6 +7,7 @@ use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Kiosk\KioskActivationController;
 use App\Http\Controllers\Kiosk\KioskEnrolmentController;
+use App\Http\Controllers\Kiosk\KioskEnrolmentRequestController;
 use App\Http\Controllers\Kiosk\KioskSessionController;
 use App\Http\Controllers\MediaController;
 use App\Http\Controllers\ReportExportController;
@@ -25,6 +26,7 @@ use App\Livewire\Admin\UserManager;
 use App\Livewire\Dashboard;
 use App\Livewire\Issues\IssueDetail;
 use App\Livewire\Issues\IssueRegister;
+use App\Livewire\Kiosk\EnrolmentRequests;
 use App\Livewire\Kiosk\MachinePicker;
 use App\Livewire\Kiosk\MachineRuns;
 use App\Livewire\Kiosk\OperatorPicker;
@@ -165,6 +167,36 @@ Route::get('/kiosk/link/{device}', [KioskEnrolmentController::class, 'enrolViaLi
 Route::middleware(['auth', 'permission:kiosk.activate'])->group(function (): void {
     Route::get('/kiosk/activate', [KioskActivationController::class, 'create'])->name('kiosk.activate');
     Route::post('/kiosk/activate', [KioskActivationController::class, 'store'])->name('kiosk.activate.store');
+});
+
+/*
+ * Asking for a kiosk, for people who may not enrol one themselves.
+ *
+ * `auth` only — deliberately NOT `permission:kiosk.activate`. The whole point
+ * is that an operator, who holds no such permission, has a move other than
+ * finding a supervisor. Asking is not enrolling: nothing here creates a
+ * device or sets the kiosk cookie, and every request waits for somebody who
+ * does hold the permission.
+ *
+ * `claim` is a POST and lives here rather than on the review screen because
+ * enrolment sets a cookie, and a cookie can only be set on the browser making
+ * the request. An approval granted at a supervisor's desk has to be redeemed
+ * by the tablet it was granted for.
+ */
+Route::middleware('auth')->group(function (): void {
+    Route::get('/kiosk/request', [KioskEnrolmentRequestController::class, 'create'])->name('kiosk.request');
+    Route::post('/kiosk/request', [KioskEnrolmentRequestController::class, 'store'])->name('kiosk.request.store');
+    Route::post('/kiosk/request/claim', [KioskEnrolmentRequestController::class, 'claim'])->name('kiosk.request.claim');
+});
+
+/*
+ * The review queue. `kiosk.activate`, not `kiosk.manage`: approving a request
+ * is the act of turning a device into a kiosk, which is the supervisor's
+ * power. Putting it on the fleet screen would hide it from every supervisor
+ * able to act on it.
+ */
+Route::middleware(['auth', 'permission:kiosk.activate'])->group(function (): void {
+    Route::get('/kiosk/requests', EnrolmentRequests::class)->name('kiosk.requests');
 });
 
 Route::middleware(['auth', 'permission:kiosk.manage'])->group(function (): void {
