@@ -34,11 +34,38 @@
         class="flex min-h-screen flex-col md:flex-row"
     >
 
+        @php
+            /*
+             * Where "Kiosk mode" goes, and whether it appears at all.
+             *
+             * Computed up here rather than in the nav because it is now a
+             * chrome control, rendered beside the menu toggle in both bars.
+             *
+             * Enrolled browser → straight into the kiosk. Otherwise it depends
+             * on what this person may do: somebody holding `kiosk.activate`
+             * sets the device up themselves, and an operator — who holds no
+             * such permission, because enrolling is a trust decision — asks
+             * for one instead. Nobody is offered a control that only leads to
+             * a 403.
+             */
+            $kioskEnrolled = \App\Http\Middleware\EnsureKioskDevice::enrolledDevice(request()) !== null;
+            $mayActivateKiosk = auth()->user()?->can('kiosk.activate') === true;
+
+            [$kioskTarget, $kioskLabel] = match (true) {
+                $kioskEnrolled => [route('kiosk.home'), __('app.nav.kiosk_mode')],
+                $mayActivateKiosk => [route('kiosk.activate'), __('app.nav.kiosk_mode_setup')],
+                default => [route('kiosk.request'), __('app.nav.kiosk_mode_request')],
+            };
+        @endphp
+
         {{-- Mobile top bar — the sidebar collapses into this under md --}}
         <header data-nav-chrome class="flex items-center justify-between gap-3 bg-slate-900 px-4 py-2 text-white md:hidden">
             <a href="{{ route('dashboard') }}" class="rounded-lg px-2 py-1 text-lg font-bold">
                 {{ config('app.name', 'Branding PM') }}
             </a>
+
+            <div class="flex items-center gap-1">
+                @include('partials.kiosk-mode-icon', ['sizeClasses' => 'h-14 w-14 rounded-xl'])
 
             <button
                 type="button"
@@ -55,6 +82,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
                 </svg>
             </button>
+            </div>
         </header>
 
         {{--
@@ -78,16 +106,27 @@
                 'md:w-72': ! collapsed,
             }"
         >
-            <div class="hidden shrink-0 items-center gap-2 px-3 py-3 md:flex">
+            {{--
+                Collapsed, this row stacks.
+
+                The rail is 80px wide and `px-3` leaves 56px of it. Two 44px
+                controls plus the gap need 96px, and both are `shrink-0`, so
+                laid out in a row the second one overflowed the aside entirely
+                and floated over the page content beside it. A column gives
+                each its own line, centred by the `items-center` already here.
+            --}}
+            <div class="hidden shrink-0 items-center gap-2 px-3 py-3 md:flex [.is-collapsed_&]:flex-col [.is-collapsed_&]:gap-0.5 [.is-collapsed_&]:pb-0">
                 <a href="{{ route('dashboard') }}"
                    class="min-w-0 flex-1 truncate rounded-lg px-3 text-xl font-bold text-white [.is-collapsed_&]:hidden">
                     {{ config('app.name', 'Branding PM') }}
                 </a>
 
+                @include('partials.kiosk-mode-icon', ['sizeClasses' => 'h-11 w-11 rounded-lg'])
+
                 {{-- Desktop collapse. The mobile drawer has its own hamburger. --}}
                 <button
                     type="button"
-                    class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-800 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 [.is-collapsed_&]:mx-auto"
+                    class="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-800 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
                     x-on:click="toggleCollapsed()"
                     x-bind:aria-expanded="(! collapsed).toString()"
                     aria-controls="sidebar-nav"
@@ -104,39 +143,10 @@
             </div>
 
             {{-- The nav scrolls inside the sticky column, not the page. --}}
-            <nav aria-label="{{ __('app.nav.main') }}" class="nav-scroll flex-1 space-y-0.5 overflow-y-auto px-3 py-3">
+            <nav aria-label="{{ __('app.nav.main') }}" class="nav-scroll flex-1 space-y-0.5 overflow-y-auto px-3 py-3 [.is-collapsed_&]:pt-2">
                 @php
                     // Icons are decorative — every entry is named in text beside it.
                     $ico = fn (string $d) => '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">'.$d.'</svg>';
-
-                    /*
-                     * Where "Kiosk mode" goes, and whether it appears at all.
-                     *
-                     * Getting to the kiosk used to mean scanning a machine's
-                     * QR sticker or typing the URL — there was no link to it
-                     * anywhere in the app. An operator sat in front of an
-                     * enrolled browser had no way to reach the thing the
-                     * browser was enrolled for.
-                     *
-                     * Enrolled browser → straight into the kiosk. Otherwise it
-                     * depends on what this person may do: somebody holding
-                     * `kiosk.activate` sets the device up themselves, and an
-                     * operator — who holds no such permission, because
-                     * enrolling is a trust decision — asks for one instead.
-                     *
-                     * Nobody is shown an entry that only leads to a 403. An
-                     * operator once saw nothing here at all, which left them
-                     * at an unenrolled tablet with no move but to find a
-                     * supervisor; being stuck is what people work around.
-                     */
-                    $kioskEnrolled = \App\Http\Middleware\EnsureKioskDevice::enrolledDevice(request()) !== null;
-                    $mayActivateKiosk = auth()->user()?->can('kiosk.activate') === true;
-
-                    [$kioskTarget, $kioskLabel] = match (true) {
-                        $kioskEnrolled => [route('kiosk.home'), __('app.nav.kiosk_mode')],
-                        $mayActivateKiosk => [route('kiosk.activate'), __('app.nav.kiosk_mode_setup')],
-                        default => [route('kiosk.request'), __('app.nav.kiosk_mode_request')],
-                    };
 
                     /*
                      * Pending requests, for the people who can clear them. One
@@ -146,25 +156,26 @@
                     $kioskRequestCount = $mayActivateKiosk
                         ? \App\Models\KioskEnrolmentRequest::query()->pending()->count()
                         : 0;
+
+                    /*
+                     * Where the review queue lives depends on who is looking,
+                     * because the two permissions do not overlap the way the
+                     * menu does.
+                     *
+                     * An administrator already has a System group holding the
+                     * kiosk fleet, and the queue belongs beside it rather than
+                     * as a ninth top-level row. A supervisor holds
+                     * `kiosk.activate` but NOT `kiosk.manage`, so that group
+                     * does not render for them at all — filing the queue in it
+                     * unconditionally would hide it from exactly the people
+                     * who clear it.
+                     */
+                    $kioskRequestsInSystem = auth()->user()?->canAny(['kiosk.manage', 'user.manage']) === true;
                 @endphp
 
-                <x-nav-link :href="$kioskTarget" :active="request()->routeIs('kiosk.request')">
-                    <x-slot:icon>{!! $ico('<rect x="4" y="2" width="16" height="20" rx="2"/><line x1="10" y1="18" x2="14" y2="18"/>') !!}</x-slot:icon>
-                    {{ $kioskLabel }}
-                </x-nav-link>
-
-                @if ($mayActivateKiosk)
-                    <x-nav-link :href="route('kiosk.requests')" :active="request()->routeIs('kiosk.requests')">
-                        <x-slot:icon>{!! $ico('<path d="M9 12l2 2 4-4"/><rect x="3" y="4" width="18" height="16" rx="2"/>') !!}</x-slot:icon>
-                        {{ __('app.nav.kiosk_requests') }}
-                        @if ($kioskRequestCount > 0)
-                            {{-- The count is the reason to look. Without it the
-                                 queue is a screen nobody opens. --}}
-                            <span class="ml-auto rounded-full bg-sky-600 px-2 py-0.5 text-xs font-bold text-white [.is-collapsed_&]:hidden">
-                                {{ $kioskRequestCount }}
-                            </span>
-                        @endif
-                    </x-nav-link>
+                {{-- Supervisors only. Administrators get this inside System. --}}
+                @if ($mayActivateKiosk && ! $kioskRequestsInSystem)
+                    @include('partials.kiosk-requests-nav-link')
                 @endif
 
                 {{--
@@ -290,9 +301,16 @@
                     <x-nav-group
                         group="system"
                         :label="__('app.nav.group_system')"
-                        :active="request()->routeIs('admin.kiosk') || request()->routeIs('admin.users')"
+                        {{-- Includes kiosk.requests, or an administrator sitting
+                             on that page finds the group folded shut over it. --}}
+                        :active="request()->routeIs('admin.kiosk') || request()->routeIs('admin.users') || request()->routeIs('kiosk.requests')"
                     >
                         <x-slot:icon>{!! $ico('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>') !!}</x-slot:icon>
+
+                {{-- Beside the fleet it belongs with. --}}
+                @if ($mayActivateKiosk && $kioskRequestsInSystem)
+                    @include('partials.kiosk-requests-nav-link')
+                @endif
 
                 @can('kiosk.manage')
                     <x-nav-link :href="route('admin.kiosk')" :active="request()->routeIs('admin.kiosk')">

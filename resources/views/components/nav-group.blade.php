@@ -55,7 +55,7 @@
         },
     }"
     x-on:nav-group-opened.window="closeIfOther($event.detail)"
-    class="pt-2"
+    class="pt-2 [.is-collapsed_&]:pt-0"
 >
     {{-- The toggle. Hidden on the icon rail, where the divider below stands in. --}}
     <button
@@ -79,7 +79,7 @@
     </button>
 
     {{-- Stands in for the heading when the sidebar is an icon rail. --}}
-    <div class="mx-2 hidden h-px bg-slate-700 [.is-collapsed_&]:block" aria-hidden="true"></div>
+    <div class="mx-2 my-2 hidden h-px bg-slate-700 [.is-collapsed_&]:block" aria-hidden="true"></div>
 
     {{--
         A class toggle rather than x-show: x-show writes inline
@@ -88,7 +88,7 @@
     --}}
     <div
         id="nav-group-{{ $group }}"
-        class="space-y-0.5 [.is-collapsed_&]:!block"
+        class="space-y-0.5 [.is-collapsed_&]:!block [.is-collapsed_&]:!mt-0"
         x-bind:class="open ? 'mt-0.5' : 'hidden'"
     >
         {{ $slot }}

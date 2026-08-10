@@ -3,6 +3,46 @@
 Versions track build milestones: `0.<milestone>.<patch>`. The project reaches
 `1.0.0` when all 8 milestones are complete and the paper forms are retired.
 
+## [0.40.0] — The kiosk control moves into the chrome, and the rail stops leaking
+
+**Kiosk mode is now an icon beside the menu toggle**, in both bars, rather
+than a menu row. It switches the whole surface instead of navigating within
+it — the same reason the collapse control was never a menu row — and it
+survives the collapsed rail, where a nav row would have been reduced to an
+unlabelled glyph anyway. Icon-only, so `aria-label` and `title` carry the name
+and the glyph is `aria-hidden`, the rule `<x-icon-button>` already enforces.
+
+**Its glyph changed.** It was the same tablet used by "Kiosk Devices" in the
+System group, so a control that switches surface wore the same badge as a page
+that lists hardware. It is now an arrow going through a doorway.
+
+**Kiosk requests moved into System for administrators**, beside the fleet it
+belongs with. It stays top-level for supervisors, who hold `kiosk.activate`
+without `kiosk.manage` and for whom the System group never renders at all —
+filing it there unconditionally would have hidden the queue from exactly the
+people who clear it. The group's `:active` now includes `kiosk.requests`, or
+an administrator on that page found the group folded shut over it.
+
+### Three spacing faults on the collapsed rail
+
+The first was reported; reproducing it turned up the other two.
+
+- **The collapse control floated off the panel.** The rail is 80px and `px-3`
+  leaves 56px, but two 44px controls plus their gap need 96px and neither
+  shrinks — so the second one overflowed the aside and sat over the page
+  content beside it. The row stacks when collapsed.
+- **The gap after a group divider depended on remembered state.** Alpine binds
+  `mt-0.5` when a group is open and `hidden` when shut; the rail forces the
+  children visible with `!block`, but the margin never arrived for a shut
+  group. Icons after a divider therefore sat tighter — and only for whichever
+  groups that user happened to have closed.
+- **Chrome and nav each carried `py-3`**, which reads as breathing room under
+  a wordmark and as 24px of nothing between two icons that are otherwise 2px
+  apart. Both now match the 8px a divider uses, so the rail has one rhythm
+  rather than three.
+
+328 tests, 1137 assertions.
+
 ## [0.39.2] — Two things that only a rendered page shows
 
 The kiosk request screens were built and tested without anybody looking at
