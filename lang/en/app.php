@@ -23,6 +23,11 @@ return [
         'verifications' => 'QA Verification',
         'kiosk' => 'Kiosk',
         'kiosk_devices' => 'Kiosk Devices',
+        // Two labels for one entry, because they lead to different places.
+        // 'Kiosk mode' enters the kiosk on a browser already enrolled;
+        // 'Set up kiosk' offers to enrol the one you are sitting at.
+        'kiosk_mode' => 'Kiosk mode',
+        'kiosk_mode_setup' => 'Set up kiosk mode',
         'machines' => 'Machines',
         'locations' => 'Locations',
         'parts' => 'Parts',
