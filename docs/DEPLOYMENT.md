@@ -759,13 +759,32 @@ This is where a missing or ignored `public/.htaccess` shows up — the front
 page works and everything else 404s. `AllowOverride All` must be in force.
 
 **Enrol a kiosk from a real tablet.** `bootstrap/app.php` trusts
-`X-Forwarded-Proto` only from private ranges, which is correct behind the
-Caddy service and may not be correct here. If the host fronts PHP from a
-public address, `$request->secure()` returns false, generated URLs go out as
-`http://`, and signed enrolment links fail their signature check — a silent
-403 that looks exactly like an expired link, which is the same failure §6
-describes for `X-Forwarded-Host`. If it happens, `URL::forceScheme('https')`
-in a service provider when `APP_ENV=production` is the fix.
+`X-Forwarded-Proto` only from private ranges, which is right behind the Caddy
+service. On LiteSpeed it is simply not used: PHP runs under LSAPI on the same
+machine, so the server sets `HTTPS` and the real `REMOTE_ADDR` directly and
+`$request->secure()` is already correct. Nothing to configure.
+
+It becomes a problem only if you later put a CDN or external proxy in front.
+Then `$request->secure()` returns false, generated URLs go out as `http://`,
+and signed enrolment links fail their signature check — a silent 403 that
+looks exactly like an expired link, the same failure §6 describes for
+`X-Forwarded-Host`.
+
+**`URL::forceScheme('https')` is not the fix, and it makes this worse.** It
+changes URL *generation* only; `UrlGenerator::hasCorrectSignature()` rebuilds
+the URL for *validation* from `$request->url()`, which still reports `http`.
+Forcing the scheme therefore signs with one URL and verifies against another
+— guaranteeing the 403 rather than curing it. The fix is to add the proxy's
+address to the `trustProxies()` list so the request is genuinely seen as
+secure.
+
+Edit that list in `bootstrap/app.php` directly. Do **not** reach for
+`env('TRUSTED_PROXIES')` there: that closure runs when the HTTP kernel is
+resolved, which `Application::handleRequest()` does *before*
+`$kernel->handle()` loads the environment — and `LoadEnvironmentVariables`
+skips `.env` entirely once `config:cache` has run, which §7 requires. The
+variable would read as null on every production host and the hardcoded
+default would silently apply.
 
 ### 13.6 Backups
 

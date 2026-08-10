@@ -3,6 +3,47 @@
 Versions track build milestones: `0.<milestone>.<patch>`. The project reaches
 `1.0.0` when all 8 milestones are complete and the paper forms are retired.
 
+## [0.36.0] — One tree that runs under Docker and uploads to shared hosting
+
+Verified rather than assumed. The source carries no absolute container paths
+outside `docker/`, and no hardcoded scheme or host anywhere — the only two
+matches are `config/app.php` and `config/mail.php`, both reading `APP_URL`
+through `env()`. Every driver that could have tied the app to one host is
+already environment-driven: sessions and queue `database`, cache `file`,
+storage `local`, no Redis, no resident worker. With `public/.htaccess` added
+in 0.35.0, the same tree serves correctly under nginx and under LiteSpeed.
+
+Confirmed on the running stack: `.htaccess` and `.env` both return 403 under
+nginx, which denies dotfiles, so the new file is inert on the Docker path
+rather than merely harmless.
+
+`.env.example` gains a shared-hosting block beside the existing Docker one,
+so switching targets is uncommenting rather than remembering.
+
+### A correction to 0.35.0's deployment notes
+
+§13.5 recommended `URL::forceScheme('https')` if signed kiosk-enrolment links
+failed behind a proxy. **That advice was wrong and would have caused the
+failure it was meant to fix.** `forceScheme` changes URL *generation* only,
+while `UrlGenerator::hasCorrectSignature()` rebuilds the URL for *validation*
+from `$request->url()` — so it would sign with one URL and verify against
+another, guaranteeing the 403. Checked against the framework source rather
+than reasoned about. The section now says to fix `trustProxies()` instead,
+and records that on LiteSpeed there is nothing to configure at all: PHP runs
+under LSAPI on the same machine, so the server sets `HTTPS` and the real
+`REMOTE_ADDR` directly.
+
+It also documents why `env('TRUSTED_PROXIES')` is not an option in
+`bootstrap/app.php`, because it looks like the obvious way to make that list
+portable and silently does nothing. That closure runs when the HTTP kernel is
+resolved, and `Application::handleRequest()` resolves the kernel *before*
+`$kernel->handle()` loads the environment. `LoadEnvironmentVariables` then
+skips `.env` outright once `config:cache` has run — which §7 requires on
+every production host. The variable would read null and the hardcoded default
+would apply, on exactly the hosts where the override was wanted.
+
+286 tests, 1029 assertions.
+
 ## [0.35.0] — Apache/LiteSpeed support and a shared-hosting deployment path
 
 The application runs unchanged on shared hosting — sessions and queue are
