@@ -3,6 +3,39 @@
 Versions track build milestones: `0.<milestone>.<patch>`. The project reaches
 `1.0.0` when all 8 milestones are complete and the paper forms are retired.
 
+## [0.31.2] — Activation returned a 500 from every real browser
+
+Reported from a phone, and reproduced from the log:
+
+```
+01:06:47  500  POST /kiosk/activate   iPhone
+ErrorException: Undefined array key "name" at KioskActivationController.php:110
+```
+
+The name field was validated with `exclude_with:device_id`, which tests
+whether the other field is **present** — not whether it holds anything. The
+"replacing a device?" control is a `<select>` with an empty first option, so
+a browser *always* posts `device_id`, as `""` when the answer is no. The name
+was therefore excluded from the validated data on every genuine submission,
+and the next line read a key that was not there.
+
+It passed its tests because those posted no `device_id` key at all, which no
+browser does. That is the second bug in this feature found only on real
+hardware, after the Alpine one — both because the tests exercised payloads a
+browser never sends.
+
+Now resolved with `$request->filled('device_id')`, which is false for both
+`""` and `null` and does not depend on `ConvertEmptyStringsToNull` being in
+the middleware stack. Four new tests post what a browser actually posts,
+including the empty select; one was confirmed to reproduce the original
+`Undefined array key "name"` before the fix.
+
+Verified end to end afterwards: an iPhone-shaped request now redirects to the
+scanned machine, creates the device with kind `phone`, and records
+`390 x 844 · touchscreen` — which also confirms the 0.31.1 measurement fix.
+
+**285 tests, 1,027 assertions.**
+
 ## [0.31.1] — The activation form was collecting nothing
 
 Found while preparing to test on a real iPad, which is the only place it

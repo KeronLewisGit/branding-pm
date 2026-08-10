@@ -94,20 +94,38 @@ class KioskActivationController extends Controller
     {
         abort_unless($request->user()?->can('kiosk.activate') === true, 403);
 
+        /*
+         * Resolved before validation, and with `filled()` rather than a
+         * validation rule, because of how the form actually posts.
+         *
+         * The "replacing a device?" control is a <select> with an empty first
+         * option, so a browser ALWAYS sends `device_id` — as `""` when the
+         * answer is "no, this is a new device". Rules that test presence
+         * therefore see it every time.
+         *
+         * This was `'name' => ['exclude_with:device_id', 'required', …]`,
+         * which excluded the name from the validated data on every real
+         * submission and produced a 500 one line later. It passed its tests
+         * because those posted no `device_id` key at all — which no browser
+         * does. `filled()` is false for both `""` and null, so it does not
+         * depend on ConvertEmptyStringsToNull being in the stack either.
+         */
+        $deviceId = $request->filled('device_id') ? (int) $request->input('device_id') : null;
+
         $validated = $request->validate([
             'device_id' => ['nullable', Rule::exists('kiosk_devices', 'id')],
-            // Required only when no existing device was chosen. `exclude_with`
-            // keeps the name out of the payload entirely in that case, so a
-            // stale value in the field cannot rename the device being reused.
-            'name' => ['exclude_with:device_id', 'required', 'string', 'max:120'],
+            // Needed only when creating one. When an existing device is being
+            // taken over, whatever is in the name box is ignored below rather
+            // than renaming it.
+            'name' => [Rule::requiredIf($deviceId === null), 'nullable', 'string', 'max:120'],
             'machine' => ['nullable', 'string', 'max:64'],
         ], [], [
             'name' => __('app.kiosk_devices.name'),
         ]);
 
-        $device = isset($validated['device_id'])
-            ? KioskDevice::query()->findOrFail($validated['device_id'])
-            : $this->createDevice($request, $validated['name']);
+        $device = $deviceId !== null
+            ? KioskDevice::query()->findOrFail($deviceId)
+            : $this->createDevice($request, (string) $validated['name']);
 
         if (! $device->is_active) {
             return back()->with('error', __('app.kiosk.device_inactive'));
