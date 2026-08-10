@@ -307,3 +307,27 @@ it('shows a supervisor how many requests are waiting', function (): void {
         ->assertSee(__('app.nav.kiosk_requests'))
         ->assertSee(route('kiosk.requests'));
 });
+
+it('files the review queue under System for an administrator', function (): void {
+    // An admin already has a System group holding the kiosk fleet; the queue
+    // belongs beside it rather than as another top-level row.
+    $admin = requestUser('admin');
+
+    $this->actingAs($admin)
+        ->get(route('dashboard'))
+        ->assertOk()
+        ->assertSee(__('app.nav.group_system'))
+        ->assertSee(route('kiosk.requests'))
+        // Inside the group means after its heading, not above it.
+        ->assertSeeInOrder([__('app.nav.group_system'), route('kiosk.requests')], escape: false);
+});
+
+it('keeps the review queue top-level for a supervisor, who has no System group', function (): void {
+    // kiosk.activate without kiosk.manage: the System group never renders for
+    // them, so filing it there would hide it from the people who clear it.
+    $this->actingAs(requestUser('supervisor'))
+        ->get(route('dashboard'))
+        ->assertOk()
+        ->assertSee(route('kiosk.requests'))
+        ->assertDontSee(__('app.nav.group_system'));
+});

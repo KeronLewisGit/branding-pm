@@ -60,6 +60,12 @@ it('offers an operator on an enrolled browser a way straight into the kiosk', fu
         ->assertOk()
         ->assertSee(__('app.nav.kiosk_mode'))
         ->assertSee(route('kiosk.home'));
+
+    // Icon-only, so the accessible name is the only name it has.
+    $this->actingAs($u)
+        ->withCookies(enrolledBrowser())
+        ->get(officeLandingRoute($u))
+        ->assertSee('aria-label="'.__('app.nav.kiosk_mode').'"', escape: false);
 });
 
 it('hides the entry from an operator whose browser is not a kiosk', function (): void {
