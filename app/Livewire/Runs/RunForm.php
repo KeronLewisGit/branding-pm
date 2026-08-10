@@ -9,6 +9,7 @@ use App\Enums\IssueStatus;
 use App\Enums\ResponseType;
 use App\Enums\RunItemStatus;
 use App\Enums\RunStatus;
+use App\Http\Middleware\EnsureKioskDevice;
 use App\Models\Attachment;
 use App\Models\ChecklistRun;
 use App\Models\ChecklistRunItem;
@@ -724,10 +725,21 @@ class RunForm extends Component
             ? __('app.runs.submitted_message')
             : __('app.runs.submitted_no_signoff_message'));
 
-        // Back to the machine's run list on a kiosk tablet; an office user
-        // who signed a run with their password has no device cookie and
-        // would land on the "this tablet is not enrolled" screen.
-        if (session()->has('kiosk.device_id')) {
+        /*
+         * Back to the machine's run list on a kiosk tablet; an office user
+         * who signed a run with their password has no device cookie and would
+         * land on the "this tablet is not enrolled" screen.
+         *
+         * The test is the device COOKIE, not `session('kiosk.device_id')`.
+         * That key is written only by the PIN pad, so it answers "did this
+         * person sign in with a PIN", when the question here is "is this
+         * browser a kiosk". Those stopped being the same thing once the
+         * office nav grew a way into kiosk mode: an operator already signed
+         * in with a password never touches the PIN pad, so they carried no
+         * such key and submitting a sheet threw them out of the kiosk and
+         * into the office runs list, mid-shift, on a tablet.
+         */
+        if (EnsureKioskDevice::enrolledDevice(request()) !== null) {
             $this->redirectRoute('kiosk.machine', [
                 'code' => $this->run->loadMissing('machine')->machine->code,
             ]);

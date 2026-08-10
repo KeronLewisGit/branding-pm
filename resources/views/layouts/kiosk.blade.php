@@ -66,6 +66,41 @@
                 <p class="text-3xl font-bold leading-tight text-white" x-text="time">{{ now($displayTz)->format('g:i A') }}</p>
                 <p class="text-base text-slate-300" x-text="date">{{ now($displayTz)->format('D j M') }}</p>
             </div>
+
+            {{--
+                The way out. Which way out depends on how the person got in,
+                and the two are not interchangeable:
+
+                A PIN session belongs to whoever tapped their name on a shared
+                tablet, so finishing means HANDING THE TABLET BACK — release
+                the session and leave the device enrolled for the next person.
+                Until now nothing but the two-minute idle timer ever did that,
+                so an operator who finished early either stood at the tablet
+                waiting or walked away with their session open.
+
+                A password session is one person's own; they came in from the
+                office and expect to go back to it. Logging them out would be
+                a strange punishment for looking at the kiosk.
+
+                Anyone not signed in gets nothing: there is no session to end
+                and no office to return to.
+            --}}
+            @auth
+                @if (session()->has('kiosk.authenticated_at'))
+                    <form method="POST" action="{{ route('kiosk.release') }}" class="shrink-0">
+                        @csrf
+                        <button type="submit"
+                                class="flex min-h-14 items-center rounded-xl border-2 border-slate-600 px-5 text-base font-semibold text-slate-100 active:bg-slate-800">
+                            {{ __('app.kiosk.finish') }}
+                        </button>
+                    </form>
+                @else
+                    <a href="{{ route('runs.index') }}"
+                       class="flex min-h-14 shrink-0 items-center rounded-xl border-2 border-slate-600 px-5 text-base font-semibold text-slate-100 active:bg-slate-800">
+                        {{ __('app.kiosk.leave') }}
+                    </a>
+                @endif
+            @endauth
         </div>
     </header>
 
