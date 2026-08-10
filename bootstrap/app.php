@@ -6,6 +6,7 @@ use App\Http\Middleware\SecurityHeaders;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Request;
 use Spatie\Permission\Middleware\PermissionMiddleware;
 use Spatie\Permission\Middleware\RoleMiddleware;
 
@@ -37,7 +38,25 @@ return Application::configure(basePath: dirname(__DIR__))
             '192.168.0.0/16',
             '127.0.0.1/32',
             '::1/128',
-        ]);
+        ], headers: Request::HEADER_X_FORWARDED_FOR
+            | Request::HEADER_X_FORWARDED_PORT
+            | Request::HEADER_X_FORWARDED_PROTO);
+
+        /*
+         * `X-Forwarded-Host` is excluded on purpose, and it is not a detail.
+         *
+         * Laravel trusts it by default. This project has already lost an
+         * afternoon to it: the forwarded host arrived without the port, every
+         * signed URL was then generated and verified against a different host
+         * than the browser used, and kiosk enrolment links failed the
+         * signature check — silently, as a 403 with no clue in it.
+         *
+         * Nothing is lost by dropping it. Caddy's `reverse_proxy` passes the
+         * original `Host` header upstream unchanged, so the framework already
+         * sees the name the browser asked for. `X-Forwarded-Proto` is the
+         * header that actually matters here: it is how the app knows the
+         * public connection was HTTPS while the hop to PHP is plain HTTP.
+         */
 
         // Response security headers on every web response (OWASP Secure
         // Headers). Appended, so it wraps everything the group produces.

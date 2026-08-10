@@ -1,0 +1,120 @@
+# TLS terminator in front of nginx.
+#
+# Caddy rather than nginx-with-certs because certificate *renewal* is the part
+# that fails eighteen months later, on a Sunday, with nobody looking. Caddy
+# obtains and renews automatically; a hand-installed certificate is a diary
+# entry that somebody has to keep.
+#
+# ---------------------------------------------------------------------------
+# Which certificate this issues
+# ---------------------------------------------------------------------------
+#
+# `tls internal` — Caddy's own local CA. No internet, no domain, works today.
+# The cost is that each device must trust Caddy's root once, so this is the
+# stopgap, not the destination. Export the root with:
+#
+#     docker compose cp caddy:/data/caddy/pki/authorities/local/root.crt .
+#
+# On iOS that file must be installed as a profile AND enabled under
+# Settings > General > About > Certificate Trust Settings — people miss the
+# second step and then report that "the tablet says not secure".
+#
+# ---------------------------------------------------------------------------
+# Switching to a real certificate
+# ---------------------------------------------------------------------------
+#
+# Once IT provides a domain, replace the `tls internal` line below with a
+# DNS-01 issuer — that proves ownership through a TXT record, so the plant
+# needs no inbound internet, only outbound for renewal:
+#
+#     tls {
+#         dns cloudflare {env.CLOUDFLARE_API_TOKEN}
+#     }
+#
+# The stock `caddy` image does NOT contain DNS provider plugins. That build
+# needs its own image:
+#
+#     FROM caddy:2-builder AS builder
+#     RUN xcaddy build --with github.com/caddy-dns/cloudflare
+#     FROM caddy:2
+#     COPY --from=builder /usr/bin/caddy /usr/bin/caddy
+#
+# Then every device trusts it with no per-device step, which is the whole
+# point of going to the trouble.
+
+{
+	# The admin API binds to 0.0.0.0:2019 by default and is unauthenticated.
+	# Nothing here uses it, and this container has a published port.
+	admin off
+
+	# Local CA issuance only; never reach out to Let's Encrypt by accident
+	# while the site address is an IP or a .local name.
+	auto_https disable_redirects
+
+	# What to serve when a client sends no SNI at all.
+	#
+	# SNI carries the hostname being requested, and RFC 6066 forbids an IP
+	# literal in it — so a browser opening https://192.168.0.14 sends none.
+	# With nothing to match, Caddy has no certificate to offer and aborts the
+	# handshake with "internal error", which reads as a server fault and is
+	# really a missing default. This names the certificate to fall back to.
+	#
+	# It is a crutch for having no hostname. A public CA will not issue for an
+	# IP, so this pins the site to the local CA and to this one address; the
+	# real fix is a DNS name.
+	default_sni {$SITE_ADDRESS}
+}
+
+{$SITE_ADDRESS} {
+	# `default_sni` is what makes an IP address usable at all.
+	#
+	# SNI carries the hostname a client is asking for, and RFC 6066 forbids
+	# putting an IP literal in it — so a browser opening https://192.168.0.14
+	# sends no SNI whatsoever. With nothing to match on, Caddy has no
+	# certificate to present and aborts the handshake with "internal error",
+	# which looks like a server fault and is really a missing default.
+	#
+	# This is a workaround for not having a hostname yet, not a good state:
+	# an IP certificate cannot be issued by a public CA, so it locks the site
+	# to the local CA and to this address. Get the DNS name.
+	tls internal
+
+	encode zstd gzip
+
+	# The app is the only upstream. `reverse_proxy` passes the original Host
+	# header through unchanged, which is what lets Laravel keep generating
+	# correct URLs without trusting X-Forwarded-Host (see bootstrap/app.php).
+	reverse_proxy nginx:80 {
+		header_up X-Forwarded-Proto {scheme}
+
+		# Generous timeouts: a signature PNG or a fault photo posted from a
+		# tablet on congested plant Wi-Fi is a slow upload, and a proxy that
+		# gives up mid-submission loses a completed checklist.
+		transport http {
+			read_timeout 120s
+			write_timeout 120s
+		}
+	}
+
+	# Caddy logs to stdout, so `docker compose logs caddy` is the whole story.
+	log {
+		output stdout
+		format console
+	}
+}
+
+# Plain HTTP on the same host: send it to HTTPS rather than leaving a second,
+# unencrypted way in. Kept explicit because `auto_https disable_redirects`
+# above turns Caddy's automatic version off.
+#
+# HTTPS_PUBLIC_SUFFIX carries the published port, and it is not optional
+# padding. Caddy listens on 443 *inside* the container and has no idea what
+# port Docker published it on outside; `{host}` is the hostname alone, with no
+# port. On this host 80 and 443 are both held by Docker Desktop's WSL relay,
+# so the app is published on 8443 — and without the suffix this redirect sent
+# every browser to https://<host>/ on port 443, where nothing is listening.
+#
+# Empty when HTTPS is on the standard 443, otherwise ":<port>".
+http://{$SITE_ADDRESS} {
+	redir https://{host}{$HTTPS_PUBLIC_SUFFIX}{uri} permanent
+}

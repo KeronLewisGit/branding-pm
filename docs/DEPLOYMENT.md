@@ -232,6 +232,71 @@ will eventually not be done.
 A reverse proxy in front of the existing `nginx` container handles both the
 certificate and the renewal — Caddy does DNS-01 with a few lines of config.
 
+### The reverse proxy that ships with this
+
+A `caddy` service is included, behind the `tls` profile so it is opt-in:
+
+```bash
+docker compose --profile tls up -d
+```
+
+Caddy rather than certificates in nginx because **renewal** is the part that
+fails eighteen months later on a Sunday. Caddy renews by itself; a
+hand-installed certificate is a diary entry somebody has to keep.
+
+Configure it in `.env`:
+
+```dotenv
+TLS_SITE_ADDRESS=192.168.0.14     # the name or address browsers will use
+HTTPS_PORT=8443
+HTTP_REDIRECT_PORT=8080
+HTTPS_PUBLIC_SUFFIX=:8443         # empty when HTTPS is on the standard 443
+```
+
+`HTTPS_PUBLIC_SUFFIX` is not redundant. Caddy listens on 443 *inside* its
+container and cannot see which port Docker published; without it the
+HTTP→HTTPS redirect sends browsers to a port with nothing on it. On the pilot
+host both 80 and 443 are already held by Docker Desktop's WSL relay, which is
+why the non-standard ports exist at all.
+
+#### Three things that will bite
+
+**An IP address is not a hostname, and TLS notices.** SNI carries the name a
+client is asking for, and RFC 6066 forbids an IP literal in it — so a browser
+opening `https://192.168.0.14` sends no SNI at all, Caddy has nothing to match
+a certificate against, and the handshake dies as "internal error". The
+`default_sni` global option in the Caddyfile works around it. It is a
+workaround: no public CA will issue for an IP, so this pins you to the local
+CA. **Get the hostname.**
+
+**Every device must trust the local CA**, until there is a real certificate.
+Export the root:
+
+```bash
+docker compose cp caddy:/data/caddy/pki/authorities/local/root.crt .
+```
+
+On iOS that is an installed profile **and** a second step under
+Settings → General → About → Certificate Trust Settings, which people miss and
+then report the tablet "saying not secure".
+
+**Stop publishing nginx's port.** Until you delete the `ports` entry from the
+`nginx` service, the app answers on plain HTTP as well, and everything TLS
+buys is optional for anyone who knows the port. It is also the only way the
+forwarded-header trust becomes sound: Docker's NAT rewrites the source of a
+direct request to the bridge gateway, a private address, so nginx cannot tell
+a request that came through Caddy from one that did not.
+
+#### Cutover, in order
+
+1. `docker compose --profile tls up -d`, and confirm it serves.
+2. Install the CA root on every tablet, or get a real certificate first.
+3. Delete the `ports:` entry from the `nginx` service and `up -d` again.
+4. Set `APP_URL=https://<name>` — **and only now print QR stickers**, since
+   they encode it.
+5. `APP_ENV=production`, which turns on secure cookies and HSTS by itself.
+6. `php artisan security:check`.
+
 ### If you put anything in front of the app
 
 Laravel decides whether to generate `http://` or `https://` URLs from the

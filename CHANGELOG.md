@@ -3,6 +3,70 @@
 Versions track build milestones: `0.<milestone>.<patch>`. The project reaches
 `1.0.0` when all 8 milestones are complete and the paper forms are retired.
 
+## [0.34.0] — HTTPS via a Caddy reverse proxy
+
+Opt-in behind a compose profile, so a certificate problem cannot take the
+shop floor offline mid-pilot:
+
+```bash
+docker compose --profile tls up -d
+```
+
+Caddy rather than certificates in nginx, because **renewal** is the part that
+fails eighteen months later on a Sunday with nobody looking. Caddy renews by
+itself; a hand-installed certificate is a diary entry somebody has to keep.
+
+It issues from Caddy's own local CA today and switches to a real certificate
+by editing one directive once IT provides a domain — the Caddyfile carries
+the DNS-01 block and the custom image build it needs, since the stock Caddy
+image has no DNS plugins.
+
+### Three real defects found by actually running it
+
+**Laravel saw every HTTPS request as insecure.** nginx set
+`X-Forwarded-Proto` from its own `$scheme`, which is `http` because Caddy
+terminates TLS and speaks plain HTTP to it — so the app generated `http://`
+URLs on `https://` pages and would never send HSTS. nginx now honours the
+forwarded scheme when the peer is on a private network, and falls back to its
+own view otherwise. It also stops flattening `X-Forwarded-For` to the proxy's
+address, which means the audit log finally records real client addresses
+rather than Docker's gateway.
+
+**The HTTP→HTTPS redirect pointed at a dead port.** Caddy listens on 443
+inside the container and cannot see which port Docker published, and `{host}`
+carries no port — so it redirected to `https://host/` on 443, where nothing is
+listening. Both 80 and 443 are held by Docker Desktop's WSL relay on this
+host, so non-standard ports are unavoidable and this was not cosmetic.
+`HTTPS_PUBLIC_SUFFIX` now carries it.
+
+**TLS to a bare IP address does not work at all.** SNI carries the name being
+requested and RFC 6066 forbids an IP literal, so a browser opening
+`https://192.168.0.14` sends no SNI, Caddy has nothing to match a certificate
+against, and the handshake dies as "internal error". Fixed with `default_sni`
+— a workaround, not a solution: no public CA issues for an IP. It is one more
+argument for getting the hostname.
+
+### Closed before it could bite
+`X-Forwarded-Host` is now explicitly excluded from the trusted headers.
+Laravel trusts it by default, **Caddy sends it, and nginx deliberately never
+did** — the same header that previously arrived without the port, broke every
+signed URL, and made kiosk enrolment fail as a silent 403. Adding a proxy
+would have reintroduced it. Nothing is lost: Caddy passes the original `Host`
+through, so the framework already sees the right name.
+
+### Verified
+`https://…/login` serves, the app generates `https://` URLs, plain HTTP
+redirects to the right port, and HTTP on 8088 still works and is still
+correctly reported as insecure. HSTS stays off until `APP_ENV=production`,
+which is right — pinning a browser to HTTPS for a year during a pilot would
+lock out any device the moment you reverted.
+
+### Still to do, and documented
+Publishing nginx's port alongside Caddy leaves a plain-HTTP bypass, and
+Docker's NAT means nginx cannot tell a proxied request from a direct one. The
+cutover checklist in `docs/DEPLOYMENT.md` ends with removing that port,
+setting `APP_URL`, and only then printing stickers.
+
 ## [0.33.0] — Off-site backups configured for LH-ARCHIVE
 
 The destination is set to `//LH-ARCHIVE/Archive/branding-pm`. Two values are
