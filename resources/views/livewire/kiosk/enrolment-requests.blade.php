@@ -1,7 +1,9 @@
 <div>
     <x-slot:header>
-        <x-page-header :title="__('app.kiosk_requests.queue_title')" :description="__('app.kiosk_requests.queue_intro')" />
+        <x-page-header :title="__('app.kiosk_requests.queue_title')" />
     </x-slot:header>
+
+    <p class="mb-6 text-lg text-slate-600">{{ __('app.kiosk_requests.queue_intro') }}</p>
 
     @if (session('status'))
         <x-alert type="success" class="mb-6">{{ session('status') }}</x-alert>

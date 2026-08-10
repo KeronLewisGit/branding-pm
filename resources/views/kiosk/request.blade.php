@@ -13,10 +13,14 @@
     @slot('title', __('app.kiosk_requests.title'))
 
     @slot('header')
-        <x-page-header :title="__('app.kiosk_requests.title')" :description="__('app.kiosk_requests.intro')" />
+        <x-page-header :title="__('app.kiosk_requests.title')" />
     @endslot
 
     <div class="mx-auto w-full max-w-2xl">
+        {{-- What happens after they press the button. x-page-header renders a
+             title and nothing else, so this belongs in the page body. --}}
+        <p class="mb-6 text-lg text-slate-600">{{ __('app.kiosk_requests.intro') }}</p>
+
         @if (session('status'))
             <x-alert type="success" class="mb-6">{{ session('status') }}</x-alert>
         @endif

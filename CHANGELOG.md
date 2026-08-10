@@ -3,6 +3,32 @@
 Versions track build milestones: `0.<milestone>.<patch>`. The project reaches
 `1.0.0` when all 8 milestones are complete and the paper forms are retired.
 
+## [0.39.2] — Two things that only a rendered page shows
+
+The kiosk request screens were built and tested without anybody looking at
+them. Rendering the real Blade output found two faults that every test passed
+straight through, because both are invisible to `assertSee`.
+
+**The explanation never appeared.** Both new screens passed
+`:description` to `<x-page-header>`, which takes `title` and nothing else — so
+the text was merged onto the wrapper as an HTML attribute and silently
+dropped. An operator met a bare form with no statement of what happens after
+they press the button, which on a screen whose entire job is "ask somebody
+else for something" is the sentence that matters most. The intro now lives in
+the page body on both.
+
+**The suggested device name read as a bug.** `DeviceType` labels are lower
+case because they are written for mid-sentence use ("this tablet is not
+enrolled"); dropped into a name field they produced `tablet — Darnell Joseph`,
+and `device — Darnell Joseph` when the User-Agent said nothing. Capitalised at
+the point of use, so the language file keeps its one correct form.
+
+`php artisan security:check` passes with four warnings, all of them the
+expected local-pilot ones: APP_DEBUG, insecure cookies, an HTTP APP_URL, and
+off-site backups awaiting credentials.
+
+326 tests, 1129 assertions.
+
 ## [0.39.1] — The kiosk round trip, which did not previously exist
 
 A review of the whole kiosk journey after 0.38.0 and 0.39.0 added ways *in*.
