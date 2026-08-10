@@ -119,7 +119,7 @@ it('shows overdue work on the machine screen the red tile points at', function (
         ->assertOk()
         ->assertSee(__('app.kiosk.overdue_heading'))
         // Warned before they open it, not after they sign it.
-        ->assertSee(__('app.runs.late_warning'));
+        ->assertSee(__('app.kiosk.overdue_note'));
 });
 
 it('still says nothing is due today when only overdue work remains', function (): void {
