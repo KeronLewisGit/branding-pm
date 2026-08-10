@@ -35,6 +35,10 @@
         <x-status-dot :status="$run->status" class="text-lg" />
     </div>
 
+    {{-- Before the sheet itself: an approver deciding on this run needs to
+         know it was signed after its due day without going digging. --}}
+    <x-late-stamp :run="$run" class="mb-6" />
+
     {{-- Header block — the same fields as the paper work order --}}
     <x-card>
         <dl class="grid grid-cols-1 gap-x-6 gap-y-3 text-base sm:grid-cols-3">

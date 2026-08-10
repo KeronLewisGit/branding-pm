@@ -3,6 +3,49 @@
 Versions track build milestones: `0.<milestone>.<patch>`. The project reaches
 `1.0.0` when all 8 milestones are complete and the paper forms are retired.
 
+## [0.37.0] — Overdue sheets are reachable, and a late signature says so
+
+The machine tile on the kiosk went red for open work from before today, and
+the screen behind it listed only today. A sheet a supervisor had sent back for
+rework was therefore unreachable from the shop floor entirely: the badge said
+"Overdue", tapping it showed today's three sheets, and the two rejected ones
+sat where nobody could reach them. `overdue` also wins its match arm outright,
+so the tile stayed red after today's work was done, with no way to clear it.
+
+The machine screen now leads with the work it was already advertising, oldest
+first, banded red to match the tile that sent you there.
+
+**Which sheets come back is deliberately narrower than `open()`.**
+`in_progress` and `rejected` only:
+
+- `pending` is excluded because `checklists:mark-missed` flips untouched
+  pending runs to `missed` once their grace period expires. An old pending run
+  is one the hourly command has not reached yet, not work anybody waits on.
+- `missed` is excluded because a gap in the record IS the record. Re-opening
+  one weeks later would rewrite a compliance figure already reported.
+
+No cutoff: an open sheet stays reachable until it is finished. Nothing
+silently becomes unfixable, and the stamp below is what stops an old
+completion being mistaken for on-time work.
+
+### The late stamp is derived, which is what makes it uneditable
+
+`ChecklistRun::completedLateByDays()` compares `scheduled_for` against
+`submitted_at`. There is no column behind it and no form field, so an operator
+cannot edit it away — not because a permission check forbids it, but because
+there is nothing to edit and nothing that can drift out of step with the two
+dates printed beside it. It appears as a warning on an overdue sheet *before*
+any work goes in, and as a stamp on the review screen and the PDF afterwards.
+
+The two dates are handled differently on purpose, matching
+`ChecksCompletedReport`: `scheduled_for` is a calendar date at midnight UTC and
+is NOT shifted into plant time, while `submitted_at` is a real instant and MUST
+be. Comparing raw UTC would have stamped every night-shift sheet as a day late
+— 02:00 UTC is 22:00 the previous day in UTC-4, which is most of a shift.
+There is a test for exactly that boundary.
+
+297 tests, 1046 assertions.
+
 ## [0.36.1] — The walkthrough's Skip and Back were invisible on the kiosk
 
 `.kiosk .btn-ghost` paints `slate-100` text, on the assumption that a ghost

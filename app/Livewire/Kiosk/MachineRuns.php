@@ -85,9 +85,34 @@ class MachineRuns extends Component
         $today = now($displayTz)->toDateString();
 
         $runsByShift = collect();
+        $overdueRuns = collect();
         $lastCompleted = null;
 
         if ($this->state === 'ok' && $this->machine !== null) {
+            /*
+             * Open work from before today, oldest first.
+             *
+             * The machine tile on the picker already goes red for these, and
+             * before this it led nowhere: the tile said "Overdue", the screen
+             * behind it listed only today, and a sheet a supervisor had sent
+             * back for rework was unreachable from the shop floor entirely.
+             * A badge that points at nothing is worse than no badge.
+             *
+             * Oldest first because the oldest is the one most at risk of
+             * never being done at all.
+             */
+            $overdueRuns = ChecklistRun::query()
+                ->forMachine($this->machine)
+                ->overdueOpenBefore($today)
+                ->with('template:id,name,work_category,work_description')
+                ->withCount([
+                    'items as items_total_count',
+                    'items as items_done_count' => fn ($q) => $q->where('status', '!=', RunItemStatus::Pending->value),
+                ])
+                ->orderBy('scheduled_for')
+                ->orderBy('shift')
+                ->get();
+
             $runs = ChecklistRun::query()
                 ->forMachine($this->machine)
                 ->dueOn($today)
@@ -106,7 +131,7 @@ class MachineRuns extends Component
             // accident.
             $runsByShift = $runs->groupBy(fn (ChecklistRun $run): string => $run->shift->value);
 
-            if ($runs->isEmpty()) {
+            if ($runs->isEmpty() && $overdueRuns->isEmpty()) {
                 // Nothing due → show when this machine was last done, not an
                 // empty screen.
                 $lastCompleted = ChecklistRun::query()
@@ -120,6 +145,7 @@ class MachineRuns extends Component
 
         return view('livewire.kiosk.machine-runs', [
             'runsByShift' => $runsByShift,
+            'overdueRuns' => $overdueRuns,
             'hasBothShifts' => $runsByShift->has('day') && $runsByShift->has('night'),
             'lastCompleted' => $lastCompleted,
             'displayTz' => $displayTz,

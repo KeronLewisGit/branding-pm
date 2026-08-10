@@ -104,6 +104,21 @@
             </div>
         @endif
 
+        {{--
+            Overdue and still editable: say so before any work goes in, not
+            after it is signed. An operator rescuing an old sheet should know
+            the record will show when it was actually signed — so it is never
+            a surprise later, and never something they feel misled about.
+
+            `late_stamp` (the signed version) is rendered by <x-late-stamp> on
+            the review screen and the PDF; both come from the same two dates.
+        --}}
+        @if ($run->status->isEditable() && $run->scheduled_for->toDateString() < now(config('app.display_timezone', 'UTC'))->toDateString())
+            <p class="mt-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-base font-semibold text-amber-900">
+                {{ __('app.runs.late_warning') }}
+            </p>
+        @endif
+
         <dl class="mt-4 grid grid-cols-1 gap-x-6 gap-y-3 text-lg sm:grid-cols-2">
             <div>
                 <dt class="text-sm font-semibold uppercase tracking-wide text-slate-500">{{ __('app.templates.work_category') }}</dt>
