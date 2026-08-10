@@ -199,8 +199,16 @@ class KioskEnrolmentRequestController extends Controller
     {
         $type = \App\Support\DeviceType::detect($request->userAgent());
 
+        /*
+         * Capitalised here, not in the language file. Those labels are written
+         * lower case because they are used mid-sentence ("this tablet is not
+         * enrolled"); dropped into a name field as-is they produced
+         * "tablet — Darnell Joseph", which reads like a bug rather than a
+         * suggestion. An unrecognised User-Agent gives "Device", which is
+         * honest about knowing nothing.
+         */
         return __('app.kiosk_requests.suggested_name', [
-            'type' => $type->label(),
+            'type' => Str::ucfirst($type->label()),
             'user' => $request->user()?->full_name ?? '',
         ]);
     }
