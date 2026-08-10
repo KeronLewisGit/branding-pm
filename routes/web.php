@@ -28,6 +28,7 @@ use App\Livewire\Issues\IssueDetail;
 use App\Livewire\Issues\IssueRegister;
 use App\Livewire\Kiosk\EnrolmentRequests;
 use App\Livewire\Kiosk\MachinePicker;
+use App\Livewire\Kiosk\RequestKiosk;
 use App\Livewire\Kiosk\MachineRuns;
 use App\Livewire\Kiosk\OperatorPicker;
 use App\Livewire\Machines\MachineProfile;
@@ -184,7 +185,7 @@ Route::middleware(['auth', 'permission:kiosk.activate'])->group(function (): voi
  * by the tablet it was granted for.
  */
 Route::middleware('auth')->group(function (): void {
-    Route::get('/kiosk/request', [KioskEnrolmentRequestController::class, 'create'])->name('kiosk.request');
+    Route::get('/kiosk/request', RequestKiosk::class)->name('kiosk.request');
     Route::post('/kiosk/request', [KioskEnrolmentRequestController::class, 'store'])->name('kiosk.request.store');
     Route::post('/kiosk/request/claim', [KioskEnrolmentRequestController::class, 'claim'])->name('kiosk.request.claim');
 });

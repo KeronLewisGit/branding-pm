@@ -213,3 +213,48 @@ it('returns a kiosk operator to the machine after submitting, not to the office'
         ->assertHasNoErrors()
         ->assertRedirect(route('kiosk.machine', ['code' => 'matan']));
 });
+
+it('shows the plant to a signed-in operator with no site of their own', function (): void {
+    /*
+     * The regression. The picker scoped to MachineScope::for(auth()->user()),
+     * which was invisible while the only way onto a kiosk was unauthenticated
+     * — no user, so every active machine. Once the office chrome grew a way
+     * in, an operator with no default site and no assignments (which is every
+     * account nobody has filled in, since no screen sets default_site_id)
+     * arrived signed in and was shown an empty plant, on a tablet bolted to a
+     * machine they could see in front of them.
+     */
+    $site = Site::factory()->create();
+    $location = Location::factory()->for($site)->create();
+    Machine::factory()->for($location)->create(['code' => 'matan', 'name' => 'MATAN', 'is_active' => true]);
+
+    $stranded = User::factory()->create(['default_site_id' => null]);
+    $stranded->assignRole('operator');
+
+    expect($stranded->machines()->count())->toBe(0);
+
+    $this->actingAs($stranded)
+        ->withCookies(roundTripKiosk())
+        ->get(route('kiosk.home'))
+        ->assertOk()
+        ->assertSee('MATAN')
+        ->assertDontSee(__('app.machines.no_machines'));
+});
+
+it('shows the same machines whether or not anybody is signed in', function (): void {
+    // The tablet is the principal on this screen, so who is holding it must
+    // not change what the plant looks like.
+    $site = Site::factory()->create();
+    $location = Location::factory()->for($site)->create();
+    Machine::factory()->for($location)->create(['code' => 'matan', 'name' => 'MATAN', 'is_active' => true]);
+
+    $cookies = roundTripKiosk();
+
+    $anonymous = $this->withCookies($cookies)->get(route('kiosk.home'))->assertOk();
+    $anonymous->assertSee('MATAN');
+
+    $operator = User::factory()->create(['default_site_id' => null]);
+    $operator->assignRole('operator');
+
+    $this->actingAs($operator)->withCookies($cookies)->get(route('kiosk.home'))->assertOk()->assertSee('MATAN');
+});

@@ -3,6 +3,39 @@
 Versions track build milestones: `0.<milestone>.<patch>`. The project reaches
 `1.0.0` when all 8 milestones are complete and the paper forms are retired.
 
+## [0.40.1] — Two ways an unenrolled device met a useless kiosk
+
+Both were opened by adding a way into kiosk mode from the office chrome, and
+neither is visible to a test that only looks at markup.
+
+**"Request kiosk mode" rendered a full-width menu over a blank page.**
+`layouts.app` sizes its sidebar through `x-bind:class`, and Alpine arrives
+ONLY bundled inside Livewire's injected script — the trap
+`kiosk/activate.blade.php` already documents for its own device fields. That
+screen was the one office page built as a plain controller view, so it shipped
+no Livewire script, Alpine never booted, and the aside kept its static
+`w-full` and `md:!flex`: menu across the screen, page pushed off the bottom.
+It is now a Livewire component like every other office screen, and a test
+asserts every office page carries `wire:snapshot` so the next one cannot
+regress silently.
+
+**A signed-in operator saw an empty plant.** The kiosk machine picker scoped
+to `MachineScope::for(auth()->user())` whenever somebody was signed in. That
+was invisible while the only way onto a kiosk was unauthenticated — no user,
+so every active machine — but an operator with no `default_site_id` and no
+machine assignments now arrives signed in, and `MachineScope` correctly
+returns nothing for them. The result was an empty grid on a tablet bolted to a
+machine the operator could see in front of them. No screen sets
+`default_site_id`, so this is the default state of a real account, not an edge
+case.
+
+The grid now follows the **device**: a kiosk pinned to a location shows that
+site, an unpinned one shows the plant. The tablet is the principal on that
+screen — it is the whole point of a shared shop-floor device — so who happens
+to be holding it must not change what the plant looks like.
+
+331 tests, 1151 assertions.
+
 ## [0.40.0] — The kiosk control moves into the chrome, and the rail stops leaking
 
 **Kiosk mode is now an icon beside the menu toggle**, in both bars, rather
