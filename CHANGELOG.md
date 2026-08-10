@@ -3,6 +3,48 @@
 Versions track build milestones: `0.<milestone>.<patch>`. The project reaches
 `1.0.0` when all 8 milestones are complete and the paper forms are retired.
 
+## [0.32.0] — Go-live groundwork: credentials, accurate docs, an HTTPS plan
+
+All eight milestones are built, so what is left is deployment, not features.
+
+### Demo accounts deactivated
+`OP-1001`, `OP-1002`, `SUP-2001`, `MM-3001` and `QA-4001` ship with the
+password `password` and PINs that are printed in this repository, and the app
+is now reachable from phones on the plant network. All five are deactivated.
+Their history is untouched — 255 runs against OP-1001, 313 against SUP-2001 —
+because deactivating stops a login without altering a single record.
+
+Reversible from **Admin → Users** in one click. Note that it also stops PIN
+sign-in at the kiosk for the two operators, so turn one back on if you are
+testing that path. `security:check` now reads **PASS — none active**.
+
+### Documentation caught up with reality
+The README still described a Laravel 11 / Livewire 3 / PHP 8.3 stack, "all 22
+migrations", "all 34 Pest tests" and *Admin → settings* as outstanding. It now
+states the real stack, 27 migrations with a table of the five added since the
+specification, 285 tests, and records that the settings screen was resolved by
+**removing the table** rather than building it.
+
+### HTTPS, written up so it can be decided rather than guessed
+A new section in `docs/DEPLOYMENT.md` compares three routes for a closed plant
+LAN — self-signed, an internal CA, and a real certificate issued by DNS-01 —
+and recommends the third, because it is the only one with no per-device trust
+step, and on a shop floor anything needing a manual step per tablet eventually
+does not get done.
+
+It also records the discovery that **the PWA and offline queue do not work at
+all over plain HTTP**: `navigator.serviceWorker` is undefined outside a secure
+context, so the worker never registers. Milestone 8's "keep working through a
+Wi-Fi outage" is inert on the pilot today. That makes HTTPS a functional
+requirement, not only a security one.
+
+### Print stickers last
+Both `docs/DEPLOYMENT.md` §6 and §9 now warn that a QR sticker encodes the
+whole of `APP_URL`. Moving from `http://192.168.0.14:8088` to a hostname, or
+to HTTPS, invalidates every sticker already glued to a machine. The current
+address is a DHCP lease that has moved more than once during the pilot, and it
+is not something to print.
+
 ## [0.31.2] — Activation returned a 500 from every real browser
 
 Reported from a phone, and reproduced from the log:
