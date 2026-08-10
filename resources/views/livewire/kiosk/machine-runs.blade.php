@@ -42,41 +42,41 @@
                     <p class="text-3xl font-black uppercase tracking-widest">{{ __('app.kiosk.overdue_heading') }}</p>
                 </div>
 
+                {{--
+                    Said ONCE for the section, not once per card. It is the same
+                    sentence every time, and repeated under each sheet it read
+                    as three different warnings to work out rather than one
+                    fact about all of them.
+                --}}
+                <p class="mb-4 text-lg text-red-200">{{ __('app.kiosk.overdue_note') }}</p>
+
                 <div class="space-y-4">
                     @foreach ($overdueRuns as $run)
+                        {{--
+                            The date leads, because on one machine these cards
+                            are otherwise identical: same sheet, same category,
+                            same description, three different days. Date, state
+                            and progress are the only things that differ, so
+                            they are the only things shown. Everything else is
+                            on the sheet itself, one tap away.
+                        --}}
                         <a
                             href="{{ route('runs.show', $run) }}"
                             wire:key="overdue-run-{{ $run->id }}"
                             class="block rounded-2xl border-2 border-red-500 bg-slate-900 p-6 active:bg-slate-800"
                         >
-                            <div class="flex flex-wrap items-start justify-between gap-3">
-                                <div class="min-w-0">
-                                    <p class="text-2xl font-bold text-white">{{ $run->template->name }}</p>
-                                    <p class="mt-1 text-base font-semibold uppercase tracking-wide text-slate-400">
-                                        {{ __('app.templates.work_category') }}: {{ $run->template->work_category->label() }}
-                                    </p>
+                            <div class="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
+                                <p class="text-2xl font-bold text-white">{{ $run->scheduled_for->format('D j M') }}</p>
+
+                                <div class="flex flex-wrap items-center gap-x-6 gap-y-2 text-lg">
+                                    <x-status-dot :status="$run->status" class="text-slate-100" />
+                                    <span class="font-semibold tabular-nums text-slate-100">
+                                        {{ __('app.runs.progress', ['done' => $run->items_done_count, 'total' => $run->items_total_count]) }}
+                                    </span>
                                 </div>
-
-                                {{-- The due date IS the point of this card, so it
-                                     is the loudest thing on it after the name. --}}
-                                <span class="shrink-0 rounded-xl bg-red-600 px-4 py-2 text-xl font-black uppercase tracking-wider text-white">
-                                    {{ $run->scheduled_for->format('D j M') }}
-                                </span>
                             </div>
 
-                            <p class="mt-3 text-lg text-slate-300">{{ $run->template->work_description }}</p>
-
-                            <div class="mt-5 flex flex-wrap items-center justify-between gap-3 text-lg">
-                                <x-status-dot :status="$run->status" class="text-slate-100" />
-                                <span class="font-semibold tabular-nums text-slate-100">
-                                    {{ __('app.runs.progress', ['done' => $run->items_done_count, 'total' => $run->items_total_count]) }}
-                                </span>
-                            </div>
-
-                            {{-- Said before they open it, not after they sign it. --}}
-                            <p class="mt-4 rounded-xl bg-red-950 px-4 py-3 text-base font-semibold text-red-100">
-                                {{ __('app.runs.late_warning') }}
-                            </p>
+                            <p class="mt-1 text-base text-slate-400">{{ $run->template->name }}</p>
                         </a>
                     @endforeach
                 </div>
@@ -103,23 +103,35 @@
                  who only sees the red band cannot tell whether today's sheets
                  are missing or simply not due. --}}
             @if ($runsByShift->isEmpty())
-                <div class="rounded-2xl border border-slate-700 bg-slate-900 p-6 text-center">
+                <div class="mb-8 rounded-2xl border border-slate-700 bg-slate-900 p-6 text-center">
                     <p class="text-xl font-semibold text-slate-100">{{ __('app.kiosk.nothing_due') }}</p>
                 </div>
             @endif
 
-            @foreach (['day', 'night', 'all'] as $shiftValue)
-                @continue(! $runsByShift->has($shiftValue))
-                @php($shiftRuns = $runsByShift->get($shiftValue))
+            {{--
+                The gap between shift groups belongs to the GROUP, not to the
+                banner inside it.
 
-                {{--
-                    Both shifts due → each shift gets an unmissable full-width
-                    banner AND a distinct card colour, so a night operator
-                    cannot open the day sheet by accident. Colour is never the
-                    only cue: the banner text and the per-card badge repeat it.
-                --}}
-                @if ($hasBothShifts && $shiftValue !== 'all')
-                    <div class="mb-3 mt-8 first:mt-0 flex min-h-[72px] items-center gap-4 rounded-2xl px-6
+                It used to live on the banner as `mt-8`, so a group without a
+                banner had no gap at all — and the `all` group never gets one,
+                because a sheet that is not shift-split has no shift to name.
+                A weekly sheet therefore sat flush against the night shift's
+                cards, reading as though it belonged to that shift.
+            --}}
+            <div class="space-y-8">
+                @foreach (['day', 'night', 'all'] as $shiftValue)
+                    @continue(! $runsByShift->has($shiftValue))
+                    @php($shiftRuns = $runsByShift->get($shiftValue))
+
+                    <div>
+                    {{--
+                        Both shifts due → each shift gets an unmissable full-width
+                        banner AND a distinct card colour, so a night operator
+                        cannot open the day sheet by accident. Colour is never the
+                        only cue: the banner text and the per-card badge repeat it.
+                    --}}
+                    @if ($hasBothShifts && $shiftValue !== 'all')
+                        <div class="mb-3 flex min-h-[72px] items-center gap-4 rounded-2xl px-6
                         {{ $shiftValue === 'day' ? 'bg-amber-400 text-slate-950' : 'bg-indigo-950 text-white ring-2 ring-indigo-400' }}">
                         @if ($shiftValue === 'day')
                             <svg class="h-9 w-9" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
@@ -172,8 +184,10 @@
                             </div>
                         </a>
                     @endforeach
-                </div>
-            @endforeach
+                    </div>
+                    </div>
+                @endforeach
+            </div>
 
             <div class="mt-8">
                 <x-button size="kiosk" variant="ghost" href="{{ route('kiosk.home') }}">

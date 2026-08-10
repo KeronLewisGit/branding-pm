@@ -969,6 +969,9 @@ return [
         'due_today' => 'Due today',
         'nothing_due' => 'No checklists due for this machine today.',
         'overdue_heading' => 'Overdue — needs attention',
+        // Section-level, so it must read correctly for one sheet or five.
+        // 'these' would be wrong when only one is overdue.
+        'overdue_note' => 'Anything completed now is recorded as completed late.',
         'enter_pin' => 'Enter your PIN',
         'pin' => 'PIN',
         'employee_number' => 'Employee number',

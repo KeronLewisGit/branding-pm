@@ -3,6 +3,36 @@
 Versions track build milestones: `0.<milestone>.<patch>`. The project reaches
 `1.0.0` when all 8 milestones are complete and the paper forms are retired.
 
+## [0.37.1] — Even pacing between shift groups, and a shorter overdue list
+
+**The gap between shift groups lived on the shift banner.** `mt-8` sat on the
+banner rather than on the group it introduced, so a group that gets no banner
+had no gap — and the `all` group never gets one, because a sheet that is not
+shift-split has no shift to name. A weekly sheet therefore butted straight
+against the night shift's cards and read as though it belonged to that shift,
+on a screen whose whole job is keeping day and night apart. The spacing now
+belongs to the group (`space-y-8` on the wrapper), so every group is evenly
+separated whether or not it has a banner.
+
+Caught by screenshotting the page Blade actually rendered. The first attempt
+looked right in the markup and did nothing at all: Tailwind's JIT only emits
+classes it finds at build time, and `space-y-8` was new, so the class was in
+the HTML and absent from the CSS until the next `npm run build`.
+
+**The overdue list said the same thing three times.** Each card repeated the
+machine name, the work category, the work description and the full late
+warning — four lines identical across every card, on a page that already names
+the machine twice in its header. Only the date, status and progress ever
+differ, so those are what the card shows now, with the date leading because it
+is what tells the sheets apart. The warning moved to the section, stated once.
+
+Its wording changed with it: "Completing **it** now" was singular on a heading
+covering several sheets. `kiosk.overdue_note` reads correctly for one sheet or
+five, while `runs.late_warning` stays singular on the individual sheet, where
+it really is about one checklist.
+
+297 tests, 1046 assertions.
+
 ## [0.37.0] — Overdue sheets are reachable, and a late signature says so
 
 The machine tile on the kiosk went red for open work from before today, and
