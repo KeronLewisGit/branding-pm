@@ -188,6 +188,69 @@ enforced from inside it:
 | Demo accounts | `OP-1001` and friends ship with the password `password` and PINs that are in the repository |
 | Admin password | Still the old published default |
 
+### HTTPS on a closed plant network
+
+The hardest go-live item, because a plant LAN has no public DNS and often no
+inbound internet. Three workable routes, worst to best for this site.
+
+**Two things are at stake, not one.** Secure cookies and encrypted PINs are
+the obvious half. The other is that **the PWA and the offline queue do not
+work at all over plain HTTP** — `navigator.serviceWorker` is undefined outside
+a secure context, so `registerServiceWorker()` returns early and nothing is
+ever cached. Milestone 8's "keep working through a Wi-Fi outage" is inert on
+an `http://` host. That is not a warning about the future; it is the state of
+the pilot today.
+
+#### Option A — self-signed certificate
+
+Free and offline, and the cost lands on every device forever. Each tablet,
+phone and laptop must install the certificate and explicitly trust it (on iOS
+that is a configuration profile *plus* **Settings → General → About →
+Certificate Trust Settings**, a step people miss). A new tablet on the floor
+means doing it again; so does expiry. Workable for three devices, miserable
+for fifteen.
+
+#### Option B — the company's internal CA
+
+If there is a Windows domain with AD CS, domain-joined machines trust it
+automatically and only the tablets need the root certificate installed once.
+Better than A, and it is the right answer if IT already runs a CA. Ask before
+building anything.
+
+#### Option C — a real certificate for a real name (recommended)
+
+Register or reuse a subdomain the company controls — `pm.example.com` — and
+issue a Let's Encrypt certificate with a **DNS-01** challenge. DNS-01 proves
+ownership by writing a TXT record, so **no inbound internet to the plant is
+required**; only outbound access for renewal.
+
+Then point an internal DNS record for that name at the server's fixed LAN
+address. Every device trusts it with **zero per-device setup**, which is the
+whole argument: on a shop floor, anything requiring a manual step per tablet
+will eventually not be done.
+
+A reverse proxy in front of the existing `nginx` container handles both the
+certificate and the renewal — Caddy does DNS-01 with a few lines of config.
+
+### If you put anything in front of the app
+
+Laravel decides whether to generate `http://` or `https://` URLs from the
+request it sees. Behind a terminating proxy it sees plain HTTP and will emit
+`http://` links on an `https://` page unless the proxy is trusted — configure
+`TrustProxies` and have the proxy send `X-Forwarded-Proto`.
+
+**Be careful with `X-Forwarded-Host`.** This project has already been bitten:
+setting it broke every signed URL, because the host it forwarded omitted the
+port and signature verification includes the host. Kiosk enrolment failed
+silently. Send `X-Forwarded-Proto`, and leave `X-Forwarded-Host` alone unless
+you have a reason and a test.
+
+### Settle the address before printing stickers
+
+Every QR sticker encodes `APP_URL`. Moving from `http://192.168.0.14:8088` to
+`https://pm.example.com` **invalidates every sticker already on a machine**.
+Do the certificate and the hostname first, then print. See §9.
+
 ### The three settings that matter
 
 ```dotenv
@@ -346,6 +409,20 @@ scuffed and over-sprayed, and a code that can be typed still works.
 every sticker already on that machine — the admin screen warns you, and the
 warning is not decorative. If a code must change, print and fit the
 replacement sticker in the same visit.
+
+**So is the address.** A sticker encodes the full URL, `APP_URL` included. If
+the server's address changes — a new DHCP lease, a move to HTTPS, a different
+host — every sticker on the floor becomes dead paper at the same moment.
+
+Before printing a single sheet:
+
+- give the server a **fixed address**: a DHCP reservation at minimum, and
+  preferably a hostname, so the URL survives a reboot or a router change;
+- settle **HTTPS** first if it is coming, because `https://` is a different
+  URL from `http://` (see §6).
+
+`http://192.168.0.14:8088` is a DHCP address. It has already moved more than
+once during the pilot. It is not something to print and glue to a machine.
 
 ---
 

@@ -5,7 +5,7 @@ department. One sheet per machine per shift, completed on a shop-floor tablet,
 signed by an operator and countersigned by a supervisor, with a searchable and
 auditable history behind it.
 
-- **Stack:** PHP 8.3 · Laravel 11 · MySQL 8 · Livewire 3 · Tailwind · Alpine
+- **Stack:** PHP 8.4 · Laravel 13 · MySQL 8 · Livewire 4 · Tailwind · Alpine
 - **No Redis, no paid packages, no external SaaS.** The plant may be offline.
 - **Timezone:** stored UTC, displayed `America/Port_of_Spain`.
 
@@ -47,29 +47,44 @@ auditable history behind it.
 
 The database schema covered the **whole** domain from milestone 1 — including
 issues, attachments and signatures — so milestones 5–8 added screens, not
-migrations. Exactly one migration has been added since the original 22
-(`kiosk_devices.kind` and `last_user_agent`, so a kiosk can be a laptop or a
-panel PC rather than only a tablet).
+migrations. Five migrations have been added since the original 22, all for
+work that came after the specification:
 
-Not yet built, and outstanding against [`docs/SPEC.md`](docs/SPEC.md):
+| Migration | Why |
+|---|---|
+| `kiosk_devices.kind`, `last_user_agent` | a kiosk can be a laptop or panel PC, not only a tablet |
+| `checklist_runs` QA verification | the Quality Assurance role |
+| `users.walkthrough_seen_at` | the first-run walkthrough |
+| drop `settings` | see below |
+| `kiosk_devices` enrolment details | who activated a device, when, and what it is |
 
-- **Admin → settings.** The `settings` table is seeded but nothing reads it —
-  every value it holds actually comes from `config/checklists.php` via `.env`,
-  so editing a seeded setting has no effect. Either give it a screen and read
-  from it, or drop the table.
+**Every deliverable in [`docs/SPEC.md`](docs/SPEC.md) is now built.** The one
+item that was outstanding — *Admin → settings* — was resolved by **removing
+the table** rather than building the screen. Nothing ever read those ten
+seeded rows; the values in force come from `config/checklists.php` via `.env`,
+where the scheduler and queue can also see them. A row somebody can edit into
+an invalid state is a worse home for configuration than a file under version
+control.
+
+What remains before the paper forms can be retired is deployment work, not
+features: HTTPS, a fixed address for the host, off-site backups and the
+credential clean-up. See the [production deployment
+checklist](#production-deployment-checklist).
 
 Two things to know before you run it:
 
-1. **It runs.** Authored on a machine with no PHP, Composer or MySQL, so for
-   most of its life this was "correct by inspection" only. It has now been
-   brought up under the shipped `docker-compose.yml` and exercised: all 22
-   migrations apply, the seeders load, **all 34 Pest tests pass**,
-   `checklists:generate` produced 12 runs and then correctly created 0 on a
-   second pass, and the login, dashboard, kiosk enrolment and machine grid all
-   serve. Nothing needed fixing to get there.
+1. **It runs, and it has been run.** Authored on a machine with no PHP,
+   Composer or MySQL, so for most of its life this was "correct by inspection"
+   only. It now runs under the shipped `docker-compose.yml`: all 27 migrations
+   apply, the seeders load, **all 285 Pest tests pass**, the scheduler
+   generates runs, and it has been used from a real tablet and phone on the
+   plant network.
 
    Still unexercised by anything automated: the signature canvas, the service
-   worker and the offline queue. All three need a real touch device.
+   worker and the offline queue. All three need a real touch device — and two
+   bugs in the kiosk activation flow were found only on real hardware after a
+   green suite, so treat "the tests pass" as necessary rather than sufficient
+   for anything a finger touches.
 2. **The 13 source PDFs were not available.** Every checklist item was
    transcribed from the written specification instead. Before the paper forms
    are retired, someone must compare the seeded templates against the printed
@@ -162,7 +177,7 @@ App on <http://localhost:8080>.
 | Service | Purpose |
 |---|---|
 | `php` | PHP 8.3-FPM with the required extensions |
-| `nginx` | Web server, document root `/var/www/html/public`, host port 8080 |
+| `nginx` | Web server, document root `/var/www/html/public`, host port `APP_PORT` (default 8080) |
 | `mysql` | MySQL 8, utf8mb4, named volume, no host port published |
 | `mailpit` | Mail server. SMTP on 1025, inbox at <http://localhost:8025> |
 | `scheduler` | Runs `php artisan schedule:work` — the cron replacement |
