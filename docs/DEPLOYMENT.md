@@ -480,6 +480,43 @@ BACKUP_OFFSITE_RETENTION_DAYS=30
 docker compose --profile offsite up -d
 ```
 
+#### Turning it on at this site
+
+The share is already set to `//LH-ARCHIVE/Archive/branding-pm` in `.env`. Two
+values are missing, and the service will not start without them.
+
+1. **Ask IT for a service account** with write access to that share and
+   nothing else. A dump holds every password and PIN hash in the plant, so it
+   should not be somebody's personal login and it should not be an account
+   that can read the rest of the file server.
+2. Put it in `.env` — never in `docker-compose.yml`, which is committed:
+   ```dotenv
+   BACKUP_OFFSITE_USERNAME=svc-pmbackup
+   BACKUP_OFFSITE_PASSWORD=…
+   BACKUP_OFFSITE_DOMAIN=LHOUSE      # WORKGROUP for a standalone NAS
+   ```
+3. **Create the `branding-pm` folder on the share first.** The mount fails if
+   the path does not exist, and the failure looks like a credential problem.
+4. Be on the plant network. Docker mounts the share when the container
+   starts; from anywhere else it cannot.
+5. Bring it up, then prove it rather than assuming:
+   ```bash
+   docker compose --profile offsite up -d
+   docker compose ps backup-offsite          # must be Up, not Restarting
+   docker compose logs backup-offsite --tail 20
+   docker compose run --rm --entrypoint /usr/local/bin/offsite.sh backup-offsite once
+   php artisan backup:status                 # Off-site should read OK
+   ```
+
+Until the credentials are in, `backup:status` reports *"awaiting credentials,
+not running yet"* and stays green — the share being chosen is not the same as
+it being broken. Once the username is set, a missing or stale off-site copy
+becomes a failure.
+
+**If the container will not start**, it is almost always the mount: a wrong
+password, a missing folder, a domain that should not be `WORKGROUP`, or SMB1
+on the far end. `docker compose logs backup-offsite` shows the mount error.
+
 Three things worth knowing before you rely on it:
 
 - **The service account needs write access to that share and nothing else.**

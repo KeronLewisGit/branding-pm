@@ -3,6 +3,46 @@
 Versions track build milestones: `0.<milestone>.<patch>`. The project reaches
 `1.0.0` when all 8 milestones are complete and the paper forms are retired.
 
+## [0.33.0] — Off-site backups configured for LH-ARCHIVE
+
+The destination is set to `//LH-ARCHIVE/Archive/branding-pm`. Two values are
+deliberately left blank — a service account and its password — because they
+belong to IT and because a dump holds every password and PIN hash in the
+plant, so it should not travel under somebody's personal login.
+
+### A domain option, which a Windows share needs
+The CIFS mount had no `domain` parameter. Against a domain-joined file server
+that fails as a bare "permission denied", which reads exactly like a wrong
+password and sends you looking in the wrong place. `BACKUP_OFFSITE_DOMAIN`
+now exists and defaults to `WORKGROUP`, correct for a standalone NAS and
+always a valid option value.
+
+### "Not finished" is now distinct from "broken"
+Setting the share immediately turned both health checks red, days before the
+service could possibly start — the machine is not even on the plant network
+yet. That is a check crying wolf, and a check that cries wolf is one nobody
+reads on the day it matters.
+
+There are now three states:
+
+| | |
+|---|---|
+| no share | not set up — a warning, as before |
+| share, no credentials | **set up, awaiting credentials** — green |
+| share and credentials | expected to work; missing or stale copies fail |
+
+`backup:status` exits 0 again and reads *"//LH-ARCHIVE/Archive/branding-pm —
+awaiting credentials, not running yet"*.
+
+### A switch-on checklist
+`docs/DEPLOYMENT.md` gains the steps for this site specifically, including
+the two that cause most of the trouble: **create the `branding-pm` folder on
+the share first** (a missing path fails like a bad credential), and **be on
+the plant network**, since Docker mounts the share when the container starts.
+It ends with commands that prove it works rather than assuming it.
+
+**286 tests, 1,029 assertions.**
+
 ## [0.32.0] — Go-live groundwork: credentials, accurate docs, an HTTPS plan
 
 All eight milestones are built, so what is left is deployment, not features.
