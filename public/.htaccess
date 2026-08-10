@@ -1,0 +1,48 @@
+# Apache / LiteSpeed front controller rules.
+#
+# Not needed under the shipped Docker stack — docker/nginx/default.conf does
+# this job there. It exists for hosts that serve the application through
+# Apache or LiteSpeed (Hostinger's shared and cloud plans are LiteSpeed),
+# where without it every route except "/" returns 404 and the cause is not
+# obvious: the home page works, so the app looks installed.
+#
+# mod_rewrite must be enabled. LiteSpeed reads this file natively.
+
+<IfModule mod_rewrite.c>
+    <IfModule mod_negotiation.c>
+        # -MultiViews so /runs cannot be content-negotiated to a file named
+        # runs.* instead of reaching the front controller. -Indexes so a
+        # directory without an index does not list its contents.
+        Options -MultiViews -Indexes
+    </IfModule>
+
+    RewriteEngine On
+
+    # Some CGI/FastCGI setups drop the Authorization header before PHP sees
+    # it. Re-expose it so the framework can read it.
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+    # Redirect trailing slashes if not a folder.
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_URI} (.+)/$
+    RewriteRule ^ %1 [L,R=301]
+
+    # Send everything else to the front controller.
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^ index.php [L]
+</IfModule>
+
+# Security headers for STATIC responses only, mirroring what
+# docker/nginx/default.conf sends. PHP responses get the full set from
+# App\Http\Middleware\SecurityHeaders; mod_headers `set` replaces rather than
+# appends, so these cannot produce the contradictory duplicate headers that
+# nginx's add_header once did here.
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# Dotfiles are not served, except ACME's .well-known challenge directory.
+RedirectMatch 404 /\.(?!well-known)

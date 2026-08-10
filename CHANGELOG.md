@@ -3,6 +3,49 @@
 Versions track build milestones: `0.<milestone>.<patch>`. The project reaches
 `1.0.0` when all 8 milestones are complete and the paper forms are retired.
 
+## [0.35.0] — Apache/LiteSpeed support and a shared-hosting deployment path
+
+The application runs unchanged on shared hosting — sessions and queue are
+`database`, cache is `file`, storage is `local`, nothing needs Redis or a
+resident worker. One file was missing to make that true.
+
+**`public/.htaccess` did not exist.** This project was built against nginx,
+where `docker/nginx/default.conf` carries the front-controller rules, so the
+file was never inherited from the framework skeleton and its absence was
+invisible under Docker. On Apache or LiteSpeed the consequence is that the
+home page loads and **every other route 404s** — which reads like a routing
+bug in the application and sends you looking in entirely the wrong place. The
+new file also carries over the two static-response security headers and the
+dotfile block from the nginx config, so the two front ends now agree.
+
+The README claimed "Laravel ships the `.htaccess`". It does not ship in this
+repository, and that sentence is why nobody noticed it was missing.
+
+**`docs/DEPLOYMENT.md` §13** covers Hostinger Cloud Startup end to end: the
+three things to verify in hPanel before committing (PHP 8.4 is a hard
+requirement — `spatie/laravel-activitylog` 5 and Pest 5 both demand it),
+document root placement, the versioned PHP binary, cron, TLS, and what
+replaces the off-site backup service that cannot follow the app off the plant
+LAN.
+
+Two traps documented because both fail misleadingly:
+
+- **PHP's upload limits must exceed 10 MB.** `RunForm::photoRules()` accepts
+  images up to `max:10240`; a lower `post_max_size` fails as a bare 413 with
+  no Laravel error behind it.
+- **`trustProxies()` may not recognise the host's proxy.** It trusts private
+  ranges only, which is right behind the Caddy service and possibly wrong on
+  shared hosting. If the platform fronts PHP from a public address,
+  `$request->secure()` returns false and every signed kiosk-enrolment link
+  fails its signature check — the same silent 403 that `X-Forwarded-Host`
+  produced in 0.34.0.
+
+**On the choice itself.** This was specified for a plant that may be offline,
+and external hosting means the tablets need working internet to log a
+checklist. §13 says so at the top rather than in a footnote: it is the right
+move for remote access to the record, and the wrong one if the line must keep
+running when its uplink does not.
+
 ## [0.34.0] — HTTPS via a Caddy reverse proxy
 
 Opt-in behind a compose profile, so a certificate problem cannot take the

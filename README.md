@@ -501,7 +501,11 @@ record, and a database backup without them is not a complete record.
 
 ### Apache
 
-`mod_rewrite` required. Laravel ships the `.htaccess`.
+`mod_rewrite` required, and `AllowOverride All` so `public/.htaccess` is read.
+That file is in the repository — this project was built against nginx, where
+`docker/nginx/default.conf` does the same job, so it had to be written rather
+than inherited from the framework skeleton. Without it every route except `/`
+returns 404, which reads like a routing bug rather than a web server one.
 
 ```apache
 <VirtualHost *:80>

@@ -21,6 +21,10 @@ one plant server, and an extra daemon is one more thing to be down at 6am.
 
 `gd` is not optional: it renders the PWA icons and reads signature images.
 
+Installing on shared hosting rather than a server you control? Read
+[§13](#13-hostinger-cloud-startup-shared-hosting) instead of §2–§7 — the
+application is unchanged, but the install, cron, TLS and backups all differ.
+
 ---
 
 ## 2. First install
@@ -646,3 +650,136 @@ tablet seems stuck on an old build, close the standalone window and reopen it.
 Health checks worth wiring into monitoring: `/login` returns 200; the
 scheduler ran within the last hour; the queue has no jobs older than a few
 minutes; disk space on `storage/`.
+
+---
+
+## 13. Hostinger Cloud Startup (shared hosting)
+
+Everything above assumes a server you control. This section is for the shared
+LiteSpeed hosting instead — no root, no Docker, no daemons. The application
+itself needs no changes: sessions and queue are `database`, cache is `file`,
+storage is `local`, and nothing here depends on Redis or a long-running
+worker. What changes is how it is installed and what you have to arrange
+yourself.
+
+**Read this first.** This system was specified for a shop floor where "the
+plant may be offline". Hosting it externally means every kiosk tablet needs
+working internet to log a checklist, and the app moves from a plant-internal
+network to the public web with device enrolment as the only gate. That is a
+defensible choice for remote access to the record. It is the wrong choice if
+the tablets must keep working when the line's uplink does not.
+
+### 13.1 Verify before committing
+
+| Check | Where in hPanel | If it is not there |
+|---|---|---|
+| **PHP 8.4** | Advanced → PHP Configuration | Stop. `spatie/laravel-activitylog` 5 and `pestphp/pest` 5 both require `^8.4`; 8.3 will not install. |
+| **Document root can be changed** | Websites → Dashboard → Advanced | Stop, or you are patching `public/index.php` — a permanent fork of the framework skeleton. |
+| **SSH access** | Advanced → SSH Access | Needed for `composer install` and `artisan migrate`. |
+
+Extensions to confirm on the PHP page: `bcmath`, `exif`, `gd`, `intl`,
+`mbstring`, `openssl`, `pdo_mysql`, `zip`. While you are there raise
+`upload_max_filesize` and `post_max_size` to **at least 12M** —
+`RunForm::photoRules()` accepts images up to 10 MB, and a lower PHP limit
+fails as a bare 413 with no Laravel error behind it.
+
+### 13.2 Install
+
+Build the assets on your own machine first: `public/build` is gitignored, so a
+clone has none, and shared hosting is a poor place to run Node.
+
+```bash
+npm ci && npm run build          # locally, then upload public/build with the rest
+```
+
+Upload the project to `~/domains/<domain>/branding-pm` — **outside**
+`public_html` — then point the website root at
+`~/domains/<domain>/branding-pm/public` in hPanel. Do not copy `public/*` into
+`public_html` and rewrite the require paths in `index.php`: that is the usual
+shared-hosting shortcut and it has to be re-done on every upgrade.
+
+Create the database and user under Databases → MySQL (Hostinger prefixes both
+with the account ID), write `.env` per §2 with `DB_HOST=localhost`, then over
+SSH:
+
+```bash
+cd ~/domains/<domain>/branding-pm
+composer install --no-dev --optimize-autoloader
+php artisan key:generate
+php artisan migrate --force --seed
+php artisan storage:link
+chmod -R ug+rwX storage bootstrap/cache
+php artisan config:cache && php artisan route:cache && php artisan view:cache
+```
+
+If the default `php` is not 8.4, use the versioned binary
+(`/opt/alt/php84/usr/bin/php`) for **every** command, including the cron line
+below. Mixing versions between CLI and web is its own afternoon.
+
+`public/storage` is gitignored, so a git-based deploy simply has no symlink
+until `storage:link` makes one. If you deploy by copying the working directory
+instead, delete `public/storage` first — it points at the absolute container
+path `/var/www/html/storage/app/public` and arrives dead.
+
+Leave every `BACKUP_OFFSITE_*` value unset. That share is an SMB path on the
+plant LAN and is unreachable from a datacentre; §10 covers what replaces it.
+
+### 13.3 Cron
+
+Advanced → Cron Jobs, every minute. Hostinger supports a 1-minute interval:
+
+```
+/opt/alt/php84/usr/bin/php ~/domains/<domain>/branding-pm/artisan schedule:run >> /dev/null 2>&1
+```
+
+No queue worker is needed. There is no `app/Jobs`, exports stream and PDFs
+render inline — see §5. If that changes, a second cron running
+`queue:work --stop-when-empty` is the shared-hosting substitute for Supervisor.
+
+### 13.4 TLS
+
+Websites → Security → SSL: install the free certificate and enable Force
+HTTPS. This is not optional — the kiosk captures photos through `getUserMedia`,
+which browsers refuse on insecure origins. The Caddy service and the `tls`
+compose profile in §6 are Docker-only and play no part here.
+
+### 13.5 Verify
+
+```bash
+php artisan security:check
+php artisan schedule:list
+curl -I https://<domain>/up            # 200
+curl https://<domain>/.env             # must NOT return the file
+```
+
+Then two failures the commands above cannot see:
+
+**Open a deep route** (`/runs`, `/admin/machines`), not just the home page.
+This is where a missing or ignored `public/.htaccess` shows up — the front
+page works and everything else 404s. `AllowOverride All` must be in force.
+
+**Enrol a kiosk from a real tablet.** `bootstrap/app.php` trusts
+`X-Forwarded-Proto` only from private ranges, which is correct behind the
+Caddy service and may not be correct here. If the host fronts PHP from a
+public address, `$request->secure()` returns false, generated URLs go out as
+`http://`, and signed enrolment links fail their signature check — a silent
+403 that looks exactly like an expired link, which is the same failure §6
+describes for `X-Forwarded-Host`. If it happens, `URL::forceScheme('https')`
+in a service provider when `APP_ENV=production` is the fix.
+
+### 13.6 Backups
+
+Hostinger's automatic daily backups on Cloud plans cover files and database,
+and that is a real safety net — but restore one into a scratch database and
+compare row counts before you rely on it. A backup nobody has restored is not
+yet a backup.
+
+Add your own copy on top, because the platform's backups leave with the
+platform. A weekly cron taking `mysqldump` plus a `tar` of `storage/app`,
+pulled down off-site, is enough. Both halves, from the same run: `checklist_runs`
+stores signature *paths*, so a database restored without the files leaves
+every approved run pointing at an image that is not there — §10 has the
+reasoning and the restore order.
+
+A dump holds every operator's name and every password and PIN hash. Wherever
+it lands is as sensitive as the server.
