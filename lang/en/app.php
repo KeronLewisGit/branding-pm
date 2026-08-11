@@ -417,6 +417,8 @@ return [
         'full_name' => 'Full name',
         'employee_number' => 'Employee number',
         'employee_number_hint' => 'The number on the floor. This is what they type at the kiosk, and it never changes once work is signed under it.',
+        'generate' => 'Generate',
+        'generated_write_down' => 'Write this down now — it is not shown again after saving.',
         'email' => 'Email address',
         'email_hint' => 'Leave blank for floor operators. Most have no company address, and they do not need one.',
         'role' => 'Role',
