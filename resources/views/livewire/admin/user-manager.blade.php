@@ -173,7 +173,14 @@
 
                 <div>
                     <label for="user-number" class="mb-1 block text-base font-semibold">{{ __('app.users.employee_number') }}</label>
-                    <x-input id="user-number" wire:model="employeeNumber" maxlength="32" class="w-full" />
+                    <div class="flex gap-2">
+                        <x-input id="user-number" wire:model="employeeNumber" maxlength="32" class="w-full" />
+                        {{-- Reads the highest number already issued in this role's
+                             block, so it cannot collide with one typed by hand. --}}
+                        <x-button type="button" variant="ghost" class="shrink-0" wire:click="generateEmployeeNumber">
+                            {{ __('app.users.generate') }}
+                        </x-button>
+                    </div>
                     <p class="mt-1 text-sm text-slate-500">{{ __('app.users.employee_number_hint') }}</p>
                     @error('employeeNumber') <p class="mt-1 text-sm text-rose-600">{{ $message }}</p> @enderror
                 </div>
@@ -220,7 +227,20 @@
             <div class="grid gap-4 border-t border-slate-200 pt-4 sm:grid-cols-2">
                 <div>
                     <label for="user-password" class="mb-1 block text-base font-semibold">{{ __('app.users.password') }}</label>
-                    <x-input id="user-password" type="password" wire:model="password" autocomplete="new-password" class="w-full" />
+                    <div class="flex gap-2">
+                        {{-- Shown as text once generated: a password the
+                             administrator cannot read is one they cannot pass on,
+                             and it is never displayed again after saving. --}}
+                        <x-input id="user-password"
+                                 type="{{ $passwordGenerated ? 'text' : 'password' }}"
+                                 wire:model="password" autocomplete="new-password" class="w-full font-mono" />
+                        <x-button type="button" variant="ghost" class="shrink-0" wire:click="generatePassword">
+                            {{ __('app.users.generate') }}
+                        </x-button>
+                    </div>
+                    @if ($passwordGenerated)
+                        <p class="mt-1 text-sm font-semibold text-amber-700">{{ __('app.users.generated_write_down') }}</p>
+                    @endif
                     <p class="mt-1 text-sm text-slate-500">
                         {{ $editingId ? __('app.users.password_hint_edit') : __('app.users.password_hint_new') }}
                     </p>
@@ -229,7 +249,18 @@
 
                 <div>
                     <label for="user-pin" class="mb-1 block text-base font-semibold">{{ __('app.users.pin') }}</label>
-                    <x-input id="user-pin" type="password" inputmode="numeric" wire:model="pin" maxlength="6" autocomplete="off" class="w-full" />
+                    <div class="flex gap-2">
+                        <x-input id="user-pin"
+                                 type="{{ $pinGenerated ? 'text' : 'password' }}"
+                                 inputmode="numeric" wire:model="pin" maxlength="6" autocomplete="off"
+                                 class="w-full font-mono" />
+                        <x-button type="button" variant="ghost" class="shrink-0" wire:click="generatePin">
+                            {{ __('app.users.generate') }}
+                        </x-button>
+                    </div>
+                    @if ($pinGenerated)
+                        <p class="mt-1 text-sm font-semibold text-amber-700">{{ __('app.users.generated_write_down') }}</p>
+                    @endif
                     <p class="mt-1 text-sm text-slate-500">
                         {{ $editingId ? __('app.users.pin_hint_edit') : __('app.users.pin_hint_new') }}
                     </p>

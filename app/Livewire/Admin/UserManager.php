@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
@@ -75,6 +76,18 @@ class UserManager extends Component
     public string $password = '';
 
     public string $pin = '';
+
+    /**
+     * Whether the value in the field was generated here, and so may be
+     * shown in the clear.
+     *
+     * A generated credential the administrator cannot read is one they
+     * cannot hand over. Typed values stay masked: those are being entered
+     * by someone who already knows them, possibly with a shoulder present.
+     */
+    public bool $passwordGenerated = false;
+
+    public bool $pinGenerated = false;
 
     // ── Confirmations ────────────────────────────────────────────────
 
@@ -147,6 +160,102 @@ class UserManager extends Component
         return $user->is_active
             && $user->hasRole(Roles::ADMIN)
             && $this->activeAdminCount() <= 1;
+    }
+
+    // ── Generators ───────────────────────────────────────────────────
+
+    /**
+     * Employee-number prefix and starting block per role, matching the
+     * numbering already in use: OP-1001, SUP-2001, MM-3001, QA-4001,
+     * ADMIN-0001. The block makes a number say what somebody is at a glance,
+     * which is the whole reason the convention exists.
+     *
+     * @var array<string, array{0: string, 1: int}>
+     */
+    private const NUMBER_SCHEME = [
+        Roles::OPERATOR => ['OP', 1000],
+        Roles::SUPERVISOR => ['SUP', 2000],
+        Roles::MAINTENANCE_MANAGER => ['MM', 3000],
+        Roles::QUALITY_ASSURANCE => ['QA', 4000],
+        Roles::ADMIN => ['ADMIN', 0],
+    ];
+
+    /**
+     * Next free employee number for the role currently selected.
+     *
+     * Derived from what exists rather than from a counter: it reads the
+     * highest number already issued in that role's block and adds one, so it
+     * cannot collide with a number somebody typed by hand, and it survives
+     * deleted rows without reusing their numbers. Soft-deleted users are
+     * included on purpose — reusing a departed employee's number would attach
+     * new work to an old person's history.
+     */
+    public function generateEmployeeNumber(): void
+    {
+        $this->authorize('create', User::class);
+
+        [$prefix, $block] = self::NUMBER_SCHEME[$this->role] ?? ['EMP', 5000];
+
+        $highest = User::query()
+            ->withTrashed()
+            ->where('employee_number', 'like', $prefix.'-%')
+            ->pluck('employee_number')
+            ->map(function (string $number) use ($prefix): int {
+                $tail = substr($number, strlen($prefix) + 1);
+
+                return ctype_digit($tail) ? (int) $tail : 0;
+            })
+            ->max();
+
+        $next = max((int) $highest, $block) + 1;
+
+        // ADMIN-0001, but OP-1001: the admin block starts at zero, so it is
+        // the only one that needs padding to stay four digits.
+        $this->employeeNumber = $prefix === 'ADMIN'
+            ? sprintf('%s-%04d', $prefix, $next)
+            : $prefix.'-'.$next;
+
+        $this->resetValidation('employeeNumber');
+    }
+
+    /**
+     * A password the administrator can read out once and then forget.
+     *
+     * Str::random rather than Str::password: the latter mixes in symbols that
+     * get mangled being read aloud across a workshop or retyped from a note,
+     * and a password nobody can transcribe is one that ends up on a sticky
+     * note. 16 URL-safe characters is roughly 95 bits, which is far past
+     * anything a login form will be brute-forced through.
+     *
+     * Shown in the form so it can be written down before saving. It is never
+     * stored in the clear: the model's `hashed` cast hashes it on assignment.
+     */
+    public function generatePassword(): void
+    {
+        $this->authorize('create', User::class);
+
+        $this->password = Str::random(16);
+        $this->passwordGenerated = true;
+
+        $this->resetValidation('password');
+    }
+
+    /**
+     * A PIN for the kiosk pad.
+     *
+     * `random_int`, not `rand`: this is a credential, and it is the only one
+     * an operator has. Leading zeros are kept — the column is a string and
+     * "0421" is a perfectly good PIN — so the value is padded rather than
+     * generated as a number and formatted.
+     */
+    public function generatePin(): void
+    {
+        $this->authorize('create', User::class);
+
+        $this->pin = str_pad((string) random_int(0, 9999), 4, '0', STR_PAD_LEFT);
+        $this->pinGenerated = true;
+
+        $this->resetValidation('pin');
     }
 
     // ── Create / edit ────────────────────────────────────────────────
@@ -459,7 +568,8 @@ class UserManager extends Component
 
     private function resetForm(): void
     {
-        $this->reset('editingId', 'fullName', 'employeeNumber', 'email', 'role', 'siteId', 'isActive', 'password', 'pin');
+        $this->reset('editingId', 'fullName', 'employeeNumber', 'email', 'role', 'siteId', 'isActive', 'password', 'pin',
+            'passwordGenerated', 'pinGenerated');
         $this->resetValidation();
     }
 }
