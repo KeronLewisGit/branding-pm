@@ -26,7 +26,7 @@ use Livewire\WithPagination;
  * Admin list of checklist templates (route `admin.templates`).
  *
  * Searchable, filterable, paginated, grouped by machine. Creation happens in
- * a modal here; item/part editing happens in TemplateEditor. Templates are
+ * a modal here; item editing happens in TemplateEditor. Templates are
  * deactivated rather than deleted — hard deletion is only offered when the
  * template has never generated a run (the `restrict` FK on
  * `checklist_runs.checklist_template_id` protects history otherwise).
@@ -182,7 +182,7 @@ class TemplateManager extends Component
     }
 
     /**
-     * Copy a template with its items and parts. The copy starts inactive at
+     * Copy a template with its items. The copy starts inactive at
      * version 1 with " (copy)" appended, so nothing generates from it until
      * it has been reviewed and activated.
      */
@@ -191,7 +191,7 @@ class TemplateManager extends Component
         $this->authorize('create', ChecklistTemplate::class);
 
         $source = ChecklistTemplate::query()
-            ->with(['items', 'templateParts'])
+            ->with(['items'])
             ->findOrFail($templateId);
 
         $copy = DB::transaction(function () use ($source): ChecklistTemplate {
@@ -210,13 +210,6 @@ class TemplateManager extends Component
                     'guidance' => $item->guidance,
                     'requires_photo_on_fail' => $item->requires_photo_on_fail,
                     'is_active' => $item->is_active,
-                ]);
-            }
-
-            foreach ($source->templateParts as $templatePart) {
-                $copy->templateParts()->create([
-                    'part_id' => $templatePart->part_id,
-                    'sort_order' => $templatePart->sort_order,
                 ]);
             }
 

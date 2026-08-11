@@ -9,9 +9,7 @@ use App\Enums\ResponseType;
 use App\Enums\WorkCategory;
 use App\Models\ChecklistTemplate;
 use App\Models\ChecklistTemplateItem;
-use App\Models\ChecklistTemplatePart;
 use App\Models\Machine;
-use App\Models\Part;
 use Illuminate\Database\Seeder;
 
 class ChecklistTemplateSeeder extends Seeder
@@ -28,10 +26,6 @@ class ChecklistTemplateSeeder extends Seeder
      *   "Follow Outlined Checks" vs "Follow Checks Outlined" (B9), and
      *   template 3's circular item 6 (B10). All intentional — see
      *   docs/seed-notes.md §B before touching any string in this file.
-     * - Item order is the order printed on the sheet. Parts order likewise
-     *   (template 1 is 22, 23, 24, 21, 7, XXX — that is the printed order).
-     * - Part codes are STRINGS (`XXX` is real — B1), kept as list values so
-     *   PHP cannot coerce them to integers or reorder them.
      *
      * `category` drives the schedule per seed-notes C1/C4:
      *   daily   → frequency daily,  per_shift true  (one run per shift)
@@ -41,7 +35,7 @@ class ChecklistTemplateSeeder extends Seeder
      *             compliance record, so general sheets run weekly on Monday)
      * All weekly generation lands on Monday (weekly_weekday = 1, C5).
      *
-     * @var list<array{machine: string, name: string, category: string, description: string, items: list<string>, parts: list<string>}>
+     * @var list<array{machine: string, name: string, category: string, description: string, items: list<string>}>
      */
     private const TEMPLATES = [
         // 1 ──────────────────────────────────────────────────────────────
@@ -61,7 +55,6 @@ class ChecklistTemplateSeeder extends Seeder
                 'Sweep Around Machine',
                 'Remove any End Rolls and Neaten up WIP roll storage',
             ],
-            'parts' => ['22', '23', '24', '21', '7', 'XXX'],
         ],
         // 2 ──────────────────────────────────────────────────────────────
         [
@@ -87,7 +80,6 @@ class ChecklistTemplateSeeder extends Seeder
                 'Empty Bins',
                 'Mop Floor',
             ],
-            'parts' => ['22', '23', '24', '21', '7', 'XXX'],
         ],
         // 3 ──────────────────────────────────────────────────────────────
         [
@@ -103,7 +95,6 @@ class ChecklistTemplateSeeder extends Seeder
                 'Check & Clean Print Head Fringe',
                 'Follow Checks Outlined', // yes, as a task item — seed-notes B10
             ],
-            'parts' => ['22', '23', '24'],
         ],
         // 4 ──────────────────────────────────────────────────────────────
         [
@@ -116,7 +107,6 @@ class ChecklistTemplateSeeder extends Seeder
                 'Clean substrate Belt',
                 'Clean Print Heads',
             ],
-            'parts' => ['22', '23', '21'],
         ],
         // 5 ──────────────────────────────────────────────────────────────
         [
@@ -132,7 +122,6 @@ class ChecklistTemplateSeeder extends Seeder
                 'Sweep around Machine',
                 'Clean Encoder',
             ],
-            'parts' => ['22', '23', '24'],
         ],
         // 6 ── identical list to template 5 by design (two sheets, two
         //      machines, two sign-off trails — seed-notes B4). Description
@@ -150,7 +139,6 @@ class ChecklistTemplateSeeder extends Seeder
                 'Sweep around Machine',
                 'Clean Encoder',
             ],
-            'parts' => ['22', '23', '24'],
         ],
         // 7 ──────────────────────────────────────────────────────────────
         [
@@ -172,7 +160,6 @@ class ChecklistTemplateSeeder extends Seeder
                 'Clean tools and tool box',
                 'Dust and wipe computer table',
             ],
-            'parts' => ['24', '22', '23'],
         ],
         // 8 ──────────────────────────────────────────────────────────────
         [
@@ -185,7 +172,6 @@ class ChecklistTemplateSeeder extends Seeder
                 'Dust Frame',
                 'Clean around Machine',
             ],
-            'parts' => ['22', '23', '24'],
         ],
         // 9 ──────────────────────────────────────────────────────────────
         [
@@ -199,7 +185,6 @@ class ChecklistTemplateSeeder extends Seeder
                 'Empty Bins',
                 'Clean around Machine',
             ],
-            'parts' => ['22', '23', '24'],
         ],
         // 10 ─────────────────────────────────────────────────────────────
         [
@@ -218,7 +203,6 @@ class ChecklistTemplateSeeder extends Seeder
                 'Check Laser Lights are Operating and aligned',
                 'Clean Machine Frame',
             ],
-            'parts' => ['26', '27', '25', '24', '23', '22', '28'],
         ],
         // 11 ─────────────────────────────────────────────────────────────
         [
@@ -229,7 +213,6 @@ class ChecklistTemplateSeeder extends Seeder
             'items' => [
                 'Dust and clean around machine',
             ],
-            'parts' => [], // none listed on the sheet — seed-notes B12
         ],
         // 12 ─────────────────────────────────────────────────────────────
         [
@@ -241,7 +224,6 @@ class ChecklistTemplateSeeder extends Seeder
                 'Wipe rollers and frame with damp cloth',
                 'Mop floor around machine',
             ],
-            'parts' => [], // none listed on the sheet — seed-notes B12
         ],
         // 13 ── "RollsRoller" one word in the title, machine name is
         //       "Rolls Roller" — both verbatim, see seed-notes B6.
@@ -257,7 +239,6 @@ class ChecklistTemplateSeeder extends Seeder
                 'Clean and Wipe Table surface with IPA/Water solution',
                 'Check Bearing Track and apply Grease as needed',
             ],
-            'parts' => [], // none listed on the sheet — seed-notes B12
         ],
     ];
 
@@ -292,7 +273,7 @@ class ChecklistTemplateSeeder extends Seeder
                 ],
             );
 
-            // Items and parts only on first creation — re-seeding must not
+            // Items only on first creation — re-seeding must not
             // duplicate rows or clobber edits made in the template builder.
             if (! $template->wasRecentlyCreated) {
                 continue;
@@ -311,15 +292,6 @@ class ChecklistTemplateSeeder extends Seeder
                 ]);
             }
 
-            foreach ($definition['parts'] as $sortOrder => $partCode) {
-                $part = Part::where('part_code', $partCode)->firstOrFail();
-
-                ChecklistTemplatePart::create([
-                    'checklist_template_id' => $template->id,
-                    'part_id' => $part->id,
-                    'sort_order' => $sortOrder, // 0-based, printed order
-                ]);
-            }
         }
     }
 }

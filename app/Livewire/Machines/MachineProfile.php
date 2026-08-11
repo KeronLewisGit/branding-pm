@@ -7,7 +7,6 @@ namespace App\Livewire\Machines;
 use App\Enums\IssueStatus;
 use App\Enums\RunStatus;
 use App\Models\ChecklistRun;
-use App\Models\ChecklistRunPart;
 use App\Models\ChecklistTemplate;
 use App\Models\Issue;
 use App\Models\Machine;
@@ -16,7 +15,6 @@ use App\Support\SqlOrder;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
-use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Url;
@@ -46,7 +44,7 @@ class MachineProfile extends Component
 
     public Machine $machine;
 
-    /** Days of history the run and parts panels cover. */
+    /** Days of history the run panel covers. */
     #[Url(as: 'days')]
     public int $days = 30;
 
@@ -68,7 +66,7 @@ class MachineProfile extends Component
     {
         $this->days = in_array($days, self::WINDOWS, true) ? $days : 30;
 
-        unset($this->runStats, $this->recentRuns, $this->partsUsed);
+        unset($this->runStats, $this->recentRuns);
     }
 
     /**
@@ -164,32 +162,6 @@ class MachineProfile extends Component
             ->orderByDesc('id')
             ->limit(20)
             ->get();
-    }
-
-    /**
-     * What this machine has consumed over the window.
-     *
-     * Grouped on the **snapshot** name and code, not the catalogue: a part
-     * renamed last month still reports under the name it was consumed as,
-     * matching the parts usage report.
-     *
-     * @return Collection<int, object>
-     */
-    #[Computed]
-    public function partsUsed(): Collection
-    {
-        return ChecklistRunPart::query()
-            ->join('checklist_runs', 'checklist_runs.id', '=', 'checklist_run_parts.checklist_run_id')
-            ->where('checklist_runs.machine_id', $this->machine->id)
-            ->where('checklist_runs.scheduled_for', '>=', now()->subDays($this->days)->toDateString())
-            ->where('checklist_run_parts.qty_used', '>', 0)
-            ->groupBy('checklist_run_parts.part_code_snapshot', 'checklist_run_parts.part_name_snapshot')
-            ->orderByDesc(DB::raw('SUM(checklist_run_parts.qty_used)'))
-            ->get([
-                'checklist_run_parts.part_code_snapshot as part_code',
-                'checklist_run_parts.part_name_snapshot as part_name',
-                DB::raw('SUM(checklist_run_parts.qty_used) as qty'),
-            ]);
     }
 
     /**

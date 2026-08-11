@@ -22,13 +22,20 @@ use App\Models\ChecklistRunItem;
  * "has this sheet been altered?", and no more is claimed.
  *
  * The inputs are only the fields that constitute the record: change any item
- * status, part quantity, signature or timestamp and the hash changes.
+ * status, signature or timestamp and the hash changes.
+ *
+ * Part quantities were an input until the parts module was removed. Dropping
+ * them changes the hash of every run computed from here on, so a verification
+ * code printed before that change will not match one printed after it. That
+ * was accepted knowingly: the runs carrying part rows were DemoSeeder
+ * fabrication, no real sheet had yet been filed, and freezing a dead field
+ * into the audit hash forever to avoid the break would have been worse.
  */
 final class RunVerification
 {
     public static function hash(ChecklistRun $run): string
     {
-        $run->loadMissing(['items', 'runParts']);
+        $run->loadMissing(['items']);
 
         $payload = [
             'run' => $run->id,
@@ -49,10 +56,6 @@ final class RunVerification
                     (string) $item->value_text,
                     (string) $item->fail_reason,
                 ]))
-                ->implode(';'),
-            'parts' => $run->runParts
-                ->sortBy('sort_order')
-                ->map(fn ($part): string => $part->part_code_snapshot.':'.$part->qty_used)
                 ->implode(';'),
             'notes' => (string) $run->notes,
         ];

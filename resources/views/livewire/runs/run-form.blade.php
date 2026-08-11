@@ -395,34 +395,6 @@
         @endforeach
     </ol>
 
-    {{-- ── Used Parts — paper sheet order (sort_order), never alphabetical ── --}}
-
-    <section class="card mt-8 p-5">
-        <h2 class="text-xl font-bold">{{ __('app.runs.used_parts') }}</h2>
-        @if ($run->runParts->isEmpty())
-            <p class="mt-3 text-lg text-slate-400">{{ __('app.parts.no_parts') }}</p>
-        @else
-            <ul class="mt-2 divide-y divide-slate-800">
-                @foreach ($run->runParts as $part)
-                    <li wire:key="part-{{ $part->id }}" class="flex min-h-20 flex-wrap items-center justify-between gap-4 py-3">
-                        <div class="min-w-0 flex-1">
-                            <p class="text-lg font-semibold leading-snug">{{ $part->part_name_snapshot }}</p>
-                            <p class="text-base text-slate-400">
-                                {{ __('app.parts.part_code') }}: {{ $part->part_code_snapshot }}
-                                <span wire:loading wire:target="qty.{{ $part->id }}" class="text-slate-300">· {{ __('app.runs.saving') }}</span>
-                            </p>
-                        </div>
-                        @if ($isEditable)
-                            <x-stepper wire:model.live="qty.{{ $part->id }}" :label="$part->part_name_snapshot" :min="0" :step="1" />
-                        @else
-                            <p class="text-2xl font-bold tabular-nums">{{ $part->qty_used }}</p>
-                        @endif
-                    </li>
-                @endforeach
-            </ul>
-        @endif
-    </section>
-
     {{-- ── Notes — debounced autosave with a visible saved indicator ── --}}
 
     <section class="card mt-8 p-5">

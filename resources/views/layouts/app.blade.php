@@ -251,11 +251,11 @@
                     maintenance manager sets up once and then rarely touches,
                     so it does not deserve five permanent rows.
                 --}}
-                @canany(['machine.manage', 'part.manage', 'template.manage', 'holiday.manage'])
+                @canany(['machine.manage', 'template.manage', 'holiday.manage'])
                     <x-nav-group
                         group="plant"
                         :label="__('app.nav.group_plant')"
-                        :active="request()->routeIs('admin.machines*') || request()->routeIs('machines.show') || request()->routeIs('admin.locations*') || request()->routeIs('admin.templates*') || request()->routeIs('admin.parts*') || request()->routeIs('admin.holidays*')"
+                        :active="request()->routeIs('admin.machines*') || request()->routeIs('machines.show') || request()->routeIs('admin.locations*') || request()->routeIs('admin.templates*') || request()->routeIs('admin.holidays*')"
                     >
                         <x-slot:icon>{!! $ico('<path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M10 21v-6h4v6"/>') !!}</x-slot:icon>
 
@@ -279,12 +279,6 @@
                     </x-nav-link>
                 @endcan
 
-                @can('part.manage')
-                    <x-nav-link :href="route('admin.parts')" :active="request()->routeIs('admin.parts*')">
-                        <x-slot:icon>{!! $ico('<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>') !!}</x-slot:icon>
-                        {{ __('app.nav.parts') }}
-                    </x-nav-link>
-                @endcan
 
                 @can('holiday.manage')
                     <x-nav-link :href="route('admin.holidays')" :active="request()->routeIs('admin.holidays*')">

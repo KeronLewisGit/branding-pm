@@ -18,7 +18,6 @@ use App\Livewire\Admin\HolidayManager;
 use App\Livewire\Admin\KioskDeviceManager;
 use App\Livewire\Admin\LocationManager;
 use App\Livewire\Admin\MachineManager;
-use App\Livewire\Admin\PartManager;
 use App\Livewire\Admin\QrStickerSheet;
 use App\Livewire\Admin\TemplateEditor;
 use App\Livewire\Admin\TemplateManager;
@@ -348,9 +347,6 @@ Route::middleware('auth')->prefix('admin')->name('admin.')->group(function (): v
         ->middleware('permission:kiosk.manage')
         ->name('kiosk');
 
-    Route::get('/parts', PartManager::class)
-        ->middleware('permission:part.manage')
-        ->name('parts');
 
     Route::middleware('permission:template.manage')->group(function (): void {
         Route::get('/templates', TemplateManager::class)->name('templates');

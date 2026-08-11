@@ -11,14 +11,11 @@ use App\Enums\RunStatus;
 use App\Enums\Shift;
 use App\Models\ChecklistRun;
 use App\Models\ChecklistRunItem;
-use App\Models\ChecklistRunPart;
 use App\Models\ChecklistTemplate;
 use App\Models\ChecklistTemplateItem;
-use App\Models\ChecklistTemplatePart;
 use App\Models\Holiday;
 use App\Models\Issue;
 use App\Models\Machine;
-use App\Models\Part;
 use App\Models\Site;
 use App\Models\User;
 use Illuminate\Database\Seeder;
@@ -44,7 +41,6 @@ use Illuminate\Support\Collection;
  * - a few submitted runs in the last two days, awaiting approval
  * - a couple of rejected runs with a supervisor comment
  * - occasional failed items, each with a linked issue
- * - plausible qty_used on parts (mostly 0, sometimes 1–2), notes on some runs
  * - timestamps respect shifts and working days: no runs on Sundays or
  *   seeded holidays; day-shift work starts 07:05–09:30, night 19:05–21:30
  *   local (America/Port_of_Spain), stored UTC.
@@ -129,7 +125,6 @@ class DemoSeeder extends Seeder
         // Model::preventLazyLoading() is enabled outside production and would
         // otherwise throw on the first access.
         $machines = Machine::with('location')->get()->keyBy('id');
-        $partsById = Part::all()->keyBy('id');
 
         $today = Carbon::today($timezone);
 
@@ -159,7 +154,6 @@ class DemoSeeder extends Seeder
                         $machine->location->name === 'Digital Print' ? $operatorPin : $operatorEmail,
                         $supervisor,
                         $manager,
-                        $partsById,
                     );
                 }
             }
@@ -333,9 +327,6 @@ class DemoSeeder extends Seeder
         return RunStatus::Approved;
     }
 
-    /**
-     * @param  Collection<int, Part>  $partsById
-     */
     private function createRun(
         ChecklistTemplate $template,
         Machine $machine,
@@ -346,7 +337,6 @@ class DemoSeeder extends Seeder
         User $operator,
         User $supervisor,
         User $manager,
-        Collection $partsById,
     ): void {
         $status = $this->runStatusFor($template, $machine, $shift, $offset);
         $worked = $status !== RunStatus::Missed;
@@ -403,7 +393,6 @@ class DemoSeeder extends Seeder
         $this->summary[$status->value] = ($this->summary[$status->value] ?? 0) + 1;
 
         $this->createRunItems($run, $template, $status, $startedAt, $durationMinutes, $operator, $manager, $offset);
-        $this->createRunParts($run, $template, $worked, $partsById);
     }
 
     private function createRunItems(
@@ -498,33 +487,4 @@ class DemoSeeder extends Seeder
         $this->summary['issues']++;
     }
 
-    /**
-     * @param  Collection<int, Part>  $partsById
-     */
-    private function createRunParts(
-        ChecklistRun $run,
-        ChecklistTemplate $template,
-        bool $worked,
-        Collection $partsById,
-    ): void {
-        $templateParts = ChecklistTemplatePart::where('checklist_template_id', $template->id)
-            ->orderBy('sort_order')
-            ->get();
-
-        foreach ($templateParts as $templatePart) {
-            $part = $partsById[$templatePart->part_id];
-
-            // Mostly nothing consumed; sometimes 1–2 of a consumable.
-            $qty = $worked && mt_rand(1, 100) <= 35 ? mt_rand(1, 2) : 0;
-
-            ChecklistRunPart::create([
-                'checklist_run_id' => $run->id,
-                'part_id' => $part->id,
-                'part_code_snapshot' => $part->part_code, // string — 'XXX' is real
-                'part_name_snapshot' => $part->name,
-                'sort_order' => $templatePart->sort_order,
-                'qty_used' => $qty,
-            ]);
-        }
-    }
 }

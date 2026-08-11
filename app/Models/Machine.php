@@ -109,16 +109,6 @@ class Machine extends Model
         return $this->hasMany(Issue::class);
     }
 
-    /**
-     * Parts normally consumed on this machine, in form order.
-     */
-    public function parts(): BelongsToMany
-    {
-        return $this->belongsToMany(Part::class, 'machine_part')
-            ->withPivot('sort_order')
-            ->withTimestamps()
-            ->orderByPivot('sort_order');
-    }
 
     /**
      * Operators assigned to this machine.

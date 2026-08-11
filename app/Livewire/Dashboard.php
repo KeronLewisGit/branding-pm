@@ -12,7 +12,6 @@ use App\Models\Machine;
 use App\Support\MachineScope;
 use App\Support\Reporting\Compliance;
 use App\Support\Reporting\ComplianceReport;
-use App\Support\Reporting\PartsUsageReport;
 use App\Support\Reporting\ReportFilters;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
@@ -80,11 +79,6 @@ class Dashboard extends Component
             'dueToday' => $this->dueToday($filters, $today),
             'awaitingApproval' => (clone $this->scopedRuns($user))->awaitingApproval()->count(),
             'openIssues' => $this->openIssuesBySeverity($user),
-            'partsThisMonth' => (new PartsUsageReport)->rows(ReportFilters::make(
-                user: $user,
-                from: $today->copy()->startOfMonth()->toDateString(),
-                to: $today->toDateString(),
-            ))->take(8),
             'heatmap' => $this->heatmap($filters),
             'today' => $today,
         ]);

@@ -105,10 +105,6 @@ class ChecklistRun extends Model
         return $this->hasMany(ChecklistRunItem::class)->orderBy('sort_order');
     }
 
-    public function runParts(): HasMany
-    {
-        return $this->hasMany(ChecklistRunPart::class)->orderBy('sort_order');
-    }
 
     public function operator(): BelongsTo
     {

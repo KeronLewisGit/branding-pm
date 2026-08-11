@@ -1,6 +1,6 @@
 {{--
     Supervisor review. The whole sheet as it was completed — every item with
-    its answer, the failure reasons, the photos, the parts used and the
+    its answer, the failure reasons, the photos and the
     operator's notes — then the two decisions at the bottom.
 
     Failed items are pulled to the top as a summary because they are the
@@ -198,39 +198,6 @@
         </ol>
     </x-card>
 
-    {{-- Used parts, in the paper sheet's order --}}
-    <x-card class="mt-6">
-        <h2 class="text-xl font-bold text-slate-900">{{ __('app.runs.used_parts') }}</h2>
-        @if ($run->runParts->isEmpty())
-            <p class="mt-3 text-base text-slate-500">{{ __('app.parts.no_parts') }}</p>
-        @else
-            <table class="data-table data-table-bare mt-3">
-                <thead>
-                    <tr>
-                        <th>{{ __('app.parts.part_code') }}</th>
-                        <th>{{ __('app.parts.part') }}</th>
-                        <th class="text-right">{{ __('app.runs.qty_used') }}</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach ($run->runParts as $part)
-                        <tr wire:key="review-part-{{ $part->id }}">
-                            <td class="text-slate-500">{{ $part->part_code_snapshot }}</td>
-                            <td class="text-slate-800">{{ $part->part_name_snapshot }}</td>
-                            <td class="text-right font-semibold tabular-nums text-slate-900">{{ $part->qty_used }}</td>
-                            @if ($this->canAmend)
-                                <td class="text-right">
-                                    <x-button variant="ghost" wire:click="openAmendPart({{ $part->id }})">
-                                        {{ __('app.amend.amend') }}
-                                    </x-button>
-                                </td>
-                            @endif
-                        </tr>
-                    @endforeach
-                </tbody>
-            </table>
-        @endif
-    </x-card>
 
     {{-- Operator notes and whole-run photos --}}
     <x-card class="mt-6">
@@ -435,12 +402,6 @@
                         <label for="amend-notes" class="mb-1 block text-base font-semibold">{{ __('app.runs.notes') }}</label>
                         <x-textarea id="amend-notes" wire:model="amendNotes" rows="4" maxlength="5000" class="w-full" />
                         @error('amendNotes') <p class="mt-1 text-sm text-rose-600">{{ $message }}</p> @enderror
-                    </div>
-                @elseif ($amendTarget === 'part')
-                    <div>
-                        <label for="amend-qty" class="mb-1 block text-base font-semibold">{{ __('app.runs.qty_used') }}</label>
-                        <x-input id="amend-qty" type="number" step="0.01" min="0" wire:model="amendQty" class="w-full" />
-                        @error('amendQty') <p class="mt-1 text-sm text-rose-600">{{ $message }}</p> @enderror
                     </div>
                 @endif
 

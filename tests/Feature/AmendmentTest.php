@@ -7,7 +7,6 @@ use App\Enums\RunStatus;
 use App\Livewire\Runs\RunReview;
 use App\Models\ChecklistRun;
 use App\Models\ChecklistRunItem;
-use App\Models\ChecklistRunPart;
 use App\Models\ChecklistTemplate;
 use App\Models\Location;
 use App\Models\Machine;
@@ -54,16 +53,7 @@ function approvedRun(array $attributes = []): array
         'status' => RunItemStatus::Done,
     ]);
 
-    ChecklistRunPart::create([
-        'checklist_run_id' => $run->id,
-        'part_id' => null,
-        'part_code_snapshot' => '23',
-        'part_name_snapshot' => 'Isopropyl alcohol',
-        'sort_order' => 0,
-        'qty_used' => 2,
-    ]);
-
-    return [$run->fresh(['items', 'runParts']), $site];
+    return [$run->fresh(['items']), $site];
 }
 
 function amender(Site $site, string $role = 'maintenance_manager'): User
@@ -166,22 +156,6 @@ it('corrects the notes', function (): void {
         ->assertHasNoErrors();
 
     expect($run->fresh()->notes)->toBe('Ran clean all shift except the last hour.');
-});
-
-it('corrects a parts quantity', function (): void {
-    [$run, $site] = approvedRun();
-
-    $part = $run->runParts->first();
-
-    Livewire::actingAs(amender($site))
-        ->test(RunReview::class, ['run' => $run])
-        ->call('openAmendPart', $part->id)
-        ->set('amendQty', '5')
-        ->set('amendReason', 'Stores count shows five bottles drawn, not two.')
-        ->call('saveAmendment')
-        ->assertHasNoErrors();
-
-    expect((float) $part->fresh()->qty_used)->toBe(5.0);
 });
 
 /*
