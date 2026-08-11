@@ -824,6 +824,58 @@ skips `.env` entirely once `config:cache` has run, which §7 requires. The
 variable would read as null on every production host and the hardcoded
 default would silently apply.
 
+### 13.8 Updating: work locally, `git pull` on the server
+
+The deploy path is a pull, so three things have to be true of the repository
+itself, and were not until 0.45.0:
+
+- **`public/build` is committed.** It used to be gitignored, which is right
+  when the server can run Node and wrong here: a pull would deliver source and
+  no compiled assets, and nothing errors — the page simply arrives unstyled.
+- **`public/.htaccess` ships the `Require all granted` block**, so nobody has
+  to hand-edit a tracked file on the server. A local edit there makes `git
+  pull` refuse outright.
+- **A deny-all `.htaccess` sits at the project root.** Inert when the document
+  root is `public/`, and the thing that keeps `.env` off the web when the
+  project is unpacked inside `public_html`.
+
+Deploy with the script rather than by hand:
+
+```bash
+cd ~/domains/<domain>/branding-pm
+PHP_BIN=/opt/alt/php84/usr/bin/php bash scripts/deploy.sh
+```
+
+It refuses to run on the wrong PHP or over a modified tracked file, takes the
+site down and guarantees it comes back up via a trap, pulls `--ff-only`, runs
+composer **only when `composer.lock` moved**, migrates, clears the caches
+before rebuilding them (`config:cache` over a stale cache reads the old cache,
+not `.env`), re-applies the storage permissions, and finishes with
+`security:check`.
+
+**Converting an existing upload into a clone.** An install unzipped from the
+bundle has no `.git`, so it cannot pull. Convert it in place, keeping `.env`
+and `storage/`:
+
+```bash
+cd ~/domains/<domain>/branding-pm
+cp .env ~/env.backup                       # the only thing that is irreplaceable
+
+# The repo now ships both of these; a hand-made copy would block the pull.
+rm -f .htaccess
+git init
+git remote add origin <your-repo-url>
+git fetch origin
+git checkout -f -t origin/main             # -f: overwrite the unzipped copies
+
+cp ~/env.backup .env
+PHP_BIN=/opt/alt/php84/usr/bin/php bash scripts/deploy.sh
+```
+
+`storage/` and `.env` are gitignored, so neither is touched by any of this.
+
+---
+
 ### 13.7 Backups
 
 Hostinger's automatic daily backups on Cloud plans cover files and database,

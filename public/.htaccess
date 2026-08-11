@@ -8,6 +8,17 @@
 #
 # mod_rewrite must be enabled. LiteSpeed reads this file natively.
 
+# Grants access to this directory explicitly.
+#
+# Normally redundant: when the document root IS this folder, nothing above it
+# is consulted. It matters when the project sits INSIDE the web root, because
+# the deny in the project root's .htaccess is inherited here and the whole
+# site would return 403 without this. Shipped rather than hand-added on the
+# server, so `git pull` never collides with a local edit.
+<IfModule mod_authz_core.c>
+    Require all granted
+</IfModule>
+
 <IfModule mod_rewrite.c>
     <IfModule mod_negotiation.c>
         # -MultiViews so /runs cannot be content-negotiated to a file named

@@ -1,0 +1,30 @@
+# Deny everything at the project root.
+#
+# Inert in a correct deployment and load-bearing in a common one.
+#
+# When the document root is `public/`, a web server never consults this file:
+# Apache and LiteSpeed read .htaccess from the document root downwards, and
+# this sits above it. Nothing here can affect a properly rooted install.
+#
+# It matters when the project is unpacked INSIDE the web root — e.g.
+# public_html/branding-pm — which is what people actually do, because it is
+# the obvious thing to do and nothing warns against it. In that layout
+# `.env`, `storage/`, `vendor/` and the whole source tree are one URL away,
+# and `.env` holds the database password and APP_KEY.
+#
+# A whitelist, not a blacklist: everything is denied here, and `public/`
+# re-grants itself in its own .htaccess. A blacklist is one forgotten file
+# extension away from serving credentials.
+#
+# This is defence in depth, NOT a licence to install inside the web root.
+# A directory the server cannot reach beats a rule that can be misconfigured,
+# so keep the project above the document root wherever the host allows it.
+
+<IfModule mod_authz_core.c>
+    Require all denied
+</IfModule>
+
+<IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+</IfModule>
