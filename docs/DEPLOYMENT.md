@@ -700,7 +700,28 @@ Extensions to confirm on the PHP page: `bcmath`, `exif`, `gd`, `intl`,
 `RunForm::photoRules()` accepts images up to 10 MB, and a lower PHP limit
 fails as a bare 413 with no Laravel error behind it.
 
-### 13.2 Install
+### 13.2 Build the upload bundle
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\package-for-hostinger.ps1
+```
+
+Writes `build/branding-pm-hostinger-<date>.zip` and a `.env.hostinger`
+template inside it. The bundle carries the compiled assets (gitignored, so a
+clone on the server has none) and deliberately omits `vendor/`,
+`bootstrap/cache` contents, every `storage/` file, `tests/`, `docker/` and the
+Windows launcher — see the script's header for why each one would be a
+problem rather than merely unnecessary.
+
+It is verified by extraction, not by inspection: the bundle was unzipped on
+Linux and booted, which is how two faults were found that a file listing hid
+completely. `Compress-Archive` writes Windows path separators, so the first
+archive extracted on Linux as files literally named `public\index.php`
+instead of directories; and stripping `bootstrap/cache` contents removed the
+directory itself, because an archive stores files rather than folders, so
+Laravel refused to start.
+
+### 13.3 Install
 
 Build the assets on your own machine first: `public/build` is gitignored, so a
 clone has none, and shared hosting is a poor place to run Node.
@@ -741,7 +762,7 @@ path `/var/www/html/storage/app/public` and arrives dead.
 Leave every `BACKUP_OFFSITE_*` value unset. That share is an SMB path on the
 plant LAN and is unreachable from a datacentre; §10 covers what replaces it.
 
-### 13.3 Cron
+### 13.4 Cron
 
 Advanced → Cron Jobs, every minute. Hostinger supports a 1-minute interval:
 
@@ -753,14 +774,14 @@ No queue worker is needed. There is no `app/Jobs`, exports stream and PDFs
 render inline — see §5. If that changes, a second cron running
 `queue:work --stop-when-empty` is the shared-hosting substitute for Supervisor.
 
-### 13.4 TLS
+### 13.5 TLS
 
 Websites → Security → SSL: install the free certificate and enable Force
 HTTPS. This is not optional — the kiosk captures photos through `getUserMedia`,
 which browsers refuse on insecure origins. The Caddy service and the `tls`
 compose profile in §6 are Docker-only and play no part here.
 
-### 13.5 Verify
+### 13.6 Verify
 
 ```bash
 php artisan security:check
@@ -803,7 +824,7 @@ skips `.env` entirely once `config:cache` has run, which §7 requires. The
 variable would read as null on every production host and the hardcoded
 default would silently apply.
 
-### 13.6 Backups
+### 13.7 Backups
 
 Hostinger's automatic daily backups on Cloud plans cover files and database,
 and that is a real safety net — but restore one into a scratch database and
