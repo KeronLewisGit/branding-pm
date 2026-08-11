@@ -32,7 +32,6 @@ return [
         'kiosk_requests' => 'Kiosk requests',
         'machines' => 'Machines',
         'locations' => 'Locations',
-        'parts' => 'Parts',
         'templates' => 'Checklist Templates',
         'holidays' => 'Holidays',
         'issues' => 'Issues',
@@ -495,7 +494,6 @@ return [
         'delete_machine' => 'Delete Machine',
         'delete_confirm' => 'Delete ":name"? Its QR sticker will stop working and it disappears from every list. This cannot be undone from this screen.',
         'delete_blocked' => 'This machine cannot be deleted: checklist templates or run history reference it, and deleting it would destroy those maintenance records. Deactivate the machine instead — it drops off the kiosk and no new checklists are generated for it.',
-        'manage_parts' => 'Parts',
         'details' => 'Details',
         'checklists' => 'Checklists',
         'no_checklists' => 'No checklists are defined for this machine.',
@@ -504,9 +502,6 @@ return [
         'no_runs' => 'No checks in this period.',
         'issue_history' => 'Faults',
         'no_issues' => 'No faults have been raised on this machine.',
-        'parts_consumed' => 'Parts consumed',
-        'no_parts_used' => 'No parts recorded against this machine in this period.',
-        'parts_snapshot_note' => 'Grouped by the part name recorded at the time, so a part renamed since still reports as it was consumed.',
         'assigned_operators' => 'Assigned operators',
         'operators_not_a_gate_short' => 'Marks this machine as their usual work. It does not control who may complete its checks.',
         'open_breakdown' => 'Breakdown reported',
@@ -519,14 +514,6 @@ return [
         'operators_not_a_gate' => 'This list does not control who may complete checks. Anyone signed in at the kiosk can pick up any checklist on this site. Assigning someone here marks the machine as their usual work, so it is surfaced to them first.',
         'operator_attached' => 'Assigned.',
         'operator_detached' => 'Removed from this machine. They can still complete its checks — this list is not a permission.',
-        'parts_for' => 'Parts — :machine',
-        'parts_help' => 'These parts appear on every checklist for this machine, in this order. Use the arrows to reorder.',
-        'no_parts_attached' => 'No parts attached yet. Pick a part below and press Add.',
-        'part_attached' => 'Part attached.',
-        'part_detached' => 'Part removed.',
-        'parts_reordered' => 'Part order saved.',
-        'parts_count' => 'Parts',
-        'detach_confirm' => 'Remove this part from the machine? It stays available in the parts list.',
         'empty_title' => 'No machines yet',
         'empty_description' => 'Add your first machine to start building checklists for it.',
         'empty_filtered_title' => 'No machines match',
@@ -536,8 +523,6 @@ return [
             'name_required' => 'The machine needs a name.',
             'code_required' => 'The machine needs a code — it is what the QR sticker encodes.',
             'code_format' => 'The code may only contain lowercase letters, numbers and dashes.',
-            'part_required' => 'Choose a part to attach.',
-            'part_already_attached' => 'That part is already attached to this machine.',
         ],
     ],
 
@@ -569,37 +554,6 @@ return [
         ],
     ],
 
-    'parts' => [
-        'title' => 'Parts',
-        'part' => 'Part',
-        'part_code' => 'Part Code',
-        'unit' => 'Unit',
-        'add_part' => 'Add Part',
-        'edit_part' => 'Edit Part',
-        'attach_part' => 'Attach Part',
-        'no_parts' => 'No parts listed.',
-        'search_placeholder' => 'Search by name or part code…',
-        'code_hint' => 'External part number, kept exactly as typed — codes like "XXX" are valid.',
-        'sort_by' => 'Sort by',
-        'sort_name' => 'Name',
-        'sort_code' => 'Part code',
-        'used_on' => 'Used on',
-        'not_used' => 'Not attached to any machine.',
-        'created_message' => 'Part ":name" created.',
-        'updated_message' => 'Part ":name" updated.',
-        'deleted_message' => 'Part ":name" deleted.',
-        'delete_part' => 'Delete Part',
-        'delete_confirm' => 'Delete ":name"? This cannot be undone from this screen.',
-        'delete_blocked' => 'This part cannot be deleted: machines or checklist templates still reference it. Detach it from them first — or simply deactivate the part so it stops appearing on new checklists while history is kept.',
-        'empty_title' => 'No parts yet',
-        'empty_description' => 'Add the consumables and spares your checklists use, then attach them to machines.',
-        'empty_filtered_title' => 'No parts match',
-        'empty_filtered_description' => 'No part matches the current search or filters. Clear them to see every part.',
-        'validation' => [
-            'part_code_required' => 'The part needs a part code.',
-            'name_required' => 'The part needs a name.',
-        ],
-    ],
 
     'templates' => [
         'title' => 'Checklist Templates',
@@ -617,7 +571,6 @@ return [
         'item' => 'Item',
         'guidance' => 'Guidance',
         'requires_photo_on_fail' => 'Photo required on fail',
-        'used_parts' => 'Used Parts',
         'add_template' => 'Add Template',
         'edit_template' => 'Edit Template',
         'add_item' => 'Add Item',
@@ -675,15 +628,7 @@ return [
         'item_reactivated' => 'Item reactivated — it will appear on new runs. The template is now version :version.',
         'items_reordered' => 'Items reordered. The template is now version :version.',
 
-        // Editor — Used Parts list.
-        'parts_order_note' => 'The order below is the order the Used Parts table is printed on the paper form (e.g. 22, 23, 24, 21, 7, XXX). That order is intentional — do not "tidy" it into alphabetical or numeric order.',
-        'part_search_placeholder' => 'Search by part code or name — codes are text, e.g. "XXX"…',
-        'no_matching_parts' => 'No matching parts.',
         'print_order' => 'Print order',
-        'part_attached' => 'Part :code added to the end of the Used Parts list.',
-        'part_detached' => 'Part removed from this template. The part itself still exists in the catalogue.',
-        'parts_reordered' => 'Parts reordered.',
-        'confirm_detach_part' => 'Remove this part from the template\'s Used Parts list? The part itself is not deleted, and runs already generated keep their own snapshot of it.',
 
         'validation' => [
             'machine_required' => 'Choose the machine this checklist belongs to.',
@@ -762,8 +707,6 @@ return [
         'late_stamp' => 'Completed late — due :due, signed :signed (:days day(s) late).',
         'notes' => 'Notes',
         'notes_placeholder' => 'Anything worth recording about this maintenance…',
-        'used_parts' => 'Used Parts',
-        'qty_used' => 'Qty used',
         'downtime_minutes' => 'Downtime (minutes)',
         'mark_done' => 'Done',
         'mark_not_applicable' => 'Mark N/A',
@@ -1179,8 +1122,6 @@ return [
         'heat_missed' => 'Missed',
         'heat_nothing' => 'Nothing scheduled',
         'by_machine' => 'Compliance by machine',
-        'parts_this_month' => 'Parts consumed this month',
-        'no_parts_used' => 'No parts recorded as used this month.',
     ],
 
     'reports' => [
@@ -1232,10 +1173,6 @@ return [
             'title' => 'Missed checks',
             'description' => 'Every check not completed: runs marked missed, plus runs still open past their scheduled date.',
         ],
-        'parts' => [
-            'title' => 'Parts usage',
-            'description' => 'What was consumed, by part, using the code and name recorded at the time — not today\'s catalogue.',
-        ],
         'operators' => [
             'title' => 'Operator activity',
             'description' => 'Who did the work. A record of activity, not a score: finding faults is the job, so a high failure count is a good sign, not a bad one.',
@@ -1271,17 +1208,11 @@ return [
         'required' => 'required',
     ],
 
-    // <x-stepper> aria labels.
-    'stepper' => [
-        'decrease' => 'Decrease quantity',
-        'increase' => 'Increase quantity',
-    ],
 
     'validation' => [
         'pin_digits' => 'The PIN must be :min to :max digits.',
         'pin_confirmation' => 'The PIN confirmation does not match.',
         'employee_number_taken' => 'That employee number is already in use.',
-        'part_code_taken' => 'That part code is already in use.',
         'machine_code_taken' => 'That machine code is already in use.',
         'monthly_day_range' => 'The day of month must be between 1 and 28.',
     ],

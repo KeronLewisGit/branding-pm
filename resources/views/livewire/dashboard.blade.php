@@ -211,37 +211,5 @@
             </table>
         </x-card>
 
-        {{-- Parts consumed this month --}}
-        <x-card>
-            <div class="flex items-center justify-between gap-3">
-                <h2 class="text-xl font-bold text-slate-900">{{ __('app.dashboard.parts_this_month') }}</h2>
-                <a href="{{ route('reports.index', ['report' => 'parts']) }}" class="text-base font-semibold text-sky-700 hover:underline">
-                    {{ __('app.reports.title') }}
-                </a>
-            </div>
-
-            @if ($partsThisMonth->isEmpty())
-                <p class="mt-3 text-base text-slate-500">{{ __('app.dashboard.no_parts_used') }}</p>
-            @else
-                <table class="data-table data-table-bare mt-3">
-                    <thead>
-                        <tr>
-                            <th>{{ __('app.parts.part_code') }}</th>
-                            <th>{{ __('app.parts.part') }}</th>
-                            <th class="text-right">{{ __('app.runs.qty_used') }}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach ($partsThisMonth as $part)
-                            <tr wire:key="part-{{ $part['part_code'] }}">
-                                <td class="font-mono text-sm text-slate-500">{{ $part['part_code'] }}</td>
-                                <td class="text-slate-800">{{ $part['part_name'] }}</td>
-                                <td class="text-right font-semibold tabular-nums text-slate-900">{{ $part['qty_used'] }}</td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            @endif
-        </x-card>
     </div>
 </div>

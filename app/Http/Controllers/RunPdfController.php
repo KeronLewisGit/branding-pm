@@ -35,7 +35,6 @@ class RunPdfController extends Controller
             'template',
             'machine.location.site',
             'items',
-            'runParts',
             'operator',
             'supervisor',
         ]);

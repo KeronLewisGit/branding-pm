@@ -34,7 +34,6 @@ class RolesAndPermissionsSeeder extends Seeder
         'machine.manage',
         'template.view',
         'template.manage',
-        'part.manage',
         'schedule.manage',
         'holiday.manage',
         'report.view',
@@ -92,7 +91,6 @@ class RolesAndPermissionsSeeder extends Seeder
         'maintenance_manager' => [
             'machine.manage',
             'template.manage',
-            'part.manage',
             'schedule.manage',
             'holiday.manage',
             'export.data',

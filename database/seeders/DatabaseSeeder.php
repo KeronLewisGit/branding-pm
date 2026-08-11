@@ -24,7 +24,6 @@ class DatabaseSeeder extends Seeder
             RolesAndPermissionsSeeder::class,
             SiteSeeder::class,
             LocationSeeder::class,
-            PartSeeder::class,
             MachineSeeder::class,
             ChecklistTemplateSeeder::class,
             HolidaySeeder::class,

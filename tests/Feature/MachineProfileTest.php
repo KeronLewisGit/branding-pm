@@ -5,7 +5,6 @@ declare(strict_types=1);
 use App\Enums\RunStatus;
 use App\Livewire\Machines\MachineProfile;
 use App\Models\ChecklistRun;
-use App\Models\ChecklistRunPart;
 use App\Models\ChecklistTemplate;
 use App\Models\Issue;
 use App\Models\Location;
@@ -78,7 +77,7 @@ it('404s on an unknown code rather than explaining itself', function (): void {
         ->assertNotFound();
 });
 
-it('gathers the checklists, runs, faults and parts for the machine', function (): void {
+it('gathers the checklists, runs and faults for the machine', function (): void {
     [$machine, $site] = profileMachine();
 
     $template = ChecklistTemplate::factory()->for($machine)->create(['name' => 'MATAN — Daily Maintenance']);
@@ -88,17 +87,6 @@ it('gathers the checklists, runs, faults and parts for the machine', function ()
         'machine_id' => $machine->id,
         'status' => RunStatus::Approved,
         'scheduled_for' => now()->subDays(2)->toDateString(),
-    ]);
-
-    // No factory for this one — created directly so the snapshot columns are
-    // exactly what the profile groups on.
-    ChecklistRunPart::create([
-        'checklist_run_id' => $run->id,
-        'part_id' => null,
-        'part_code_snapshot' => '23',
-        'part_name_snapshot' => 'Isopropyl alcohol',
-        'sort_order' => 0,
-        'qty_used' => 3,
     ]);
 
     Issue::factory()->create([
@@ -112,8 +100,7 @@ it('gathers the checklists, runs, faults and parts for the machine', function ()
     Livewire::actingAs($manager)
         ->test(MachineProfile::class, ['machine' => $machine])
         ->assertSee('MATAN — Daily Maintenance')
-        ->assertSee('Vacuum table losing suction')
-        ->assertSee('Isopropyl alcohol');
+        ->assertSee('Vacuum table losing suction');
 });
 
 it('counts a window and refuses a hand-edited one', function (): void {

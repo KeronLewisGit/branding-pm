@@ -13,7 +13,6 @@ use App\Http\Middleware\EnsureKioskDevice;
 use App\Models\Attachment;
 use App\Models\ChecklistRun;
 use App\Models\ChecklistRunItem;
-use App\Models\ChecklistRunPart;
 use App\Models\Issue;
 use App\Models\User;
 use App\Support\SignatureImage;
@@ -63,7 +62,6 @@ class RunForm extends Component
         'items.templateItem',
         'items.attachments',
         'items.completedBy',
-        'runParts',
         'attachments',
         // Signature blocks (milestone 5) print the signer's name and number.
         'operator',
@@ -76,9 +74,6 @@ class RunForm extends Component
     public string $notes = '';
 
     public bool $notesSaved = false;
-
-    /** @var array<int|string, mixed> run part id => qty_used (stepper binding) */
-    public array $qty = [];
 
     // ── Item options / fail flow state ──────────────────────────────
 
@@ -129,10 +124,6 @@ class RunForm extends Component
 
         $this->run = $run;
         $this->notes = (string) ($run->notes ?? '');
-
-        foreach ($run->runParts as $part) {
-            $this->qty[$part->id] = (string) $part->qty_used;
-        }
     }
 
     public function render(): View
@@ -528,7 +519,7 @@ class RunForm extends Component
         $this->dispatch('close-modal', name: 'item-issue');
     }
 
-    // ── Notes / used parts autosave ─────────────────────────────────
+    // ── Notes autosave ──────────────────────────────────────────────
 
     public function updatedNotes(): void
     {
@@ -540,27 +531,6 @@ class RunForm extends Component
         $this->run->update(['notes' => $this->notes]);
 
         $this->notesSaved = true;
-    }
-
-    /** Stepper wrote qty.{runPartId} — persist that one part immediately. */
-    public function updatedQty(mixed $value, string $key): void
-    {
-        $this->authorize('update', $this->run);
-
-        /** @var ChecklistRunPart|null $part */
-        $part = $this->run->runParts()->whereKey((int) $key)->first();
-
-        if ($part === null) {
-            return;
-        }
-
-        $qtyUsed = is_numeric($value) ? (float) $value : 0.0;
-        $qtyUsed = max(0.0, min($qtyUsed, 999999.99)); // decimal(8,2)
-
-        $this->ensureStarted();
-
-        // Absolute quantity, not an increment — idempotent under offline replay.
-        $part->update(['qty_used' => $qtyUsed]);
     }
 
     // ── Photos ──────────────────────────────────────────────────────

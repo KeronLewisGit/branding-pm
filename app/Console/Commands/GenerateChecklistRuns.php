@@ -9,7 +9,6 @@ use App\Enums\RunStatus;
 use App\Enums\Shift;
 use App\Models\ChecklistRun;
 use App\Models\ChecklistRunItem;
-use App\Models\ChecklistRunPart;
 use App\Models\ChecklistTemplate;
 use Carbon\CarbonImmutable;
 use Carbon\Exceptions\InvalidFormatException;
@@ -56,14 +55,11 @@ class GenerateChecklistRuns extends Command
         $dryRun = (bool) $this->option('dry-run');
 
         // 13 templates in production — loading them all with their children in
-        // one pass is deliberate; no chunking needed at this scale. Parts are
-        // loaded withTrashed so a soft-deleted part still gets snapshotted —
-        // the template row referencing it is the operative record.
+        // one pass is deliberate; no chunking needed at this scale.
         $templates = ChecklistTemplate::query()
             ->with([
                 'machine.location.site',
                 'activeItems',
-                'templateParts.part' => fn ($query) => $query->withTrashed(),
             ])
             ->get();
 
@@ -220,24 +216,6 @@ class GenerateChecklistRuns extends Command
 
         if ($items !== []) {
             ChecklistRunItem::query()->insert($items);
-        }
-
-        // Every template part, code + name snapshotted, qty_used = 0.
-        $parts = $template->templateParts
-            ->map(fn ($templatePart): array => [
-                'checklist_run_id' => $run->id,
-                'part_id' => $templatePart->part_id,
-                'part_code_snapshot' => $templatePart->part?->part_code ?? '',
-                'part_name_snapshot' => $templatePart->part?->name ?? '',
-                'sort_order' => $templatePart->sort_order,
-                'qty_used' => 0,
-                'created_at' => $now,
-                'updated_at' => $now,
-            ])
-            ->all();
-
-        if ($parts !== []) {
-            ChecklistRunPart::query()->insert($parts);
         }
 
         return true;

@@ -117,7 +117,7 @@
             </div>
         </div>
 
-        {{-- Right: checklists, runs, issues, parts --}}
+        {{-- Right: checklists, runs, issues --}}
         <div class="space-y-6 lg:col-span-2">
             <div class="card card-body">
                 <h2 class="text-lg font-bold text-slate-900">{{ __('app.machines.checklists') }}</h2>
@@ -207,27 +207,6 @@
                 @endif
             </div>
 
-            <div class="card card-body">
-                <h2 class="text-lg font-bold text-slate-900">{{ __('app.machines.parts_consumed') }}</h2>
-                @if ($this->partsUsed->isEmpty())
-                    <p class="mt-2 text-base text-slate-500">{{ __('app.machines.no_parts_used') }}</p>
-                @else
-                    <table class="data-table data-table-bare mt-3">
-                        <tbody>
-                            @foreach ($this->partsUsed as $part)
-                                <tr>
-                                    <td class="font-mono text-sm text-slate-500">{{ $part->part_code }}</td>
-                                    <td>{{ $part->part_name }}</td>
-                                    <td class="text-right font-semibold tabular-nums">{{ rtrim(rtrim(number_format((float) $part->qty, 2), '0'), '.') }}</td>
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                    {{-- Snapshot names, like the parts usage report — a part renamed
-                         last month still reports as it was consumed. --}}
-                    <p class="mt-3 text-sm text-slate-500">{{ __('app.machines.parts_snapshot_note') }}</p>
-                @endif
-            </div>
         </div>
     </div>
 </div>

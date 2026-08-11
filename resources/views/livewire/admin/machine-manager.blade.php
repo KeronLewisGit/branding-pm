@@ -94,7 +94,6 @@
                             <th scope="col">{{ __('app.common.code') }}</th>
                             <th scope="col">{{ __('app.machines.location') }}</th>
                             <th scope="col">{{ __('app.machines.asset_tag') }}</th>
-                            <th scope="col" class="text-right">{{ __('app.machines.parts_count') }}</th>
                             <th scope="col">{{ __('app.common.status') }}</th>
                             <th scope="col" class="text-right">{{ __('app.common.actions') }}</th>
                         </tr>
@@ -125,7 +124,6 @@
                                     {{ $machine->location?->site?->name }} — {{ $machine->location?->name }}
                                 </td>
                                 <td>{{ $machine->asset_tag ?? '—' }}</td>
-                                <td class="text-right tabular-nums">{{ $machine->parts_count }}</td>
                                 <td>
                                     @if ($machine->is_active)
                                         <span class="inline-flex items-center rounded-full bg-emerald-100 px-3 py-1 text-sm font-semibold text-emerald-800">
@@ -149,8 +147,6 @@
                                         @can('update', $machine)
                                             <x-icon-button icon="edit" :label="__('app.actions.edit')"
                                                 wire:click="openEditModal({{ $machine->id }})" />
-                                            <x-icon-button icon="parts" :label="__('app.machines.manage_parts')"
-                                                wire:click="openPartsModal({{ $machine->id }})" />
                                             <x-icon-button icon="operators" :label="__('app.machines.manage_operators')"
                                                 wire:click="openOperatorsModal({{ $machine->id }})" />
                                         @endcan
@@ -253,72 +249,6 @@
                 <x-button type="submit">{{ $editingId ? __('app.actions.update') : __('app.actions.create') }}</x-button>
             </div>
         </form>
-    </x-modal>
-
-    {{-- Parts modal --}}
-    <x-modal name="machine-parts" max-width="2xl" :title="$this->partsMachine ? __('app.machines.parts_for', ['machine' => $this->partsMachine->name]) : __('app.machines.manage_parts')">
-        @if ($this->partsMachine)
-            <p class="mb-4 text-base text-slate-600">{{ __('app.machines.parts_help') }}</p>
-
-            @if ($this->partsMachine->parts->isEmpty())
-                <p class="rounded-xl bg-slate-50 p-4 text-base text-slate-600">
-                    {{ __('app.machines.no_parts_attached') }}
-                </p>
-            @else
-                <ul class="divide-y divide-slate-100">
-                    @foreach ($this->partsMachine->parts as $part)
-                        <li wire:key="machine-part-{{ $part->id }}" class="flex min-h-14 items-center gap-3 py-2">
-                            <span class="w-8 shrink-0 text-center text-sm font-semibold text-slate-400 tabular-nums">
-                                {{ $loop->iteration }}
-                            </span>
-                            <span class="min-w-0 flex-1">
-                                <span class="block truncate font-semibold">{{ $part->name }}</span>
-                                <span class="block font-mono text-sm text-slate-500">{{ $part->part_code }}</span>
-                            </span>
-                            <x-icon-button
-                                icon="move_up"
-                                :label="__('app.actions.move_up')"
-                                class="disabled:opacity-30"
-                                wire:click="movePartUp({{ $part->id }})"
-                                :disabled="$loop->first"
-                            />
-                            <x-icon-button
-                                icon="move_down"
-                                :label="__('app.actions.move_down')"
-                                class="disabled:opacity-30"
-                                wire:click="movePartDown({{ $part->id }})"
-                                :disabled="$loop->last"
-                            />
-                            <x-icon-button
-                                icon="delete"
-                                variant="danger"
-                                :label="__('app.actions.delete')"
-                                wire:click="detachPart({{ $part->id }})"
-                                wire:confirm="{{ __('app.machines.detach_confirm') }}"
-                            />
-                        </li>
-                    @endforeach
-                </ul>
-            @endif
-
-            <div class="mt-4 border-t border-slate-200 pt-4">
-                <label for="attach-part" class="mb-1 block text-base font-semibold">{{ __('app.parts.attach_part') }}</label>
-                <div class="flex flex-col gap-3 sm:flex-row">
-                    <x-select id="attach-part" wire:model="attachPartId" class="w-full">
-                        <option value="">{{ __('app.parts.part') }}…</option>
-                        @foreach ($this->availableParts as $part)
-                            <option value="{{ $part->id }}">{{ $part->name }} ({{ $part->part_code }})</option>
-                        @endforeach
-                    </x-select>
-                    <x-button wire:click="attachPart" class="shrink-0">{{ __('app.actions.add') }}</x-button>
-                </div>
-                @error('attachPartId') <p class="mt-1 text-sm text-rose-600">{{ $message }}</p> @enderror
-            </div>
-
-            <div class="flex justify-end pt-4">
-                <x-button variant="ghost" x-on:click="show = false">{{ __('app.actions.close') }}</x-button>
-            </div>
-        @endif
     </x-modal>
 
     {{-- Operators --}}

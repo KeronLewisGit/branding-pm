@@ -10,8 +10,6 @@ use App\Enums\RunStatus;
 use App\Enums\WorkCategory;
 use App\Models\ChecklistTemplate;
 use App\Models\ChecklistTemplateItem;
-use App\Models\ChecklistTemplatePart;
-use App\Models\Part;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -24,7 +22,7 @@ use Livewire\Component;
 
 /**
  * Template editor (route `admin.templates.edit`) — the item builder and the
- * "Used Parts" list for one checklist template.
+ * item list for one checklist template.
  *
  * Versioning rules (SPEC §Template management, seed-notes D3):
  * - Any change to the ITEM SET (add / reorder / edit description / change
@@ -80,10 +78,6 @@ class TemplateEditor extends Component
 
     public bool $itemRequiresPhotoOnFail = false;
 
-    // ── Part picker (section c) ──────────────────────────────────────
-
-    public string $partSearch = '';
-
     // ── Lifecycle ────────────────────────────────────────────────────
 
     public function mount(ChecklistTemplate $template): void
@@ -109,35 +103,6 @@ class TemplateEditor extends Component
             ->where('template_version', $this->template->version)
             ->whereIn('status', [RunStatus::Pending, RunStatus::InProgress])
             ->count();
-    }
-
-    /**
-     * Part-picker matches. `part_code` is searched as a STRING — one real
-     * code is literally `XXX` (seed-notes B1) — never cast to int.
-     *
-     * @return Collection<int, Part>
-     */
-    #[Computed]
-    public function availableParts(): Collection
-    {
-        $search = trim($this->partSearch);
-
-        if ($search === '') {
-            return new Collection;
-        }
-
-        $term = '%'.addcslashes($search, '\\%_').'%';
-
-        return Part::query()
-            ->where('is_active', true)
-            ->whereNotIn('id', $this->template->templateParts()->pluck('part_id'))
-            ->where(function (Builder $query) use ($term): void {
-                $query->where('part_code', 'like', $term)
-                    ->orWhere('name', 'like', $term);
-            })
-            ->orderBy('part_code')
-            ->limit(20)
-            ->get();
     }
 
     /**
@@ -308,67 +273,6 @@ class TemplateEditor extends Component
         $this->moveItem($itemId, 1);
     }
 
-    // ── Section c: parts list ────────────────────────────────────────
-
-    /**
-     * Append a part to the end of the printed "Used Parts" order. Parts are
-     * not part of the item set, so no version bump.
-     */
-    public function attachPart(int $partId): void
-    {
-        $this->authorize('update', $this->template);
-
-        $part = Part::query()->findOrFail($partId);
-
-        if ($this->template->templateParts()->where('part_id', $part->id)->exists()) {
-            return;
-        }
-
-        DB::transaction(function () use ($part): void {
-            // Max via an unordered query — see the note in saveItem().
-            $this->template->templateParts()->create([
-                'part_id' => $part->id,
-                'sort_order' => ((int) ChecklistTemplatePart::query()
-                    ->where('checklist_template_id', $this->template->id)
-                    ->max('sort_order')) + 1,
-            ]);
-        });
-
-        $this->partSearch = '';
-
-        session()->flash('flash.success', __('app.templates.part_attached', ['code' => $part->part_code]));
-    }
-
-    public function detachPart(int $templatePartId): void
-    {
-        $this->authorize('update', $this->template);
-
-        $templatePart = $this->template->templateParts()->findOrFail($templatePartId);
-
-        DB::transaction(function () use ($templatePart): void {
-            $templatePart->delete();
-
-            // Close the gap so the printed order stays contiguous.
-            $remaining = $this->template->templateParts()->pluck('id')->all();
-
-            if ($remaining !== []) {
-                $this->writeContiguousOrder('checklist_template_parts', $remaining);
-            }
-        });
-
-        session()->flash('flash.success', __('app.templates.part_detached'));
-    }
-
-    public function movePartUp(int $templatePartId): void
-    {
-        $this->movePart($templatePartId, -1);
-    }
-
-    public function movePartDown(int $templatePartId): void
-    {
-        $this->movePart($templatePartId, 1);
-    }
-
     // ── Render ───────────────────────────────────────────────────────
 
     public function render(): View
@@ -379,7 +283,6 @@ class TemplateEditor extends Component
 
         return view('livewire.admin.template-editor', [
             'items' => $this->template->items()->get(),
-            'templateParts' => $this->template->templateParts()->with('part')->get(),
         ])->title($this->template->name.' — '.__('app.templates.edit_template'));
     }
 
@@ -429,24 +332,6 @@ class TemplateEditor extends Component
         });
 
         session()->flash('flash.success', __('app.templates.items_reordered', ['version' => $this->template->version]));
-    }
-
-    private function movePart(int $templatePartId, int $offset): void
-    {
-        $this->authorize('update', $this->template);
-
-        $orderedIds = $this->template->templateParts()->pluck('id')->all();
-        $reordered = $this->swap($orderedIds, $templatePartId, $offset);
-
-        if ($reordered === null) {
-            return;
-        }
-
-        DB::transaction(function () use ($reordered): void {
-            $this->writeContiguousOrder('checklist_template_parts', $reordered);
-        });
-
-        session()->flash('flash.success', __('app.templates.parts_reordered'));
     }
 
     /**

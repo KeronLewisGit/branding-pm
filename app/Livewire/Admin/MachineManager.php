@@ -8,7 +8,6 @@ use App\Enums\IssueSeverity;
 use App\Enums\IssueStatus;
 use App\Models\Location;
 use App\Models\Machine;
-use App\Models\Part;
 use App\Models\Site;
 use App\Models\User;
 use Illuminate\Contracts\View\View;
@@ -29,8 +28,7 @@ use Livewire\WithPagination;
  * Machine master data (route `admin.machines`).
  *
  * Searchable, filterable, paginated. Create/edit happens in a modal; the
- * machine's parts list (the `machine_part` pivot) is managed in a second
- * modal with up/down reordering — no drag-and-drop, tablet first.
+ * machine's operator list is managed in a second modal.
  *
  * `code` is the QR sticker slug (`/m/{code}`). It is suggested from the name
  * on create only; on edit it is never rewritten automatically, and changing
@@ -90,12 +88,6 @@ class MachineManager extends Component
     // ── Delete confirmation ──────────────────────────────────────────
 
     public ?int $deletingId = null;
-
-    // ── Parts modal ──────────────────────────────────────────────────
-
-    public ?int $partsMachineId = null;
-
-    public string $attachPartId = '';
 
     // ── Operators modal ──────────────────────────────────────────────
     //
@@ -168,37 +160,6 @@ class MachineManager extends Component
             )
             ->orderBy('name')
             ->get();
-    }
-
-    /**
-     * The machine whose parts are being managed, with its parts in pivot
-     * order. Eager-loaded because `preventLazyLoading()` is on.
-     */
-    #[Computed]
-    public function partsMachine(): ?Machine
-    {
-        if ($this->partsMachineId === null) {
-            return null;
-        }
-
-        return Machine::query()->with('parts')->find($this->partsMachineId);
-    }
-
-    /**
-     * Active parts not yet attached to the parts-modal machine.
-     *
-     * @return Collection<int, Part>
-     */
-    #[Computed]
-    public function availableParts(): Collection
-    {
-        $attachedIds = $this->partsMachine?->parts->pluck('id') ?? collect();
-
-        return Part::query()
-            ->active()
-            ->whereNotIn('id', $attachedIds)
-            ->orderBy('name')
-            ->get(['id', 'part_code', 'name', 'unit']);
     }
 
     /**
@@ -381,57 +342,6 @@ class MachineManager extends Component
         $this->deletingId = null;
     }
 
-    // ── Parts (machine_part pivot) ───────────────────────────────────
-
-    public function openPartsModal(int $machineId): void
-    {
-        $machine = Machine::query()->findOrFail($machineId);
-
-        $this->authorize('update', $machine);
-
-        $this->resetValidation();
-        $this->partsMachineId = $machine->id;
-        $this->attachPartId = '';
-        unset($this->partsMachine, $this->availableParts);
-
-        $this->dispatch('open-modal', name: 'machine-parts');
-    }
-
-    public function attachPart(): void
-    {
-        $machine = Machine::query()->with('parts')->findOrFail((int) $this->partsMachineId);
-
-        $this->authorize('update', $machine);
-
-        $this->validate(
-            [
-                'attachPartId' => [
-                    'required',
-                    'integer',
-                    Rule::exists('parts', 'id'),
-                    Rule::notIn($machine->parts->pluck('id')->all()),
-                ],
-            ],
-            [
-                'attachPartId.required' => __('app.machines.validation.part_required'),
-                'attachPartId.integer' => __('app.machines.validation.part_required'),
-                'attachPartId.exists' => __('app.machines.validation.part_required'),
-                'attachPartId.not_in' => __('app.machines.validation.part_already_attached'),
-            ],
-        );
-
-        DB::transaction(function () use ($machine): void {
-            $machine->parts()->attach((int) $this->attachPartId, [
-                'sort_order' => $machine->parts->count(),
-            ]);
-        });
-
-        $this->attachPartId = '';
-        unset($this->partsMachine, $this->availableParts);
-
-        session()->flash('flash.success', __('app.machines.part_attached'));
-    }
-
     public function openOperatorsModal(int $machineId): void
     {
         $machine = Machine::query()->findOrFail($machineId);
@@ -497,46 +407,13 @@ class MachineManager extends Component
         session()->flash('flash.success', __('app.machines.operator_detached'));
     }
 
-    public function detachPart(int $partId): void
-    {
-        $machine = Machine::query()->with('parts')->findOrFail((int) $this->partsMachineId);
-
-        $this->authorize('update', $machine);
-
-        // Detach and close the gap in one transaction so sort_order stays
-        // contiguous (0, 1, 2, …) no matter where the removed part sat.
-        DB::transaction(function () use ($machine, $partId): void {
-            $machine->parts()->detach($partId);
-
-            $remaining = $machine->parts()->pluck('parts.id')->all();
-
-            foreach (array_values($remaining) as $index => $id) {
-                $machine->parts()->updateExistingPivot($id, ['sort_order' => $index]);
-            }
-        });
-
-        unset($this->partsMachine, $this->availableParts);
-
-        session()->flash('flash.success', __('app.machines.part_detached'));
-    }
-
-    public function movePartUp(int $partId): void
-    {
-        $this->movePart($partId, -1);
-    }
-
-    public function movePartDown(int $partId): void
-    {
-        $this->movePart($partId, 1);
-    }
-
     // ── Render ───────────────────────────────────────────────────────
 
     public function render(): View
     {
         $machines = Machine::query()
             ->with('location.site')
-            ->withCount(['parts', 'templates'])
+            ->withCount(['templates'])
             // Open breakdowns are flagged wherever a machine is listed
             // (SPEC §Issues). Counted here rather than through the
             // Machine::open_breakdown accessor, which would be a query per row.
@@ -625,42 +502,6 @@ class MachineManager extends Component
     }
 
     // ── Internals ────────────────────────────────────────────────────
-
-    /**
-     * Swap a part with its neighbour and persist the whole contiguous
-     * sequence (0, 1, 2, …) in a single transaction.
-     */
-    private function movePart(int $partId, int $offset): void
-    {
-        $machine = Machine::query()->with('parts')->findOrFail((int) $this->partsMachineId);
-
-        $this->authorize('update', $machine);
-
-        $ids = $machine->parts->pluck('id')->all();
-        $index = array_search($partId, $ids, true);
-
-        if ($index === false) {
-            return;
-        }
-
-        $target = $index + $offset;
-
-        if ($target < 0 || $target >= count($ids)) {
-            return;
-        }
-
-        [$ids[$index], $ids[$target]] = [$ids[$target], $ids[$index]];
-
-        DB::transaction(function () use ($machine, $ids): void {
-            foreach ($ids as $sortOrder => $id) {
-                $machine->parts()->updateExistingPivot($id, ['sort_order' => $sortOrder]);
-            }
-        });
-
-        unset($this->partsMachine);
-
-        session()->flash('flash.success', __('app.machines.parts_reordered'));
-    }
 
     private function resetForm(): void
     {

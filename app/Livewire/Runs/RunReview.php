@@ -49,7 +49,6 @@ class RunReview extends Component
         'machine.location.site',
         'items.attachments',
         'items.completedBy',
-        'runParts',
         'attachments',
         'operator',
         'supervisor',
@@ -242,7 +241,7 @@ class RunReview extends Component
     | sheet.
     */
 
-    /** `item` | `notes` | `part` — which kind of thing is being corrected. */
+    /** `item` | `notes` — which kind of thing is being corrected. */
     public ?string $amendTarget = null;
 
     public ?int $amendTargetId = null;
@@ -253,7 +252,6 @@ class RunReview extends Component
 
     public string $amendNotes = '';
 
-    public string $amendQty = '';
 
     public string $amendReason = '';
 
@@ -312,20 +310,6 @@ class RunReview extends Component
         $this->dispatch('open-modal', name: 'run-amend');
     }
 
-    public function openAmendPart(int $runPartId): void
-    {
-        $this->authorize('amend', $this->run);
-
-        $part = $this->run->runParts()->findOrFail($runPartId);
-
-        $this->resetAmendForm();
-        $this->amendTarget = 'part';
-        $this->amendTargetId = $part->id;
-        $this->amendQty = (string) $part->qty_used;
-
-        $this->dispatch('open-modal', name: 'run-amend');
-    }
-
     /**
      * Apply the correction and write it to the audit trail.
      *
@@ -346,7 +330,6 @@ class RunReview extends Component
                 'amendFailReason' => ['nullable', 'string', 'max:500'],
             ],
             'notes' => ['amendNotes' => ['nullable', 'string', 'max:5000']],
-            'part' => ['amendQty' => ['required', 'numeric', 'min:0', 'max:999999']],
             default => [],
         };
 
@@ -355,7 +338,6 @@ class RunReview extends Component
         [$field, $before, $after] = match ($this->amendTarget) {
             'item' => $this->applyItemAmendment(),
             'notes' => $this->applyNotesAmendment(),
-            'part' => $this->applyPartAmendment(),
             default => [null, null, null],
         };
 
@@ -431,24 +413,9 @@ class RunReview extends Component
         return [__('app.runs.notes'), $before, $after];
     }
 
-    /**
-     * @return array{0: string, 1: string, 2: string}
-     */
-    private function applyPartAmendment(): array
-    {
-        $part = $this->run->runParts()->findOrFail($this->amendTargetId);
-
-        $before = (string) $part->qty_used;
-        $after = number_format((float) $this->amendQty, 2, '.', '');
-
-        DB::transaction(fn () => $part->forceFill(['qty_used' => $after])->save());
-
-        return [$part->part_name_snapshot, $before, $after];
-    }
-
     private function resetAmendForm(): void
     {
-        $this->reset('amendTarget', 'amendTargetId', 'amendItemStatus', 'amendFailReason', 'amendNotes', 'amendQty', 'amendReason');
+        $this->reset('amendTarget', 'amendTargetId', 'amendItemStatus', 'amendFailReason', 'amendNotes', 'amendReason');
         $this->resetErrorBag();
     }
 

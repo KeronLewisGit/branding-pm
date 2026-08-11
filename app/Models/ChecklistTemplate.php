@@ -10,7 +10,6 @@ use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\Activitylog\Models\Concerns\LogsActivity;
@@ -101,21 +100,6 @@ class ChecklistTemplate extends Model
             ->orderBy('sort_order');
     }
 
-    public function templateParts(): HasMany
-    {
-        return $this->hasMany(ChecklistTemplatePart::class)->orderBy('sort_order');
-    }
-
-    /**
-     * The "Used Parts" table printed on the sheet, in form order.
-     */
-    public function parts(): BelongsToMany
-    {
-        return $this->belongsToMany(Part::class, 'checklist_template_parts')
-            ->withPivot('sort_order')
-            ->withTimestamps()
-            ->orderByPivot('sort_order');
-    }
 
     public function runs(): HasMany
     {

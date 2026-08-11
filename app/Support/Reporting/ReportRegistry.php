@@ -18,7 +18,6 @@ final class ReportRegistry
         'compliance' => ComplianceReport::class,
         'checks' => ChecksCompletedReport::class,
         'missed' => MissedChecksReport::class,
-        'parts' => PartsUsageReport::class,
         'operators' => OperatorActivityReport::class,
     ];
 

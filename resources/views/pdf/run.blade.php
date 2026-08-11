@@ -2,9 +2,9 @@
     Per-run PDF — a facsimile of the paper work order (SPEC §"PDF Export").
 
     Auditors and ISO reviewers expect the familiar sheet, so the layout keeps
-    the paper form's order: header block, two-column numbered task list, Used
-    Parts table, Notes box, then the two signature blocks with printed name,
-    employee number and timestamp beneath each image.
+    the paper form's order: header block, two-column numbered task list,
+    Notes box, then the two signature blocks with printed name, employee
+    number and timestamp beneath each image.
 
     dompdf notes: no flexbox, no grid, no external assets. Layout is tables,
     CSS is inline in this file, and the signature images arrive as data URIs
@@ -42,9 +42,6 @@
         .state-na { color: #64748b; }
         .reason { display: block; margin: 0.5mm 0 0 6mm; color: #b91c1c; font-size: 8pt; }
         .value { display: block; margin: 0.5mm 0 0 6mm; color: #334155; font-size: 8pt; }
-        .parts th, .parts td { border: 0.4pt solid #94a3b8; padding: 1mm 2mm; text-align: left; }
-        .parts th { background: #f1f5f9; font-size: 7.5pt; text-transform: uppercase; color: #475569; }
-        .parts .qty { text-align: right; width: 18mm; }
         .notes { border: 0.4pt solid #94a3b8; min-height: 18mm; padding: 2mm; }
         .sign td { width: 50%; padding: 0 3mm 0 0; vertical-align: top; }
         .sign-box { border: 0.4pt solid #94a3b8; height: 26mm; padding: 1.5mm; text-align: center; }
@@ -140,29 +137,6 @@
                 @endforeach
             </tr>
         </table>
-    </div>
-
-    {{-- Used Parts — the form's own order, never alphabetical --}}
-    <div class="section">
-        <div class="section-title">{{ __('app.runs.used_parts') }}</div>
-        @if ($run->runParts->isEmpty())
-            <p style="margin:0; color:#64748b;">{{ __('app.parts.no_parts') }}</p>
-        @else
-            <table class="parts">
-                <tr>
-                    <th style="width:22mm;">{{ __('app.parts.part_code') }}</th>
-                    <th>{{ __('app.parts.part') }}</th>
-                    <th class="qty">{{ __('app.runs.qty_used') }}</th>
-                </tr>
-                @foreach ($run->runParts as $part)
-                    <tr>
-                        <td>{{ $part->part_code_snapshot }}</td>
-                        <td>{{ $part->part_name_snapshot }}</td>
-                        <td class="qty">{{ $part->qty_used }}</td>
-                    </tr>
-                @endforeach
-            </table>
-        @endif
     </div>
 
     <div class="section">
