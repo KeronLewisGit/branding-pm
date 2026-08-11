@@ -1,6 +1,12 @@
 /.phpunit.cache
 /node_modules
-/public/build
+# public/build is COMMITTED, deliberately.
+#
+# Deployment is `git pull` on shared hosting with no Node, so anything not
+# in the repository does not reach the server. Ignoring the compiled assets
+# would pull source that renders unstyled — and silently, since nothing
+# errors when a manifest entry is missing, the page just arrives naked.
+# The cost is churn: hashed filenames change on every asset edit.
 /public/hot
 /public/storage
 /storage/*.key
@@ -24,3 +30,6 @@ yarn-error.log
 /scripts/branding-pm.ico
 
 /build
+
+# Claude Code, per-machine
+/.claude/settings.local.json
