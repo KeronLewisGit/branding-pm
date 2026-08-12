@@ -35,6 +35,15 @@
             <x-checkbox id="include-inactive" wire:model.live="includeInactive">
                 {{ __('app.users.include_inactive') }}
             </x-checkbox>
+
+            {{-- Reachable, but off by default: the everyday list is the people
+                 who exist. It matters that it is here at all — a removed
+                 account keeps its email and employee number, so without this
+                 "that address is already taken" names a user who appears
+                 nowhere. --}}
+            <x-checkbox id="show-deleted" wire:model.live="showDeleted">
+                {{ __('app.users.show_deleted') }}
+            </x-checkbox>
         </div>
     </div>
 
@@ -65,7 +74,8 @@
                     </thead>
                     <tbody>
                         @foreach ($users as $user)
-                            <tr wire:key="user-{{ $user->id }}">
+                            @php($removed = $user->trashed())
+                            <tr wire:key="user-{{ $user->id }}" @class(['opacity-60' => $removed])>
                                 <td class="font-semibold">
                                     {{ $user->full_name }}
                                     @if ($user->id === auth()->id())
@@ -93,7 +103,15 @@
                                 </td>
 
                                 <td>
-                                    @if ($user->is_active)
+                                    @if ($removed)
+                                        {{-- Said plainly, because a removed account still
+                                             holds its email and employee number and that is
+                                             why a new one cannot reuse them. --}}
+                                        <span class="inline-flex items-center gap-2 rounded-full bg-rose-50 px-3 py-1 text-sm font-semibold text-rose-800">
+                                            <span class="h-2 w-2 rounded-full bg-rose-500" aria-hidden="true"></span>
+                                            {{ __('app.users.deleted_badge') }}
+                                        </span>
+                                    @elseif ($user->is_active)
                                         <span class="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-800">
                                             <span class="h-2 w-2 rounded-full bg-emerald-500" aria-hidden="true"></span>
                                             {{ __('app.common.active') }}
@@ -108,6 +126,17 @@
 
                                 <td>
                                     <div class="flex items-center justify-end gap-1">
+                                        @if ($removed)
+                                            {{-- One action only. Editing, clearing a PIN or
+                                                 deactivating a removed account are all
+                                                 answers to questions nobody asked; putting
+                                                 it back is the only useful move. --}}
+                                            <x-icon-button
+                                                icon="restore"
+                                                :label="__('app.users.restore')"
+                                                wire:click="restoreUser({{ $user->id }})"
+                                            />
+                                        @else
                                         <x-icon-button icon="edit" :label="__('app.actions.edit')"
                                             wire:click="openEditModal({{ $user->id }})" />
 
@@ -149,6 +178,7 @@
                                             :disabled="$isSelf"
                                             wire:click="confirmDelete({{ $user->id }})"
                                         />
+                                        @endif
                                     </div>
                                 </td>
                             </tr>
@@ -301,8 +331,13 @@
     {{-- Delete confirmation --}}
     <x-modal name="confirm-delete-user" :title="__('app.users.delete_user')">
         @if ($this->deletingUser)
+            {{-- Which of the two is about to happen, said before the click.
+                 "This can be undone" and "this cannot" are different
+                 decisions. --}}
             <p class="text-base text-slate-700">
-                {{ __('app.users.delete_confirm', ['name' => $this->deletingUser->full_name]) }}
+                {{ $this->deletingKeepsRecord
+                    ? __('app.users.delete_keeps_record', ['name' => $this->deletingUser->full_name])
+                    : __('app.users.delete_removes', ['name' => $this->deletingUser->full_name]) }}
             </p>
 
             <div class="mt-6 flex flex-wrap justify-end gap-3">

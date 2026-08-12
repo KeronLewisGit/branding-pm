@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Livewire\Admin\UserManager;
+use App\Models\ChecklistRun;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Support\Facades\Hash;
@@ -248,9 +249,18 @@ it('allows an administrator to be deactivated while another one remains', functi
 |--------------------------------------------------------------------------
 */
 
-it('soft-deletes and deactivates rather than erasing somebody', function (): void {
+it('soft-deletes and deactivates rather than erasing somebody named on the record', function (): void {
     $operator = User::factory()->create(['full_name' => 'Darnell Joseph']);
     $operator->assignRole('operator');
+
+    /*
+     * The run is the point, and this test did not have one. Without work
+     * attached it was asserting that everybody is retired, which turned out to
+     * be the bug rather than the guarantee: an account named nowhere held its
+     * email address for good, and a mistake could never be undone. What has to
+     * hold is narrower — somebody the record names is never erased.
+     */
+    ChecklistRun::factory()->create(['operator_id' => $operator->id]);
 
     Livewire::actingAs(admin())
         ->test(UserManager::class)

@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -162,6 +163,61 @@ class User extends Authenticatable
     public function defaultSite(): BelongsTo
     {
         return $this->belongsTo(Site::class, 'default_site_id');
+    }
+
+    /**
+     * Every place a user id is recorded as "who did this".
+     *
+     * All of these are `SET NULL` on delete, which is what makes deleting a
+     * user destructive in a way row-counting does not reveal: the row survives
+     * and simply stops saying who was responsible. A completed checklist with
+     * no operator is worse than no checklist at all, because it still looks
+     * like a record.
+     *
+     * Kept as an explicit list rather than derived at runtime so the decision
+     * is reviewable, and guarded by a test that reads the schema and fails if
+     * a new foreign key to `users` appears without being considered here.
+     *
+     * @var array<string, list<string>>
+     */
+    public const HISTORY_REFERENCES = [
+        'checklist_runs' => ['operator_id', 'supervisor_id', 'qa_verified_by'],
+        'checklist_run_items' => ['completed_by'],
+        'issues' => ['raised_by', 'assigned_to'],
+        'attachments' => ['uploaded_by'],
+        'kiosk_devices' => ['enrolled_by_id'],
+        'kiosk_enrolment_requests' => ['reviewed_by_id'],
+        'mail_settings' => ['updated_by_id'],
+    ];
+
+    /**
+     * Is this person named anywhere in the maintenance record?
+     *
+     * The question that decides whether deleting the account removes it or
+     * merely retires it. An account that has signed, completed, verified,
+     * raised or enrolled anything has to be kept, because the record has to
+     * keep saying who did it. An account that has done none of those things
+     * protects nothing by lingering — and lingering costs something real, since
+     * it holds an email address and an employee number that can then never be
+     * used again.
+     */
+    public function hasMaintenanceHistory(): bool
+    {
+        foreach (self::HISTORY_REFERENCES as $table => $columns) {
+            $query = DB::table($table);
+
+            $query->where(function ($q) use ($columns): void {
+                foreach ($columns as $column) {
+                    $q->orWhere($column, $this->id);
+                }
+            });
+
+            if ($query->exists()) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public function runsAsOperator(): HasMany
