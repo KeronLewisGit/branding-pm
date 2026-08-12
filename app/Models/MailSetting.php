@@ -31,7 +31,7 @@ class MailSetting extends Model
     private static self|false|null $memo = null;
 
     protected $fillable = [
-        'host', 'port', 'username', 'password', 'encryption',
+        'transport', 'host', 'port', 'username', 'password', 'encryption',
         'from_address', 'from_name', 'is_active',
         'last_tested_at', 'last_test_result', 'updated_by_id',
     ];
@@ -61,7 +61,7 @@ class MailSetting extends Model
             ->useLogName('settings')
             // Everything EXCEPT the password. An activity log that records a
             // credential is a second place it leaks from.
-            ->logOnly(['host', 'port', 'username', 'encryption', 'from_address', 'from_name', 'is_active'])
+            ->logOnly(['transport', 'host', 'port', 'username', 'encryption', 'from_address', 'from_name', 'is_active'])
             ->logOnlyDirty()
             ->dontLogEmptyChanges();
     }

@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Support\MailRelay;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
 use Livewire\Livewire;
 
@@ -203,4 +204,71 @@ it('keeps the key out of the activity log', function (): void {
     $logged = DB::table('activity_log')->pluck('properties')->implode(' ');
 
     expect($logged)->not->toContain('SG.never-logged');
+});
+
+/*
+|--------------------------------------------------------------------------
+| The API transport
+|--------------------------------------------------------------------------
+| Same destination as SMTP; it differs in how it leaves the building. Worth
+| having because a host that blocks outbound 587 will still allow HTTPS.
+*/
+
+it('registers a sendgrid_api mailer Laravel does not ship', function (): void {
+    // Laravel provides SES, Postmark, Resend and Mailgun transports, but not
+    // SendGrid. Without this registration `mail.default = sendgrid_api` names
+    // a transport that does not exist.
+    MailRelay::registerTransports();
+
+    config(['mail.mailers.sendgrid_api' => [
+        'transport' => 'sendgrid_api',
+        'api_key' => 'SG.test-key',
+    ]]);
+
+    expect(Mail::mailer('sendgrid_api'))->not->toBeNull();
+});
+
+it('switches the default mailer to the API when that transport is chosen', function (): void {
+    MailSetting::create([
+        'transport' => 'sendgrid_api',
+        'host' => 'api.sendgrid.com', 'port' => 587,
+        'password' => 'SG.api-key',
+        'from_address' => 'no-reply@labelhouse.com', 'from_name' => 'Branding PM',
+        'is_active' => true,
+    ]);
+
+    config(['mail.default' => 'smtp']);
+    MailSetting::forget();
+    MailRelay::apply();
+
+    expect(config('mail.default'))->toBe('sendgrid_api')
+        ->and(config('mail.mailers.sendgrid_api.api_key'))->toBe('SG.api-key');
+});
+
+it('does not demand a host or port for the API', function (): void {
+    // They would be values that go nowhere: the API is one HTTPS call to a
+    // fixed endpoint.
+    Livewire::actingAs(settingsAdmin())
+        ->test(MailSettings::class)
+        ->set('transport', 'sendgrid_api')
+        ->set('host', '')
+        ->set('port', '')
+        ->set('password', 'SG.key')
+        ->set('fromAddress', 'no-reply@labelhouse.com')
+        ->set('fromName', 'Branding PM')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect(MailSetting::query()->first()->transport)->toBe('sendgrid_api');
+});
+
+it('still requires a host for SMTP', function (): void {
+    Livewire::actingAs(settingsAdmin())
+        ->test(MailSettings::class)
+        ->set('transport', 'smtp')
+        ->set('host', '')
+        ->set('fromAddress', 'no-reply@labelhouse.com')
+        ->set('fromName', 'Branding PM')
+        ->call('save')
+        ->assertHasErrors('host');
 });

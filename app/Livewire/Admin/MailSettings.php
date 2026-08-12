@@ -27,6 +27,16 @@ class MailSettings extends Component
 {
     use AuthorizesRequests;
 
+    /**
+     * 'smtp' | 'sendgrid_api'.
+     *
+     * Both reach SendGrid; they differ in how they leave the building. SMTP
+     * opens a socket on 587, which shared hosts block often enough that it is
+     * the first thing to suspect when mail stops. The API is ordinary HTTPS on
+     * 443, which anything able to browse the web can do.
+     */
+    public string $transport = MailRelay::TRANSPORT_SMTP;
+
     public string $host = '';
 
     public string $port = '587';
@@ -63,6 +73,7 @@ class MailSettings extends Component
         $existing = MailSetting::query()->first();
 
         if ($existing !== null) {
+            $this->transport = $existing->transport;
             $this->host = $existing->host;
             $this->port = (string) $existing->port;
             $this->username = (string) $existing->username;
@@ -90,8 +101,10 @@ class MailSettings extends Component
     protected function rules(): array
     {
         return [
-            'host' => ['required', 'string', 'max:190'],
-            'port' => ['required', 'integer', 'min:1', 'max:65535'],
+            'transport' => ['required', Rule::in([MailRelay::TRANSPORT_SMTP, MailRelay::TRANSPORT_SENDGRID_API])],
+            // The API needs neither: it is one HTTPS call to a fixed endpoint.
+            'host' => [Rule::requiredIf($this->transport === MailRelay::TRANSPORT_SMTP), 'nullable', 'string', 'max:190'],
+            'port' => [Rule::requiredIf($this->transport === MailRelay::TRANSPORT_SMTP), 'nullable', 'integer', 'min:1', 'max:65535'],
             'username' => ['nullable', 'string', 'max:190'],
             'password' => ['nullable', 'string', 'max:500'],
             // '' is a real answer — an unencrypted relay on a plant LAN — so
@@ -127,8 +140,9 @@ class MailSettings extends Component
         $setting = MailSetting::query()->first() ?? new MailSetting;
 
         $setting->fill([
-            'host' => trim($this->host),
-            'port' => (int) $this->port,
+            'transport' => $this->transport,
+            'host' => trim($this->host) ?: 'api.sendgrid.com',
+            'port' => (int) ($this->port ?: 587),
             'username' => trim($this->username) ?: null,
             'encryption' => $this->encryption ?: null,
             'from_address' => trim($this->fromAddress),
@@ -179,8 +193,12 @@ class MailSettings extends Component
             ? $this->password
             : (string) (MailSetting::query()->first()?->password ?? '');
 
-        config([
-            'mail.mailers.probe' => [
+        // Built from what is in the FORM, under a throwaway mailer name, so
+        // the test exercises what you are about to save rather than what is
+        // already saved and working.
+        $probe = $this->transport === MailRelay::TRANSPORT_SENDGRID_API
+            ? ['transport' => MailRelay::TRANSPORT_SENDGRID_API, 'api_key' => $password]
+            : [
                 'transport' => 'smtp',
                 'host' => trim($this->host),
                 'port' => (int) $this->port,
@@ -188,7 +206,10 @@ class MailSettings extends Component
                 'password' => $password ?: null,
                 'encryption' => $this->encryption ?: null,
                 'timeout' => 15,
-            ],
+            ];
+
+        config([
+            'mail.mailers.probe' => $probe,
             'mail.from.address' => trim($this->fromAddress),
             'mail.from.name' => trim($this->fromName),
         ]);
