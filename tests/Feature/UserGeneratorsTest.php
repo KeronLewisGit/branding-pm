@@ -144,3 +144,57 @@ it('clears generated values when the form is reopened', function (): void {
         ->assertSet('passwordGenerated', false)
         ->assertSet('pinGenerated', false);
 });
+
+/*
+|--------------------------------------------------------------------------
+| Filling itself in
+|--------------------------------------------------------------------------
+*/
+
+it('fills the employee number in when the create form opens', function (): void {
+    Livewire::actingAs(generatorAdmin())
+        ->test(UserManager::class)
+        ->call('openCreateModal')
+        ->assertSet('employeeNumber', 'OP-1001');   // operator is the default role
+});
+
+it('does not fill in a password, because blank is a legitimate answer', function (): void {
+    // A shop-floor operator signs in with a PIN and may have no password at
+    // all; generating one would create a credential nobody asked for.
+    Livewire::actingAs(generatorAdmin())
+        ->test(UserManager::class)
+        ->call('openCreateModal')
+        ->assertSet('password', '')
+        ->assertSet('pin', '');
+});
+
+it('re-derives the number when the role changes', function (): void {
+    Livewire::actingAs(generatorAdmin())
+        ->test(UserManager::class)
+        ->call('openCreateModal')
+        ->assertSet('employeeNumber', 'OP-1001')
+        ->set('role', Roles::SUPERVISOR)
+        ->assertSet('employeeNumber', 'SUP-2001');
+});
+
+it('leaves a hand-typed number alone when the role changes', function (): void {
+    // Changing the role must not silently overwrite a number somebody chose.
+    Livewire::actingAs(generatorAdmin())
+        ->test(UserManager::class)
+        ->call('openCreateModal')
+        ->set('employeeNumber', 'CONTRACTOR-7')
+        ->set('role', Roles::SUPERVISOR)
+        ->assertSet('employeeNumber', 'CONTRACTOR-7');
+});
+
+it('does not touch the number when editing an existing user', function (): void {
+    $existing = User::factory()->create(['employee_number' => 'OP-1099']);
+    $existing->assignRole(Roles::OPERATOR);
+
+    Livewire::actingAs(generatorAdmin())
+        ->test(UserManager::class)
+        ->call('openEditModal', $existing->id)
+        ->assertSet('employeeNumber', 'OP-1099')
+        ->set('role', Roles::SUPERVISOR)
+        ->assertSet('employeeNumber', 'OP-1099');
+});

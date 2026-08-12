@@ -89,6 +89,14 @@ class UserManager extends Component
 
     public bool $pinGenerated = false;
 
+    /**
+     * True while the employee number in the box is the one we derived.
+     *
+     * It goes false the moment the administrator types over it, which is what
+     * stops the role dropdown rewriting a number somebody chose on purpose.
+     */
+    public bool $employeeNumberGenerated = false;
+
     // ── Confirmations ────────────────────────────────────────────────
 
     public ?int $deletingId = null;
@@ -215,6 +223,8 @@ class UserManager extends Component
             ? sprintf('%s-%04d', $prefix, $next)
             : $prefix.'-'.$next;
 
+        $this->employeeNumberGenerated = true;
+
         $this->resetValidation('employeeNumber');
     }
 
@@ -265,7 +275,44 @@ class UserManager extends Component
         $this->authorize('create', User::class);
 
         $this->resetForm();
+
+        /*
+         * Filled in before the form is even seen. The number is required, it
+         * is derived rather than chosen, and the default role is already
+         * selected — so leaving the field blank only asks the administrator to
+         * work out what the application already knows.
+         *
+         * The password is deliberately NOT auto-filled. Blank is a legitimate
+         * answer: a shop-floor operator signs in with a PIN and may have no
+         * password at all, and generating one for them would create a
+         * credential nobody asked for and nobody will manage. It stays a
+         * button, so issuing a password is a decision.
+         */
+        $this->generateEmployeeNumber();
+
         $this->dispatch('open-modal', name: 'user-form');
+    }
+
+    /**
+     * Re-derive the number when the role changes, because the blocks differ:
+     * an operator is OP-1xxx and a supervisor SUP-2xxx, and a number left over
+     * from the previously selected role would be wrong in the one way this
+     * convention exists to prevent.
+     *
+     * Only while the number is still ours. Once somebody has typed their own,
+     * changing the role must not silently overwrite it.
+     */
+    public function updatedRole(): void
+    {
+        if ($this->editingId === null && $this->employeeNumberGenerated) {
+            $this->generateEmployeeNumber();
+        }
+    }
+
+    /** The administrator has taken the number over; stop deriving it. */
+    public function updatedEmployeeNumber(): void
+    {
+        $this->employeeNumberGenerated = false;
     }
 
     public function openEditModal(int $userId): void
@@ -569,7 +616,7 @@ class UserManager extends Component
     private function resetForm(): void
     {
         $this->reset('editingId', 'fullName', 'employeeNumber', 'email', 'role', 'siteId', 'isActive', 'password', 'pin',
-            'passwordGenerated', 'pinGenerated');
+            'passwordGenerated', 'pinGenerated', 'employeeNumberGenerated');
         $this->resetValidation();
     }
 }
