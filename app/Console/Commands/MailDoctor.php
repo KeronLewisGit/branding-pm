@@ -1,0 +1,207 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Console\Commands;
+
+use App\Models\MailSetting;
+use App\Support\MailRelay;
+use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Mail;
+use Throwable;
+
+/**
+ * `mail:doctor` — where is this site actually sending mail, and why?
+ *
+ * Mail has an unusually bad failure mode: the relay that is configured and the
+ * relay that is used can differ, and nothing says so. A saved SendGrid relay
+ * that was never switched on looks identical, on screen, to one that is in
+ * force — right up until a message goes out through the local mail server and
+ * comes back rejected by a Postfix that has never heard of this domain.
+ *
+ * That is not a theoretical failure. It cost this project three rounds of
+ * guessing at a "554 Client host rejected", each one a plausible explanation
+ * of a symptom nobody could see the cause of. This command exists so the
+ * question is answered rather than reasoned about: it reports the route the
+ * next message will take, and what decided it.
+ *
+ * `--send=` puts it beyond argument by actually sending one.
+ */
+class MailDoctor extends Command
+{
+    protected $signature = 'mail:doctor {--send= : Send a test message to this address}';
+
+    protected $description = 'Report which relay this site will send through, and why';
+
+    public function handle(): int
+    {
+        $this->components->info('Mail — where this site will send from');
+
+        $relay = $this->storedRelay();
+
+        $this->line('');
+        $this->route();
+        $this->line('');
+
+        $ok = $this->warnings($relay);
+
+        if (($to = $this->option('send')) !== null) {
+            $this->line('');
+            $ok = $this->send((string) $to) && $ok;
+        }
+
+        return $ok ? self::SUCCESS : self::FAILURE;
+    }
+
+    /**
+     * What is saved on the Mail settings screen, and is it switched on?
+     *
+     * The distinction is the whole point. "Saved" and "in use" are different
+     * states, and the gap between them is where the confusion lives.
+     */
+    private function storedRelay(): ?MailSetting
+    {
+        try {
+            $row = MailSetting::row();
+        } catch (Throwable $e) {
+            $this->components->error('Could not read mail_settings: '.$e->getMessage());
+            $this->components->warn('Has `php artisan migrate` been run on this server?');
+
+            return null;
+        }
+
+        if ($row === null) {
+            $this->components->twoColumnDetail('Saved on the Mail screen', '<fg=yellow>nothing saved</>');
+            $this->components->twoColumnDetail('', 'The .env values are in force.');
+
+            return null;
+        }
+
+        $this->components->twoColumnDetail('Saved on the Mail screen', $row->transport);
+        $this->components->twoColumnDetail('  host / port', ($row->host ?: '—').' : '.($row->port ?: '—'));
+        $this->components->twoColumnDetail('  username', $row->username ?: '—');
+        $this->components->twoColumnDetail('  API key / password', $row->password ? 'set' : '<fg=yellow>not set</>');
+        $this->components->twoColumnDetail('  from', $row->from_address.' ('.$row->from_name.')');
+        $this->components->twoColumnDetail('  copy account emails to', $row->credentials_cc ?: '—');
+
+        $this->components->twoColumnDetail(
+            '  “Use these settings”',
+            $row->is_active
+                ? '<fg=green>ticked — these override .env</>'
+                : '<fg=red>NOT ticked — .env is in force, these are ignored</>'
+        );
+
+        return $row;
+    }
+
+    /**
+     * The route the next message actually takes.
+     *
+     * Read from the live config after `MailRelay::apply()` has run, not from
+     * the stored row — that is precisely the difference this command exists to
+     * show.
+     */
+    private function route(): void
+    {
+        $mailer = (string) config('mail.default');
+
+        $this->components->twoColumnDetail('<options=bold>The next message goes via</>', "<options=bold>{$mailer}</>");
+
+        if ($mailer === MailRelay::TRANSPORT_SENDGRID_API) {
+            $this->components->twoColumnDetail('  endpoint', 'https://api.sendgrid.com (no SMTP port)');
+            $this->components->twoColumnDetail('  API key', config('mail.mailers.'.$mailer.'.api_key') ? 'set' : '<fg=red>not set</>');
+        } else {
+            $host = (string) config("mail.mailers.{$mailer}.host");
+            $port = (string) config("mail.mailers.{$mailer}.port");
+
+            $this->components->twoColumnDetail('  host / port', ($host ?: '—').' : '.($port ?: '—'));
+            $this->components->twoColumnDetail('  username', config("mail.mailers.{$mailer}.username") ?: '—');
+        }
+
+        $this->components->twoColumnDetail(
+            '  from',
+            config('mail.from.address').' ('.config('mail.from.name').')'
+        );
+    }
+
+    /**
+     * The specific mistakes that produce a message nobody can explain.
+     */
+    private function warnings(?MailSetting $relay): bool
+    {
+        $ok = true;
+        $mailer = (string) config('mail.default');
+        $host = strtolower((string) config("mail.mailers.{$mailer}.host"));
+
+        if ($relay !== null && ! $relay->is_active) {
+            $this->components->warn(
+                'A relay is saved but not switched on, so it is doing nothing. '
+                .'Tick “Use these settings” on Admin → Mail and save.'
+            );
+            $ok = false;
+        }
+
+        /*
+         * The one that produced "554 Client host rejected". A shared host runs
+         * a local mail server that accepts mail for its own domains and
+         * refuses to relay anywhere else — so this looks configured, connects
+         * fine, and is rejected on delivery.
+         */
+        if (in_array($host, ['localhost', '127.0.0.1', '::1', 'sendmail', ''], true) && $mailer !== MailRelay::TRANSPORT_SENDGRID_API) {
+            $this->components->error(
+                'This site is sending through the local mail server ('.($host ?: 'no host set').'). '
+                .'On shared hosting that relays nothing off-domain and is rejected as '
+                .'“554 Client host rejected”. Configure a real relay on Admin → Mail.'
+            );
+            $ok = false;
+        }
+
+        if ($relay?->transport === MailRelay::TRANSPORT_SENDGRID_API && ! MailRelay::sendgridApiAvailable()) {
+            $this->components->error(
+                'The SendGrid API transport is selected but symfony/sendgrid-mailer is not installed, '
+                .'so mail has fallen back to SMTP. Run `composer install --no-dev` on this server.'
+            );
+            $ok = false;
+        }
+
+        if ((string) config('mail.from.address') === '') {
+            $this->components->warn('No from address is set. Most relays reject a message without one.');
+            $ok = false;
+        }
+
+        if ($ok) {
+            $this->components->info('No configuration problems found.');
+        }
+
+        return $ok;
+    }
+
+    /**
+     * Prove it, rather than describe it.
+     *
+     * The provider's own refusal is the most useful line this command can
+     * print — "554 Client host rejected" names the problem far better than any
+     * check written in advance — so the exception message is reported verbatim
+     * rather than being reduced to a tick or a cross.
+     */
+    private function send(string $to): bool
+    {
+        $this->components->info("Sending a test message to {$to} via ".config('mail.default').'…');
+
+        try {
+            Mail::raw(
+                'Test from '.config('app.name').' via '.config('mail.default').'.',
+                fn ($message) => $message->to($to)->subject('Test from '.config('app.name'))
+            );
+        } catch (Throwable $e) {
+            $this->components->error('Not sent. The relay said:');
+            $this->line('  '.$e->getMessage());
+
+            return false;
+        }
+
+        $this->components->info('Accepted by the relay. If it does not arrive, the relay took it and dropped it — check the activity log at the provider.');
+
+        return true;
+    }
+}
