@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 use App\Models\MailSetting;
 use App\Support\MailRelay;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
 
 /*
 |--------------------------------------------------------------------------
@@ -76,9 +78,7 @@ it('does not mistake a real relay for the local one', function (): void {
 it('says when the API transport is chosen but its package is missing', function (): void {
     // Otherwise the fall back to SMTP is silent, and the administrator is
     // looking at a screen that says SendGrid while mail goes elsewhere.
-    if (MailRelay::sendgridApiAvailable()) {
-        $this->markTestSkipped('The SendGrid bridge is installed here, so this state cannot be reached.');
-    }
+    MailRelay::fakeBridge(false);
 
     storedRelay(['transport' => MailRelay::TRANSPORT_SENDGRID_API]);
     MailSetting::forget();
@@ -101,4 +101,64 @@ it('warns on the settings screen, not only in a terminal', function (): void {
     Livewire\Livewire::actingAs($admin)
         ->test(App\Livewire\Admin\MailSettings::class)
         ->assertSee('554');
+});
+
+it('falls back to SendGrid over SMTP when the API package is missing', function (): void {
+    /*
+     * The fallback used to read the stored host, which for an API relay was a
+     * placeholder, and the username SendGrid requires had never been asked
+     * for — so it authenticated as nobody and failed with `535`, a wrong-key
+     * error for a problem that was not the key.
+     *
+     * SendGrid's SMTP settings are fixed and the API key doubles as the SMTP
+     * password, so the fallback can be exact.
+     */
+    MailRelay::fakeBridge(false);
+
+    storedRelay([
+        'transport' => MailRelay::TRANSPORT_SENDGRID_API,
+        'host' => null,
+        'port' => null,
+        'username' => null,
+        'password' => 'SG.the-key',
+    ]);
+    MailSetting::forget();
+    MailRelay::apply();
+
+    expect(config('mail.default'))->toBe('smtp')
+        ->and(config('mail.mailers.smtp.host'))->toBe(MailRelay::SENDGRID_SMTP_HOST)
+        ->and(config('mail.mailers.smtp.username'))->toBe(MailRelay::SENDGRID_SMTP_USERNAME)
+        ->and(config('mail.mailers.smtp.password'))->toBe('SG.the-key');
+});
+
+it('does not call the log or array mailers a local relay', function (): void {
+    // Both are legitimate — `log` is what a machine without Docker uses, and
+    // the test suite runs on `array`. Warning about either would be noise.
+    config(['mail.default' => 'log']);
+    expect(MailRelay::sendsLocally())->toBeFalse();
+
+    config(['mail.default' => 'array']);
+    expect(MailRelay::sendsLocally())->toBeFalse();
+});
+
+it('recognises every spelling of the local mail server', function (): void {
+    foreach (['localhost', '127.0.0.1', '::1', 'LOCALHOST', ''] as $host) {
+        config(['mail.default' => 'smtp', 'mail.mailers.smtp.host' => $host]);
+
+        expect(MailRelay::sendsLocally())->toBeTrue("host: {$host}");
+    }
+});
+
+it('says the database is behind the code rather than failing on save', function (): void {
+    /*
+     * A `git pull` without `php artisan migrate` leaves code writing a column
+     * the table does not have. The only symptom is a 500 on save — an SQL
+     * error the browser never shows and nobody connects to a migration.
+     */
+    Schema::table('mail_settings', fn (Blueprint $table) => $table->dropColumn('credentials_cc'));
+
+    $this->artisan('mail:doctor')
+        ->expectsOutputToContain('credentials_cc')
+        ->expectsOutputToContain('migrate')
+        ->assertExitCode(1);
 });

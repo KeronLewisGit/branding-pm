@@ -3,6 +3,7 @@
 namespace Tests;
 
 use App\Models\MailSetting;
+use App\Support\MailRelay;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 
 abstract class TestCase extends BaseTestCase
@@ -21,5 +22,6 @@ abstract class TestCase extends BaseTestCase
         parent::setUp();
 
         MailSetting::forget();
+        MailRelay::fakeBridge(null);
     }
 }
