@@ -163,8 +163,12 @@ class MailSettings extends Component
 
         $setting->fill([
             'transport' => $this->transport,
-            'host' => trim($this->host) ?: 'api.sendgrid.com',
-            'port' => (int) ($this->port ?: 587),
+            // Null rather than a placeholder hostname. The API does not use
+            // one, and a stored `api.sendgrid.com` was a value that looked
+            // like configuration, described nothing, and misled the fallback
+            // that later had to read it.
+            'host' => trim($this->host) ?: null,
+            'port' => $this->port !== '' ? (int) $this->port : null,
             'username' => trim($this->username) ?: null,
             'encryption' => $this->encryption ?: null,
             'from_address' => trim($this->fromAddress),
@@ -271,35 +275,12 @@ class MailSettings extends Component
         MailRelay::apply();
     }
 
-    /**
-     * Is the site about to hand its mail to the local mail server?
-     *
-     * A shared host runs one that accepts mail for its own domains and refuses
-     * to relay anywhere else, so this state looks configured, connects
-     * happily, and is refused on delivery with “554 Client host rejected”. The
-     * card above showed the host but not what it meant — a hostname is not an
-     * explanation, and the address that produces this is usually just whatever
-     * `.env` shipped with.
-     */
-    private function sendsLocally(): bool
-    {
-        $mailer = (string) config('mail.default');
-
-        if ($mailer === MailRelay::TRANSPORT_SENDGRID_API) {
-            return false;
-        }
-
-        $host = mb_strtolower((string) config("mail.mailers.{$mailer}.host"));
-
-        return in_array($host, ['localhost', '127.0.0.1', '::1', 'sendmail', ''], true);
-    }
-
     public function render(): View
     {
         return view('livewire.admin.mail-settings', [
             'setting' => MailSetting::query()->with('updatedBy:id,full_name')->first(),
             'envHost' => (string) config('mail.mailers.smtp.host'),
-            'sendsLocally' => $this->sendsLocally(),
+            'sendsLocally' => MailRelay::sendsLocally(),
         ])->title(__('app.mail.title'));
     }
 }

@@ -8,6 +8,7 @@ use App\Models\MailSetting;
 use App\Support\MailRelay;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Schema;
 use Throwable;
 
 /**
@@ -37,6 +38,10 @@ class MailDoctor extends Command
     {
         $this->components->info('Mail — where this site will send from');
 
+        if (! $this->schema()) {
+            return self::FAILURE;
+        }
+
         $relay = $this->storedRelay();
 
         $this->line('');
@@ -51,6 +56,53 @@ class MailDoctor extends Command
         }
 
         return $ok ? self::SUCCESS : self::FAILURE;
+    }
+
+    /**
+     * Does the database have the columns this code writes?
+     *
+     * A `git pull` without `php artisan migrate` leaves code that saves a
+     * column the table does not have, and the only symptom is a 500 on save —
+     * an SQL error the browser never shows and nobody thinks to connect to a
+     * migration. Checked first, because every reading below it would be
+     * describing a table that cannot be written to anyway.
+     */
+    private function schema(): bool
+    {
+        $required = [
+            'transport', 'host', 'port', 'username', 'password', 'encryption',
+            'from_address', 'from_name', 'credentials_cc', 'is_active',
+            'last_tested_at', 'last_test_result', 'updated_by_id',
+        ];
+
+        try {
+            if (! Schema::hasTable('mail_settings')) {
+                $this->components->error('The mail_settings table does not exist. Run `php artisan migrate --force`.');
+
+                return false;
+            }
+
+            $missing = array_values(array_diff($required, Schema::getColumnListing('mail_settings')));
+        } catch (Throwable $e) {
+            $this->components->error('Could not read the database: '.$e->getMessage());
+
+            return false;
+        }
+
+        if ($missing !== []) {
+            $this->components->error(
+                'The database is behind the code. mail_settings is missing: '.implode(', ', $missing).'. '
+                .'This is what makes saving the Mail screen fail.'
+            );
+
+            // Its own line, so the fix survives the console wrapping the
+            // sentence above it.
+            $this->line('  Run: php artisan migrate --force');
+
+            return false;
+        }
+
+        return true;
     }
 
     /**
@@ -131,7 +183,6 @@ class MailDoctor extends Command
     {
         $ok = true;
         $mailer = (string) config('mail.default');
-        $host = strtolower((string) config("mail.mailers.{$mailer}.host"));
 
         if ($relay !== null && ! $relay->is_active) {
             $this->components->warn(
@@ -147,7 +198,9 @@ class MailDoctor extends Command
          * refuses to relay anywhere else — so this looks configured, connects
          * fine, and is rejected on delivery.
          */
-        if (in_array($host, ['localhost', '127.0.0.1', '::1', 'sendmail', ''], true) && $mailer !== MailRelay::TRANSPORT_SENDGRID_API) {
+        if (MailRelay::sendsLocally()) {
+            $host = (string) config("mail.mailers.{$mailer}.host");
+
             $this->components->error(
                 'This site is sending through the local mail server ('.($host ?: 'no host set').'). '
                 .'On shared hosting that relays nothing off-domain and is rejected as '
