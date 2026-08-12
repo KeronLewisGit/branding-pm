@@ -94,6 +94,19 @@ return [
         'reset_email_expiry' => 'This link works once, and stops working after :minutes minutes.',
         'reset_email_ignore' => 'If this was not you, you do not need to do anything. Your password has not changed. Tell your supervisor if you keep getting these.',
         'reset_email_salutation' => 'Branding & Signage — Preventive Maintenance',
+
+        // Choosing your own password, after an administrator issued one.
+        'change_title' => 'Choose a password',
+        'change_forced_intro' => 'Your password was set by an administrator. Choose your own before carrying on.',
+        'change_intro' => 'Change the password you use to sign in.',
+        'change_current' => 'Current password',
+        'change_current_hint' => 'The one you were given, or the one you use now.',
+        'change_current_wrong' => 'That is not your current password.',
+        'change_new' => 'New password',
+        'change_new_hint' => 'At least 8 characters.',
+        'change_confirm' => 'Confirm new password',
+        'change_button' => 'Save password',
+        'change_done' => 'Your password has been changed.',
     ],
 
     // Run status — enum RunStatus (§3). Always shown with the coloured dot,
@@ -1334,13 +1347,18 @@ return [
     |--------------------------------------------------------------------------
     */
     'credentials_mail' => [
-        'subject' => 'Your :app sign-in details',
+        'subject' => 'Your :app account',
         'greeting' => 'Hello :name,',
-        'intro' => 'An account has been created for you on :app.',
+        'intro' => 'An account has been created for you on :app, the preventive maintenance checklist system for Branding & Signage. Your details are below.',
         'employee_number' => '**Employee number:** :number',
+        'email' => '**Email:** :email',
         'password' => '**Password:** :password',
         'pin' => '**Kiosk PIN:** :pin',
+        'where' => 'Sign in using the button below.',
         'button' => 'Sign in',
-        'change_it' => 'Please change these after signing in. This email is not a safe place for them to stay.',
+        'first_login' => 'You will be asked to choose your own password the first time you sign in.',
+        'kiosk_note' => 'Your PIN is for the shop-floor tablets: tap your name on the kiosk and enter it.',
+        'keep_safe' => 'Please keep these details to yourself, and delete this email once you have signed in.',
+        'salutation' => 'The :app team',
     ],
 ];

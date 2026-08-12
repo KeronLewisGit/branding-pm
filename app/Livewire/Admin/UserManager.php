@@ -396,6 +396,20 @@ class UserManager extends Component
         // name does not wipe somebody's PIN.
         if ($this->password !== '') {
             $data['password'] = $this->password;
+
+            /*
+             * A password somebody else chose is a shared secret from the
+             * moment it is issued — it exists wherever the administrator wrote
+             * it and, if emailed, in a mailbox and its backups. Requiring the
+             * first sign-in to replace it bounds how long that matters.
+             *
+             * Creation only. Forcing it on an edit would lock somebody out of
+             * their own account the next time an administrator corrected a
+             * typo in their name.
+             */
+            if ($editing === null) {
+                $data['must_change_password'] = true;
+            }
         }
 
         if ($this->pin !== '') {

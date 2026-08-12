@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\NewPasswordController;
 use App\Http\Controllers\Auth\PasswordResetLinkController;
+use App\Http\Controllers\Auth\ChangePasswordController;
 use App\Http\Controllers\Kiosk\KioskActivationController;
 use App\Http\Controllers\Kiosk\KioskEnrolmentController;
 use App\Http\Controllers\Kiosk\KioskEnrolmentRequestController;
@@ -221,7 +222,18 @@ Route::middleware(['auth', 'permission:kiosk.manage'])->group(function (): void 
 | runs.show, and must be dropped if they walk away from the tablet. It is a
 | no-op for ordinary password sessions, which carry no kiosk session keys.
 */
-Route::middleware(['auth', 'kiosk.idle'])->group(function (): void {
+/*
+ * Choosing your own password.
+ *
+ * Outside the `password.change` middleware group on purpose — it is where that
+ * middleware sends people, so gating it behind itself would loop.
+ */
+Route::middleware('auth')->group(function (): void {
+    Route::get('/change-password', [ChangePasswordController::class, 'create'])->name('password.change');
+    Route::post('/change-password', [ChangePasswordController::class, 'store'])->name('password.change.store');
+});
+
+Route::middleware(['auth', 'kiosk.idle', 'password.change'])->group(function (): void {
     Route::get('/dashboard', Dashboard::class)->name('dashboard');
 
     /*
