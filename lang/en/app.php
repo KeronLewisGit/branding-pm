@@ -1274,4 +1274,46 @@ return [
         'status_declined' => 'Declined',
         'status_claimed' => 'Set up',
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Admin -> Mail
+    |--------------------------------------------------------------------------
+    */
+    'mail' => [
+        'title' => 'Mail',
+        'intro' => 'The relay that sends password resets. Saved here, these override the values in .env — so the relay can be fixed without shell access.',
+        'in_force' => 'Sending through',
+        'source_app' => 'set here',
+        'source_env' => 'from .env',
+        'last_tested' => 'Last tested :when',
+        'last_changed' => 'Changed by :name, :when',
+        'host' => 'SMTP host',
+        'host_hint' => 'SendGrid is smtp.sendgrid.net.',
+        'port' => 'Port',
+        'username' => 'Username',
+        'username_hint' => 'For SendGrid this is the literal word "apikey" — not your email.',
+        'password' => 'Password / API key',
+        'password_hint' => 'Stored encrypted. Leave blank to keep the saved one.',
+        'password_unchanged' => 'unchanged',
+        'encryption' => 'Encryption',
+        'encryption_tls' => 'TLS (port 587)',
+        'encryption_ssl' => 'SSL (port 465)',
+        'encryption_none' => 'None',
+        'from_address' => 'From address',
+        'from_address_hint' => 'Must be a sender the relay will vouch for, or the message is rejected or junked.',
+        'from_name' => 'From name',
+        'use_these' => 'Use these settings',
+        'use_these_hint' => 'Until this is ticked, .env stays in force. Test first.',
+        'send_test' => 'Send test email',
+        'sending' => 'Sending...',
+        'save' => 'Save',
+        'saved' => 'Mail settings saved.',
+        'test_ok' => 'Sent',
+        'test_failed' => 'Not sent',
+        'test_sent' => 'Test message sent to :email. If it does not arrive, the relay accepted it and the problem is downstream.',
+        'test_no_recipient' => 'Your account has no email address, so there is nowhere to send the test.',
+        'test_subject' => 'Mail test',
+        'test_body' => 'This is a test message from :app. If you are reading it, the relay works.',
+    ],
 ];
