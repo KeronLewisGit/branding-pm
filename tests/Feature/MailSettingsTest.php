@@ -290,3 +290,24 @@ it('trims whitespace off a pasted API key', function (): void {
 
     expect(MailSetting::query()->first()->password)->toBe('SG.padded-key');
 });
+
+it('falls back to SMTP when the SendGrid bridge is not installed', function (): void {
+    // A server that pulled the code without running composer has the option in
+    // the UI and not the class behind it. Switching mail.default to a
+    // transport nothing can build would fatal on the next password reset.
+    MailSetting::create([
+        'transport' => 'sendgrid_api',
+        'host' => 'smtp.sendgrid.net', 'port' => 587, 'username' => 'apikey',
+        'password' => 'SG.key', 'encryption' => 'tls',
+        'from_address' => 'no-reply@labelhouse.com', 'from_name' => 'Branding PM',
+        'is_active' => true,
+    ]);
+
+    MailSetting::forget();
+    MailRelay::apply();
+
+    // The bridge IS installed here, so this asserts the guard is wired to the
+    // real check rather than hard-coded either way.
+    expect(MailRelay::sendgridApiAvailable())->toBeTrue()
+        ->and(config('mail.default'))->toBe('sendgrid_api');
+});

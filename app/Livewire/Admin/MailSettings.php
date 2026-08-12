@@ -101,7 +101,16 @@ class MailSettings extends Component
     protected function rules(): array
     {
         return [
-            'transport' => ['required', Rule::in([MailRelay::TRANSPORT_SMTP, MailRelay::TRANSPORT_SENDGRID_API])],
+            'transport' => [
+                'required',
+                Rule::in([MailRelay::TRANSPORT_SMTP, MailRelay::TRANSPORT_SENDGRID_API]),
+                // Refused with a sentence rather than accepted and fatal later.
+                function (string $attribute, mixed $value, callable $fail): void {
+                    if ($value === MailRelay::TRANSPORT_SENDGRID_API && ! MailRelay::sendgridApiAvailable()) {
+                        $fail(__('app.mail.api_unavailable'));
+                    }
+                },
+            ],
             // The API needs neither: it is one HTTPS call to a fixed endpoint.
             'host' => [Rule::requiredIf($this->transport === MailRelay::TRANSPORT_SMTP), 'nullable', 'string', 'max:190'],
             'port' => [Rule::requiredIf($this->transport === MailRelay::TRANSPORT_SMTP), 'nullable', 'integer', 'min:1', 'max:65535'],
