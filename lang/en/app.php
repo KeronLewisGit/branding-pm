@@ -1327,6 +1327,8 @@ return [
         'from_address' => 'From address',
         'from_address_hint' => 'Must be a sender the relay will vouch for, or the message is rejected or junked.',
         'from_name' => 'From name',
+        'credentials_cc' => 'Copy account emails to',
+        'credentials_cc_hint' => 'Optional. This address is copied on every "here is how to sign in" email, so somebody keeps a record. Leave blank to copy nobody.',
         'use_these' => 'Use these settings',
         'use_these_hint' => 'Until this is ticked, .env stays in force. Test first.',
         'send_test' => 'Send test email',

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Notifications;
 
+use App\Models\MailSetting;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
@@ -99,6 +100,23 @@ class AccountCredentials extends Notification
 
         if ($this->pin !== null && $this->pin !== '') {
             $message->line(__('app.credentials_mail.kiosk_note'));
+        }
+
+        /*
+         * A copy to whoever is named in Admin -> Mail, if anybody.
+         *
+         * `row()`, not `active()`: who gets a copy is a property of the mail,
+         * not of the route it takes, so an address saved while the site still
+         * relays through `.env` must still be honoured.
+         *
+         * CC, not BCC, deliberately: the recipient can see their details went
+         * to somebody else. Hiding that from the person whose password it is
+         * would be the wrong default.
+         */
+        $cc = MailSetting::row()?->credentials_cc;
+
+        if ($cc !== null && $cc !== '' && $cc !== $notifiable->email) {
+            $message->cc($cc);
         }
 
         return $message

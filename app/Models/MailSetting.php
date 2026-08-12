@@ -30,9 +30,12 @@ class MailSetting extends Model
      */
     private static self|false|null $memo = null;
 
+    /** @var self|false|null Same memo trick, for the row regardless of `is_active`. */
+    private static self|false|null $rowMemo = null;
+
     protected $fillable = [
         'transport', 'host', 'port', 'username', 'password', 'encryption',
-        'from_address', 'from_name', 'is_active',
+        'from_address', 'from_name', 'credentials_cc', 'is_active',
         'last_tested_at', 'last_test_result', 'updated_by_id',
     ];
 
@@ -61,22 +64,23 @@ class MailSetting extends Model
             ->useLogName('settings')
             // Everything EXCEPT the password. An activity log that records a
             // credential is a second place it leaks from.
-            ->logOnly(['transport', 'host', 'port', 'username', 'encryption', 'from_address', 'from_name', 'is_active'])
+            ->logOnly(['transport', 'host', 'port', 'username', 'encryption', 'from_address', 'from_name', 'credentials_cc', 'is_active'])
             ->logOnlyDirty()
             ->dontLogEmptyChanges();
     }
 
     protected static function booted(): void
     {
-        // Saved and deleted both, so the memo cannot outlive the row.
-        static::saved(fn () => self::$memo = null);
-        static::deleted(fn () => self::$memo = null);
+        // Saved and deleted both, so the memos cannot outlive the row.
+        static::saved(fn () => self::forget());
+        static::deleted(fn () => self::forget());
     }
 
-    /** Drop the memo — for tests, and after a save within one request. */
+    /** Drop the memos — for tests, and after a save within one request. */
     public static function forget(): void
     {
         self::$memo = null;
+        self::$rowMemo = null;
     }
 
     public function updatedBy(): BelongsTo
@@ -95,5 +99,27 @@ class MailSetting extends Model
         }
 
         return self::$memo ?: null;
+    }
+
+    /**
+     * The stored row whether or not it is switched on.
+     *
+     * Distinct from `active()`, and the distinction matters. `active()` answers
+     * "which relay should send this?", so an unticked row must not override
+     * `.env`. This answers "what has been configured?", which is the right
+     * question for settings that describe the mail itself rather than the
+     * route it takes — the credentials CC being the one that exists today.
+     *
+     * Tying the CC to `is_active` would mean an address saved while the site
+     * still relays through `.env` is silently ignored, and the person expecting
+     * a copy finds out by not receiving one.
+     */
+    public static function row(): ?self
+    {
+        if (self::$rowMemo === null) {
+            self::$rowMemo = self::query()->first() ?? false;
+        }
+
+        return self::$rowMemo ?: null;
     }
 }
