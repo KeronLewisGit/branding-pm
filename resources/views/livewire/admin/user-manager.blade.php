@@ -174,7 +174,7 @@
                 <div>
                     <label for="user-number" class="mb-1 block text-base font-semibold">{{ __('app.users.employee_number') }}</label>
                     <div class="flex gap-2">
-                        <x-input id="user-number" wire:model="employeeNumber" maxlength="32" class="w-full" />
+                        <x-input id="user-number" wire:model.live.debounce.400ms="employeeNumber" maxlength="32" class="w-full" />
                         {{-- Reads the highest number already issued in this role's
                              block, so it cannot collide with one typed by hand. --}}
                         <x-button type="button" variant="ghost" class="shrink-0" wire:click="generateEmployeeNumber">
@@ -199,7 +199,7 @@
             <div class="grid gap-4 sm:grid-cols-2">
                 <div>
                     <label for="user-role" class="mb-1 block text-base font-semibold">{{ __('app.users.role') }}</label>
-                    <x-select id="user-role" wire:model="role" class="w-full">
+                    <x-select id="user-role" wire:model.live="role" class="w-full">
                         @foreach ($this->roles as $roleOption)
                             <option value="{{ $roleOption }}">{{ __('app.roles.'.$roleOption) }}</option>
                         @endforeach
