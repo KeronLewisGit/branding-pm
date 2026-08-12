@@ -153,8 +153,16 @@ class MailSettings extends Component
 
         // Overwritten only when something was actually typed, or saving any
         // other field would wipe the stored key.
-        if ($this->password !== '') {
-            $setting->password = $this->password;
+        if (trim($this->password) !== '') {
+            /*
+             * Trimmed, because an API key is pasted rather than typed and a
+             * trailing space or newline comes with it more often than not —
+             * from a terminal, an email, or a double-click that took the line
+             * break. It is invisible in a password field, and SendGrid rejects
+             * it as `535 authentication failed`, which reads like a wrong key
+             * rather than a whitespace problem.
+             */
+            $setting->password = trim($this->password);
         }
 
         $setting->save();
@@ -189,8 +197,8 @@ class MailSettings extends Component
 
         // The typed password when there is one, the stored one otherwise, so a
         // test after reopening the form does not need it retyped.
-        $password = $this->password !== ''
-            ? $this->password
+        $password = trim($this->password) !== ''
+            ? trim($this->password)
             : (string) (MailSetting::query()->first()?->password ?? '');
 
         // Built from what is in the FORM, under a throwaway mailer name, so

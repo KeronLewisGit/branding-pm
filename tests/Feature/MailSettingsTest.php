@@ -272,3 +272,21 @@ it('still requires a host for SMTP', function (): void {
         ->call('save')
         ->assertHasErrors('host');
 });
+
+it('trims whitespace off a pasted API key', function (): void {
+    // A key pasted from a terminal or an email arrives with a newline more
+    // often than not. It is invisible in a password field, and SendGrid
+    // rejects it as "535 authentication failed" — which reads like a wrong
+    // key rather than a whitespace problem.
+    Livewire::actingAs(settingsAdmin())
+        ->test(MailSettings::class)
+        ->set('transport', 'sendgrid_api')
+        ->set('password', "  SG.padded-key
+")
+        ->set('fromAddress', 'no-reply@labelhouse.com')
+        ->set('fromName', 'Branding PM')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect(MailSetting::query()->first()->password)->toBe('SG.padded-key');
+});
