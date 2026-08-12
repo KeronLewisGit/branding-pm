@@ -33,3 +33,7 @@ yarn-error.log
 
 # Claude Code, per-machine
 /.claude/settings.local.json
+
+# Written by scripts/deploy.sh after a successful composer install, so the
+# next deploy can tell whether vendor matches the lock. Per-server.
+/storage/framework/.composer-lock-hash

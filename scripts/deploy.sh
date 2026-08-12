@@ -90,24 +90,39 @@ say "Maintenance mode"
 # Pull
 # ---------------------------------------------------------------------------
 say "Fetching"
-LOCK_BEFORE="$(md5sum composer.lock 2>/dev/null | cut -d' ' -f1 || echo none)"
 
 # --ff-only: a merge commit created on a production server is a branch nobody
 # will ever push back, and a conflict here should stop the deploy, not start a
 # merge in a shell with no editor.
 git pull --ff-only
 
-LOCK_AFTER="$(md5sum composer.lock 2>/dev/null | cut -d' ' -f1 || echo none)"
+# ---------------------------------------------------------------------------
+# Dependencies — when what is INSTALLED does not match the lock
+# ---------------------------------------------------------------------------
+# Compared against a stamp written after the last successful install, NOT
+# against the lock before this pull.
+#
+# The before/after comparison was wrong in a way that only shows up later: it
+# asks "did this pull change the lock", when the question is "does vendor match
+# the lock". A deploy that skipped or failed its install left vendor behind
+# permanently, because every subsequent pull that did not itself touch the lock
+# saw "unchanged" and skipped again. That is how a server ended up serving code
+# whose dependencies were never installed, and reporting a missing class as a
+# configuration problem.
+STAMP="storage/framework/.composer-lock-hash"
+LOCK_HASH="$(md5sum composer.lock 2>/dev/null | cut -d' ' -f1 || echo none)"
+INSTALLED_HASH="$(cat "$STAMP" 2>/dev/null || echo none)"
 
-# ---------------------------------------------------------------------------
-# Dependencies — only when the lock actually moved
-# ---------------------------------------------------------------------------
-if [ "$LOCK_BEFORE" != "$LOCK_AFTER" ]; then
-    say "composer.lock changed — installing"
+if [ ! -d vendor ] || [ "$LOCK_HASH" != "$INSTALLED_HASH" ]; then
+    say "Dependencies out of date — installing"
     [ -n "$COMPOSER_BIN" ] || fail "composer not found. Set COMPOSER_BIN."
     "$PHP_BIN" "$COMPOSER_BIN" install --no-dev --optimize-autoloader --no-interaction
+
+    # Stamped only after composer succeeds, so a failed install is retried on
+    # the next deploy rather than recorded as done.
+    printf '%s' "$LOCK_HASH" > "$STAMP"
 else
-    ok "composer.lock unchanged — skipping install"
+    ok "dependencies match composer.lock"
 fi
 
 # ---------------------------------------------------------------------------
