@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Livewire\Admin\UserManager;
+use App\Models\MailSetting;
 use App\Models\User;
 use App\Notifications\AccountCredentials;
 use App\Support\Roles;
@@ -118,12 +119,13 @@ it('offers a sign-in button only when there is a password to use', function (): 
         ->and($rendered)->toContain(__('app.credentials_mail.button'));
 });
 
-it('tells them to change it', function (): void {
+it('tells them to change it, and to keep it to themselves', function (): void {
     $user = User::factory()->create();
 
     $rendered = (string) (new AccountCredentials('the-password', null))->toMail($user)->render();
 
-    expect($rendered)->toContain(__('app.credentials_mail.change_it'));
+    expect($rendered)->toContain(__('app.credentials_mail.first_login'))
+        ->and($rendered)->toContain(__('app.credentials_mail.keep_safe'));
 });
 
 it('creates the account even when the relay refuses', function (): void {
@@ -146,4 +148,81 @@ it('creates the account even when the relay refuses', function (): void {
         ->assertHasNoErrors();
 
     expect(User::query()->where('email', 'anyway@labelhouse.com')->exists())->toBeTrue();
+});
+
+/*
+|--------------------------------------------------------------------------
+| Copying somebody in
+|--------------------------------------------------------------------------
+| A setting rather than an address in the source: a name in a repository is a
+| published personal address, and one that goes quietly wrong when that person
+| changes role. Worth knowing what a copy means — that mailbox accumulates the
+| credentials of everybody ever created.
+*/
+
+it('copies the address configured in mail settings', function (): void {
+    MailSetting::query()->create([
+        'transport' => 'smtp',
+        'host' => 'smtp.example.com',
+        'port' => 587,
+        'from_address' => 'pm@labelhouse.com',
+        'from_name' => 'Branding PM',
+        'credentials_cc' => 'records@labelhouse.com',
+        'is_active' => true,
+    ]);
+    MailSetting::forget();
+
+    $user = User::factory()->create(['email' => 'newstarter@labelhouse.com']);
+    $message = (new AccountCredentials('the-password', null))->toMail($user);
+
+    expect(collect($message->cc)->flatten())->toContain('records@labelhouse.com');
+});
+
+it('copies nobody when no address is configured', function (): void {
+    $message = (new AccountCredentials('the-password', null))->toMail(User::factory()->create());
+
+    expect($message->cc)->toBeEmpty();
+});
+
+it('copies the address even while .env is still doing the relaying', function (): void {
+    /*
+     * `row()` rather than `active()`. Who gets a copy is a property of the
+     * mail, not of the route it takes — an address saved while the relay is
+     * still switched off would otherwise be ignored in silence, and the person
+     * expecting a copy finds out by never receiving one.
+     */
+    MailSetting::query()->create([
+        'transport' => 'smtp',
+        'host' => 'smtp.example.com',
+        'port' => 587,
+        'from_address' => 'pm@labelhouse.com',
+        'from_name' => 'Branding PM',
+        'credentials_cc' => 'records@labelhouse.com',
+        'is_active' => false,
+    ]);
+    MailSetting::forget();
+
+    $message = (new AccountCredentials('the-password', null))->toMail(User::factory()->create());
+
+    expect(collect($message->cc)->flatten())->toContain('records@labelhouse.com');
+});
+
+it('does not copy somebody on their own email', function (): void {
+    // Where the person configured to keep the record is also the person being
+    // set up, one copy is enough.
+    MailSetting::query()->create([
+        'transport' => 'smtp',
+        'host' => 'smtp.example.com',
+        'port' => 587,
+        'from_address' => 'pm@labelhouse.com',
+        'from_name' => 'Branding PM',
+        'credentials_cc' => 'records@labelhouse.com',
+        'is_active' => true,
+    ]);
+    MailSetting::forget();
+
+    $user = User::factory()->create(['email' => 'records@labelhouse.com']);
+    $message = (new AccountCredentials('the-password', null))->toMail($user);
+
+    expect($message->cc)->toBeEmpty();
 });

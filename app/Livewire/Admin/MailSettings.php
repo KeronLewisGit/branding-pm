@@ -59,6 +59,16 @@ class MailSettings extends Component
 
     public string $fromName = '';
 
+    /**
+     * Copied on every account-credentials email, if set.
+     *
+     * A setting rather than an address in the source: a name in a repository
+     * is a published personal address, and one that becomes wrong the moment
+     * somebody changes role — quietly, because nothing fails when mail keeps
+     * going to a person who has left.
+     */
+    public string $credentialsCc = '';
+
     public bool $isActive = false;
 
     /** Result of the last test in THIS screen, so it reads as a reply. */
@@ -80,6 +90,7 @@ class MailSettings extends Component
             $this->encryption = (string) ($existing->encryption ?? '');
             $this->fromAddress = $existing->from_address;
             $this->fromName = $existing->from_name;
+            $this->credentialsCc = (string) $existing->credentials_cc;
             $this->isActive = $existing->is_active;
 
             return;
@@ -121,6 +132,7 @@ class MailSettings extends Component
             'encryption' => ['nullable', Rule::in(['tls', 'ssl'])],
             'fromAddress' => ['required', 'email', 'max:190'],
             'fromName' => ['required', 'string', 'max:190'],
+            'credentialsCc' => ['nullable', 'email', 'max:190'],
             'isActive' => ['boolean'],
         ];
     }
@@ -137,6 +149,7 @@ class MailSettings extends Component
             'password' => __('app.mail.password'),
             'fromAddress' => __('app.mail.from_address'),
             'fromName' => __('app.mail.from_name'),
+            'credentialsCc' => __('app.mail.credentials_cc'),
         ];
     }
 
@@ -156,6 +169,7 @@ class MailSettings extends Component
             'encryption' => $this->encryption ?: null,
             'from_address' => trim($this->fromAddress),
             'from_name' => trim($this->fromName),
+            'credentials_cc' => trim($this->credentialsCc) ?: null,
             'is_active' => $this->isActive,
             'updated_by_id' => auth()->id(),
         ]);

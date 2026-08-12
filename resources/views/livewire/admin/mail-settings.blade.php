@@ -119,6 +119,13 @@
             </div>
 
             <div class="border-t border-slate-200 pt-4">
+                <x-label for="mail-cc">{{ __('app.mail.credentials_cc') }}</x-label>
+                <x-input id="mail-cc" type="email" wire:model="credentialsCc" class="mt-1 w-full" maxlength="190" />
+                <p class="mt-1 text-sm text-slate-500">{{ __('app.mail.credentials_cc_hint') }}</p>
+                @error('credentialsCc') <p class="mt-1 text-sm text-rose-600">{{ $message }}</p> @enderror
+            </div>
+
+            <div class="border-t border-slate-200 pt-4">
                 <x-checkbox wire:model="isActive" id="mail-active">{{ __('app.mail.use_these') }}</x-checkbox>
                 <p class="mt-1 text-sm text-slate-500">{{ __('app.mail.use_these_hint') }}</p>
             </div>
