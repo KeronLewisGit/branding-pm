@@ -31,6 +31,8 @@
              reader to recognise "localhost". --}}
         @if ($sendsLocally)
             <x-alert type="error" class="mt-3">{{ __('app.mail.sends_locally') }}</x-alert>
+        @elseif ($sendsUnauthenticated)
+            <x-alert type="error" class="mt-3">{{ __('app.mail.sends_unauthenticated') }}</x-alert>
         @endif
 
         @if ($setting?->last_tested_at)

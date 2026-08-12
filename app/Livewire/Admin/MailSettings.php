@@ -84,8 +84,13 @@ class MailSettings extends Component
 
         if ($existing !== null) {
             $this->transport = $existing->transport;
-            $this->host = $existing->host;
-            $this->port = (string) $existing->port;
+            // Cast, because host and port are legitimately null for an API
+            // relay and these properties are typed strings. Assigning null to
+            // one is a TypeError — a 500 on the very screen that exists to fix
+            // a broken relay, reachable only by the configuration this change
+            // was meant to allow.
+            $this->host = (string) ($existing->host ?? '');
+            $this->port = (string) ($existing->port ?? '');
             $this->username = (string) $existing->username;
             $this->encryption = (string) ($existing->encryption ?? '');
             $this->fromAddress = $existing->from_address;
@@ -281,6 +286,7 @@ class MailSettings extends Component
             'setting' => MailSetting::query()->with('updatedBy:id,full_name')->first(),
             'envHost' => (string) config('mail.mailers.smtp.host'),
             'sendsLocally' => MailRelay::sendsLocally(),
+            'sendsUnauthenticated' => MailRelay::sendsUnauthenticated(),
         ])->title(__('app.mail.title'));
     }
 }

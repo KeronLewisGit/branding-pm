@@ -1310,6 +1310,7 @@ return [
     'mail' => [
         'title' => 'Mail',
         'intro' => 'The relay that sends password resets. Saved here, these override the values in .env — so the relay can be fixed without shell access.',
+        'sends_unauthenticated' => 'This site is connecting to the mail server without a username, so it is asking it to carry mail for a stranger — which is refused as “554 Client host rejected”. Fill in the username and password below and tick “Use these settings”.',
         'sends_locally' => 'This site is handing its mail to the local mail server, which will not deliver to outside addresses — that is the “554 Client host rejected” you have been seeing. Fill in the relay below and tick “Use these settings”.',
         'in_force' => 'Sending through',
         'transport' => 'How to send',
