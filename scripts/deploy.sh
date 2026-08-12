@@ -36,6 +36,24 @@ case "$PHP_VERSION" in
     *) fail "PHP $PHP_VERSION — this application requires 8.4. Set PHP_BIN to the right binary." ;;
 esac
 
+# Boot before taking anything down.
+#
+# A stale bootstrap/cache/packages.php -- one written while dev dependencies
+# were installed, then left behind by `composer install --no-dev` -- names a
+# service provider that no longer exists, and the failure is PRE-boot. That
+# means artisan cannot rescue it: up, optimize:clear and config:clear all have
+# to boot first. Discovering that after `artisan down` leaves the site off with
+# no artisan command able to bring it back.
+if ! "$PHP_BIN" artisan --version >/dev/null 2>&1; then
+    printf '
+'
+    "$PHP_BIN" artisan --version || true
+    printf '
+'
+    fail "The application does not boot, so there is nothing safe to deploy. If this is a stale package manifest: rm -f bootstrap/cache/packages.php bootstrap/cache/services.php && composer install --no-dev --optimize-autoloader"
+fi
+ok "application boots"
+
 # A modified TRACKED file means somebody edited the application on the server.
 # Pulling over that either fails or silently discards their fix, and both are
 # worse than stopping to ask.
@@ -54,7 +72,15 @@ fi
 # ---------------------------------------------------------------------------
 # Without the trap, a failed migration leaves the site down until somebody
 # notices and knows the command.
-restore() { "$PHP_BIN" artisan up >/dev/null 2>&1 || true; }
+# `artisan up` is tried first because it is the clean way, and the files are
+# removed directly when it cannot run — which is exactly the case that matters,
+# since a deploy fails hardest when the application has stopped booting.
+restore() {
+    "$PHP_BIN" artisan up >/dev/null 2>&1 && return
+    rm -f storage/framework/down storage/framework/maintenance.php
+    printf '[33m    artisan could not run; maintenance files removed directly.[0m
+' >&2
+}
 trap restore EXIT
 
 say "Maintenance mode"
@@ -87,6 +113,10 @@ fi
 # ---------------------------------------------------------------------------
 # Schema
 # ---------------------------------------------------------------------------
+if ! "$PHP_BIN" artisan --version >/dev/null 2>&1; then
+    fail "The application stopped booting after the update. Nothing has been migrated."
+fi
+
 say "Migrations"
 "$PHP_BIN" artisan migrate --force
 
