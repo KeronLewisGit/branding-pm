@@ -25,6 +25,14 @@
             </span>
         </p>
 
+        {{-- A hostname is not an explanation. This is the one value that
+             silently produces a rejection nobody can trace back to this
+             screen, so it says what will happen rather than leaving the
+             reader to recognise "localhost". --}}
+        @if ($sendsLocally)
+            <x-alert type="error" class="mt-3">{{ __('app.mail.sends_locally') }}</x-alert>
+        @endif
+
         @if ($setting?->last_tested_at)
             <p class="mt-2 text-sm text-slate-500">
                 {{ __('app.mail.last_tested', ['when' => $setting->last_tested_at->diffForHumans()]) }}
