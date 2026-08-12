@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Livewire\Admin;
 
+use Closure;
 use App\Models\Site;
 use App\Notifications\AccountCredentials;
 use App\Models\User;
@@ -56,6 +57,16 @@ class UserManager extends Component
 
     #[Url(as: 'inactive')]
     public bool $includeInactive = false;
+
+    /**
+     * Show accounts that were retired rather than removed.
+     *
+     * Off by default — the everyday list should be the people who exist. It
+     * matters that this is reachable at all: a retired account keeps its email
+     * and employee number, so without a way to see one, "that address is
+     * already taken" names a user who appears nowhere.
+     */
+    public bool $showDeleted = false;
 
     // ── Create / edit form ───────────────────────────────────────────
 
@@ -118,7 +129,7 @@ class UserManager extends Component
 
     public function updating(string $property, mixed $value): void
     {
-        if (in_array($property, ['search', 'roleFilter', 'includeInactive'], true)) {
+        if (in_array($property, ['search', 'roleFilter', 'includeInactive', 'showDeleted'], true)) {
             $this->resetPage();
         }
     }
@@ -159,6 +170,19 @@ class UserManager extends Component
     public function deletingUser(): ?User
     {
         return $this->deletingId === null ? null : User::query()->find($this->deletingId);
+    }
+
+    /**
+     * Whether confirming will retire the account or remove it.
+     *
+     * Asked before the click, not after. "This cannot be undone" and "this can
+     * be undone" are different decisions, and an administrator is entitled to
+     * know which one is in front of them.
+     */
+    #[Computed]
+    public function deletingKeepsRecord(): bool
+    {
+        return $this->deletingUser?->hasMaintenanceHistory() ?? false;
     }
 
     /**
@@ -542,9 +566,23 @@ class UserManager extends Component
     }
 
     /**
-     * Soft delete only. Runs, signatures and issues reference users with
-     * `nullOnDelete`, so a hard delete would strip the name off signed work
-     * — the record must keep saying who did it.
+     * Remove the account, or retire it — whichever the record allows.
+     *
+     * Runs, signatures and issues reference users with `nullOnDelete`, so
+     * deleting somebody who has worked would leave completed checklists that no
+     * longer say who completed them. That is why this was a soft delete.
+     *
+     * But a soft delete is not free, and the cost fell in the wrong place. The
+     * row keeps its unique email and employee number while being invisible in
+     * every list, so an account created by mistake could never be created
+     * again: the administrator is told the address is taken, by a user they
+     * cannot find anywhere. That is a dead end, and it was reachable in about
+     * a minute of ordinary use.
+     *
+     * So the question is asked rather than assumed. An account named nowhere in
+     * the maintenance record protects nothing by lingering, and is removed
+     * outright. One that has signed, completed, verified, raised or enrolled
+     * anything is retired as before, and can be restored.
      */
     public function deleteUser(): void
     {
@@ -571,8 +609,19 @@ class UserManager extends Component
         }
 
         $name = $user->full_name;
+        $keep = $user->hasMaintenanceHistory();
 
-        DB::transaction(function () use ($user): void {
+        DB::transaction(function () use ($user, $keep): void {
+            if (! $keep) {
+                // Nothing records this person, so nothing is lost. The email
+                // and employee number go back into circulation, which is the
+                // whole point — an account created by mistake has to be
+                // creatable again.
+                $user->forceDelete();
+
+                return;
+            }
+
             // Deactivate as well as soft-delete: `is_active` is what the
             // login and the kiosk PIN pad check, and a restored row should
             // not silently be able to sign in again.
@@ -580,9 +629,36 @@ class UserManager extends Component
             $user->delete();
         });
 
-        session()->flash('flash.success', __('app.users.deleted_message', ['name' => $name]));
+        session()->flash('flash.success', $keep
+            ? __('app.users.retired_message', ['name' => $name])
+            : __('app.users.deleted_message', ['name' => $name]));
 
         $this->closeDelete();
+    }
+
+    /**
+     * Put a retired account back.
+     *
+     * Restored deactivated: `delete` switched `is_active` off, and coming back
+     * into the list should not also hand somebody a working sign-in. An
+     * administrator who wants them working again turns them on deliberately.
+     */
+    public function restoreUser(int $userId): void
+    {
+        $user = User::withTrashed()->findOrFail($userId);
+
+        $this->authorize('restore', $user);
+
+        if (! $user->trashed()) {
+            return;
+        }
+
+        DB::transaction(function () use ($user): void {
+            $user->restore();
+            $user->update(['is_active' => false]);
+        });
+
+        session()->flash('flash.success', __('app.users.restored_message', ['name' => $user->full_name]));
     }
 
     private function closeDelete(): void
@@ -592,13 +668,56 @@ class UserManager extends Component
         unset($this->deletingUser);
     }
 
+    /**
+     * Reject a duplicate, and say which kind of duplicate it is.
+     *
+     * `Rule::unique` would do the rejecting, but not the saying. Retired
+     * accounts keep their email and employee number while being hidden from
+     * the list by default, so the plain "already been taken" sends an
+     * administrator looking for a user who is not there — the exact dead end
+     * that made deleting an account feel broken.
+     *
+     * Retired rows are still counted as taken. Handing a departed employee's
+     * number to somebody new would attach the new person to the old one's
+     * history, which is worse than the inconvenience of choosing another.
+     */
+    private function failIfTaken(string $column, mixed $value, Closure $fail): void
+    {
+        if ($value === null || $value === '') {
+            return;
+        }
+
+        $clash = User::withTrashed()
+            ->where($column, $value)
+            ->when($this->editingId !== null, fn (Builder $q) => $q->whereKeyNot($this->editingId))
+            ->first();
+
+        if ($clash === null) {
+            return;
+        }
+
+        $fail(__($clash->trashed()
+            ? 'app.users.taken_by_deleted'
+            : 'app.users.taken', ['name' => $clash->full_name]));
+    }
+
     // ── Render ───────────────────────────────────────────────────────
 
     public function render(): View
     {
         $users = User::query()
             ->with('roles:id,name')
-            ->when(! $this->includeInactive, fn (Builder $q) => $q->where('is_active', true))
+            ->when($this->showDeleted, fn (Builder $q) => $q->withTrashed())
+            /*
+             * "Show removed" has to survive the active filter. Deleting an
+             * account switches `is_active` off, so filtering on it would hide
+             * every removed account again and the checkbox would appear to do
+             * nothing — the same disappearing act it exists to undo.
+             */
+            ->when(! $this->includeInactive, fn (Builder $q) => $q->where(
+                fn (Builder $q) => $q->where('is_active', true)
+                    ->when($this->showDeleted, fn (Builder $q) => $q->orWhereNotNull('deleted_at'))
+            ))
             ->when($this->roleFilter !== '', fn (Builder $q) => $q->role($this->roleFilter))
             ->when($this->search !== '', function (Builder $query): void {
                 $term = '%'.addcslashes($this->search, '\\%_').'%';
@@ -633,13 +752,13 @@ class UserManager extends Component
                 'required',
                 'string',
                 'max:32',
-                Rule::unique('users', 'employee_number')->ignore($this->editingId),
+                fn (string $attribute, mixed $value, Closure $fail) => $this->failIfTaken('employee_number', $value, $fail),
             ],
             'email' => [
                 'nullable',
                 'email',
                 'max:190',
-                Rule::unique('users', 'email')->ignore($this->editingId),
+                fn (string $attribute, mixed $value, Closure $fail) => $this->failIfTaken('email', $value, $fail),
             ],
             'role' => ['required', Rule::in($this->roles())],
             'siteId' => ['nullable', Rule::exists('sites', 'id')],
