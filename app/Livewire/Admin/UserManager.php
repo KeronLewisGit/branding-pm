@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Livewire\Admin;
 
 use App\Models\Site;
+use App\Notifications\AccountCredentials;
 use App\Models\User;
 use App\Support\Roles;
 use Illuminate\Contracts\View\View;
@@ -96,6 +97,15 @@ class UserManager extends Component
      * stops the role dropdown rewriting a number somebody chose on purpose.
      */
     public bool $employeeNumberGenerated = false;
+
+    /**
+     * Email the credentials to the person being created.
+     *
+     * Create only, and only when they have an address. There is nothing to
+     * send on an edit: the stored password is a hash, so the plaintext exists
+     * solely inside the request that set it.
+     */
+    public bool $sendCredentials = false;
 
     // ── Confirmations ────────────────────────────────────────────────
 
@@ -403,9 +413,38 @@ class UserManager extends Component
             return $user;
         });
 
-        session()->flash('flash.success', $editing !== null
+        $flash = $editing !== null
             ? __('app.users.updated_message', ['name' => $user->full_name])
-            : __('app.users.created_message', ['name' => $user->full_name]));
+            : __('app.users.created_message', ['name' => $user->full_name]);
+
+        /*
+         * Sent AFTER the transaction, never inside it. A relay that hangs or
+         * refuses must not roll back an account that was created correctly —
+         * and an email cannot be un-sent if the transaction later fails.
+         *
+         * Create only: on an edit there is nothing to send, because the stored
+         * password is a hash and the plaintext exists solely in the request
+         * that set it.
+         */
+        if ($editing === null && $this->sendCredentials && $user->email !== null) {
+            try {
+                $user->notify(new AccountCredentials(
+                    $this->password !== '' ? $this->password : null,
+                    $this->pin !== '' ? $this->pin : null,
+                ));
+
+                $flash .= ' '.__('app.users.credentials_sent', ['email' => $user->email]);
+            } catch (\Throwable $e) {
+                // The account exists; only the email failed. Saying so beats
+                // a success message that leaves an administrator believing
+                // somebody was told when they were not.
+                $flash .= ' '.__('app.users.credentials_failed', [
+                    'error' => mb_substr($e->getMessage(), 0, 200),
+                ]);
+            }
+        }
+
+        session()->flash('flash.success', $flash);
 
         $this->dispatch('close-modal', name: 'user-form');
         $this->resetForm();
@@ -616,7 +655,7 @@ class UserManager extends Component
     private function resetForm(): void
     {
         $this->reset('editingId', 'fullName', 'employeeNumber', 'email', 'role', 'siteId', 'isActive', 'password', 'pin',
-            'passwordGenerated', 'pinGenerated', 'employeeNumberGenerated');
+            'passwordGenerated', 'pinGenerated', 'employeeNumberGenerated', 'sendCredentials');
         $this->resetValidation();
     }
 }
