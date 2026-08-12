@@ -1310,6 +1310,12 @@ return [
     'mail' => [
         'title' => 'Mail',
         'intro' => 'The relay that sends password resets. Saved here, these override the values in .env — so the relay can be fixed without shell access.',
+        'diag' => [
+            'not_active' => 'A relay is saved on Admin → Mail but “Use these settings” is not ticked, so it is being ignored and the .env values are sending instead.',
+            'bridge_missing' => 'The SendGrid API is selected but its package is not installed on this server. Run `composer install --no-dev`.',
+            'local' => 'Mail is going to this machine’s own mail server, which does not deliver to outside addresses. Set a real relay on Admin → Mail.',
+            'unauthenticated' => 'Mail is going to the relay with no username, so it is being refused as an unknown sender. Set the username and password on Admin → Mail.',
+        ],
         'sends_unauthenticated' => 'This site is connecting to the mail server without a username, so it is asking it to carry mail for a stranger — which is refused as “554 Client host rejected”. Fill in the username and password below and tick “Use these settings”.',
         'sends_locally' => 'This site is handing its mail to the local mail server, which will not deliver to outside addresses — that is the “554 Client host rejected” you have been seeing. Fill in the relay below and tick “Use these settings”.',
         'in_force' => 'Sending through',

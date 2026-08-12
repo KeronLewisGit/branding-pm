@@ -163,6 +163,73 @@ final class MailRelay
         return trim((string) config("mail.mailers.{$mailer}.username")) === '';
     }
 
+    /**
+     * Why is mail failing, in words an administrator can act on?
+     *
+     * One diagnosis, several places to show it: the settings screen, the
+     * `mail:doctor` command, and — most importantly — the message an
+     * administrator actually reads, which is the one attached to the account
+     * they just created. A relay problem is discovered there far more often
+     * than on the screen built for it, because that is where somebody is when
+     * it bites.
+     *
+     * Returns a translation key rather than a sentence, so the wording stays
+     * in the language files with everything else.
+     *
+     * Ordered by which fault is upstream of the others. A relay that is saved
+     * but not switched on explains every symptom below it, and reporting the
+     * downstream ones as well would send somebody to fix settings that are not
+     * in use.
+     */
+    public static function diagnosis(): ?string
+    {
+        try {
+            $relay = MailSetting::row();
+        } catch (Throwable) {
+            return null;
+        }
+
+        if ($relay !== null && ! $relay->is_active) {
+            return 'app.mail.diag.not_active';
+        }
+
+        if ($relay?->transport === self::TRANSPORT_SENDGRID_API && ! self::sendgridApiAvailable()) {
+            return 'app.mail.diag.bridge_missing';
+        }
+
+        if (self::sendsLocally()) {
+            return 'app.mail.diag.local';
+        }
+
+        if (self::sendsUnauthenticated()) {
+            return 'app.mail.diag.unauthenticated';
+        }
+
+        return null;
+    }
+
+    /**
+     * The relay's own words, followed by what to do about them.
+     *
+     * A pure function of the two, so the pairing is testable on its own. The
+     * call site is then a single line that cannot be subtly wrong, which
+     * matters because the place it is called from — a flash message on a
+     * Livewire component — cannot be observed from a test at all: the harness
+     * ages flash data before an assertion can reach it.
+     *
+     * The provider's message is kept and kept first. "554 Client host
+     * rejected" is the evidence, and paraphrasing it away would leave somebody
+     * unable to search for the actual error.
+     */
+    public static function explain(string $providerMessage): string
+    {
+        $why = self::diagnosis();
+
+        return $why === null
+            ? $providerMessage
+            : $providerMessage.' '.__($why);
+    }
+
     public static function apply(): void
     {
         try {
