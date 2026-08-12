@@ -68,7 +68,13 @@ it('fails when the site is handing mail to the local server', function (): void 
 });
 
 it('does not mistake a real relay for the local one', function (): void {
-    config(['mail.default' => 'smtp', 'mail.mailers.smtp.host' => 'smtp.sendgrid.net']);
+    // Credentials included: a host on its own is not a working relay, and
+    // leaving them out made this pass for the wrong reason.
+    config([
+        'mail.default' => 'smtp',
+        'mail.mailers.smtp.host' => 'smtp.sendgrid.net',
+        'mail.mailers.smtp.username' => 'apikey',
+    ]);
     storedRelay();
     MailSetting::forget();
 
@@ -161,4 +167,87 @@ it('says the database is behind the code rather than failing on save', function 
         ->expectsOutputToContain('credentials_cc')
         ->expectsOutputToContain('migrate')
         ->assertExitCode(1);
+});
+
+it('catches a real relay offered no credentials', function (): void {
+    /*
+     * The other way to earn "554 Client host rejected", and the one that does
+     * not look wrong at a glance: a genuine mail server, the right port, a
+     * connection that succeeds — and no username, so the server refuses to
+     * carry mail for a stranger. Found in the wild on the pilot server, where
+     * MAIL_HOST was smtp.hostinger.com with MAIL_USERNAME unset.
+     */
+    config([
+        'mail.default' => 'smtp',
+        'mail.mailers.smtp.host' => 'smtp.hostinger.com',
+        'mail.mailers.smtp.username' => null,
+    ]);
+
+    expect(MailRelay::sendsUnauthenticated())->toBeTrue();
+
+    $this->artisan('mail:doctor')
+        ->expectsOutputToContain('without a username')
+        ->assertExitCode(1);
+});
+
+it('does not complain when the relay has credentials', function (): void {
+    config([
+        'mail.default' => 'smtp',
+        'mail.mailers.smtp.host' => 'smtp.sendgrid.net',
+        'mail.mailers.smtp.username' => 'apikey',
+    ]);
+
+    expect(MailRelay::sendsUnauthenticated())->toBeFalse();
+});
+
+it('leaves the local-server case its own message', function (): void {
+    // Both are true of an unauthenticated localhost, and two errors for one
+    // fault is how a report stops being read.
+    config(['mail.default' => 'smtp', 'mail.mailers.smtp.host' => 'localhost', 'mail.mailers.smtp.username' => null]);
+
+    expect(MailRelay::sendsUnauthenticated())->toBeFalse()
+        ->and(MailRelay::sendsLocally())->toBeTrue();
+});
+
+it('opens the settings screen for an API relay that has no host', function (): void {
+    /*
+     * Regression. Making host and port nullable — correct, an API relay has
+     * neither — meant mount() assigned null to a typed string property. The
+     * result was a 500 on the one screen that exists to repair a broken relay,
+     * reachable only via the configuration the change was meant to allow.
+     */
+    MailSetting::query()->create([
+        'transport' => MailRelay::TRANSPORT_SENDGRID_API,
+        'host' => null,
+        'port' => null,
+        'username' => null,
+        'password' => 'SG.the-key',
+        'from_address' => 'pm@labelhouse.com',
+        'from_name' => 'Branding PM',
+        'is_active' => true,
+    ]);
+    MailSetting::forget();
+
+    $this->seed(Database\Seeders\RolesAndPermissionsSeeder::class);
+    $admin = App\Models\User::factory()->create();
+    $admin->assignRole('admin');
+
+    Livewire\Livewire::actingAs($admin)
+        ->test(App\Livewire\Admin\MailSettings::class)
+        ->assertOk();
+});
+
+it('keeps the EHLO domain when falling back to SendGrid SMTP', function (): void {
+    // config/mail.php sets local_domain, and relays do reject a session that
+    // greets them with the wrong name. Replacing the array would drop it.
+    config(['mail.mailers.smtp.local_domain' => 'branding-pm.example']);
+
+    MailRelay::fakeBridge(false);
+
+    storedRelay(['transport' => MailRelay::TRANSPORT_SENDGRID_API, 'host' => null, 'port' => null]);
+    MailSetting::forget();
+    MailRelay::apply();
+
+    expect(config('mail.mailers.smtp.local_domain'))->toBe('branding-pm.example')
+        ->and(config('mail.mailers.smtp.host'))->toBe(MailRelay::SENDGRID_SMTP_HOST);
 });

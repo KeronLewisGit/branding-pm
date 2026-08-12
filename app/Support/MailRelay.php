@@ -138,6 +138,31 @@ final class MailRelay
         });
     }
 
+    /**
+     * Is the site about to offer a real relay no credentials at all?
+     *
+     * The other way to earn "554 Client host rejected", and the one that does
+     * not look wrong at a glance: the host is a genuine mail server, the port
+     * is right, the connection succeeds — and the session presents no
+     * username, so the server refuses to carry mail for a stranger. Reading
+     * the configuration, everything appears filled in; the empty field is the
+     * one nobody notices is empty.
+     *
+     * Public relays that accept anonymous mail exist, so this is a warning
+     * rather than a refusal. A local mail server is excluded because it has
+     * its own, more specific message.
+     */
+    public static function sendsUnauthenticated(): bool
+    {
+        $mailer = (string) config('mail.default');
+
+        if ($mailer !== 'smtp' || self::sendsLocally()) {
+            return false;
+        }
+
+        return trim((string) config("mail.mailers.{$mailer}.username")) === '';
+    }
+
     public static function apply(): void
     {
         try {
@@ -172,14 +197,22 @@ final class MailRelay
              * approximate. Same provider, same credential, different door.
              */
             Config::set('mail.default', 'smtp');
-            Config::set('mail.mailers.smtp', [
-                'transport' => 'smtp',
-                'host' => self::SENDGRID_SMTP_HOST,
-                'port' => self::SENDGRID_SMTP_PORT,
-                'username' => self::SENDGRID_SMTP_USERNAME,
-                'password' => $relay->password,
-                'encryption' => 'tls',
-            ]);
+
+            // Merged, not replaced. config/mail.php also sets `local_domain`
+            // — the name used in the SMTP EHLO greeting — and relays do
+            // reject a session that greets them with the wrong one. Replacing
+            // the array wholesale would drop it silently.
+            Config::set('mail.mailers.smtp', array_merge(
+                (array) config('mail.mailers.smtp', []),
+                [
+                    'transport' => 'smtp',
+                    'host' => self::SENDGRID_SMTP_HOST,
+                    'port' => self::SENDGRID_SMTP_PORT,
+                    'username' => self::SENDGRID_SMTP_USERNAME,
+                    'password' => $relay->password,
+                    'encryption' => 'tls',
+                ],
+            ));
 
             return;
         }

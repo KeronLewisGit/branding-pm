@@ -209,6 +209,16 @@ class MailDoctor extends Command
             $ok = false;
         }
 
+        if (MailRelay::sendsUnauthenticated()) {
+            $this->components->error(
+                'This site is connecting to '.config('mail.mailers.smtp.host').' without a username, so it is '
+                .'asking a mail server to carry mail for a stranger. That is refused as '
+                .'“554 Client host rejected: Access denied”.'
+            );
+            $this->line('  Set a username and password on Admin → Mail, or switch to the SendGrid API.');
+            $ok = false;
+        }
+
         if ($relay?->transport === MailRelay::TRANSPORT_SENDGRID_API && ! MailRelay::sendgridApiAvailable()) {
             $this->components->error(
                 'The SendGrid API transport is selected but symfony/sendgrid-mailer is not installed, '
