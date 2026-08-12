@@ -8,12 +8,15 @@ use App\Models\ChecklistRun;
 use App\Models\ChecklistTemplate;
 use App\Models\Issue;
 use App\Models\Machine;
+use App\Models\MailSetting;
 use App\Models\User;
 use App\Policies\ChecklistRunPolicy;
 use App\Policies\ChecklistTemplatePolicy;
 use App\Policies\IssuePolicy;
 use App\Policies\MachinePolicy;
+use App\Policies\MailSettingPolicy;
 use App\Policies\UserPolicy;
+use App\Support\MailRelay;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
@@ -41,10 +44,22 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Machine::class, MachinePolicy::class);
         Gate::policy(Issue::class, IssuePolicy::class);
         Gate::policy(User::class, UserPolicy::class);
+        Gate::policy(MailSetting::class, MailSettingPolicy::class);
 
         // Surface N+1 queries everywhere except production. Mass assignment
         // stays guarded — every model declares an explicit $fillable.
         Model::preventLazyLoading(! $this->app->isProduction());
+
+        /*
+         * The relay configured in the application wins over .env, when one is
+         * saved AND enabled. Deliberately here rather than in a config file:
+         * config files are cached, and a cached config cannot read a database.
+         *
+         * It never throws — see MailRelay. A boot-time override that can fail
+         * is one that can take the site down, and this application has already
+         * been stranded once by exactly that shape of problem.
+         */
+        MailRelay::apply();
 
         $this->warnAboutUnsafeProductionSettings();
     }

@@ -18,6 +18,7 @@ use App\Livewire\Admin\HolidayManager;
 use App\Livewire\Admin\KioskDeviceManager;
 use App\Livewire\Admin\LocationManager;
 use App\Livewire\Admin\MachineManager;
+use App\Livewire\Admin\MailSettings;
 use App\Livewire\Admin\QrStickerSheet;
 use App\Livewire\Admin\TemplateEditor;
 use App\Livewire\Admin\TemplateManager;
@@ -197,6 +198,14 @@ Route::middleware('auth')->group(function (): void {
  */
 Route::middleware(['auth', 'permission:kiosk.activate'])->group(function (): void {
     Route::get('/kiosk/requests', EnrolmentRequests::class)->name('kiosk.requests');
+});
+
+/*
+ * The mail relay, editable without SSH. `setting.manage` is administrators
+ * only — a relay is a credential and a sending identity, not a preference.
+ */
+Route::middleware(['auth', 'permission:setting.manage'])->group(function (): void {
+    Route::get('/admin/mail', MailSettings::class)->name('admin.mail');
 });
 
 Route::middleware(['auth', 'permission:kiosk.manage'])->group(function (): void {
