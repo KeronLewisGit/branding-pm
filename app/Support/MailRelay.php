@@ -31,15 +31,34 @@ final class MailRelay
     public const TRANSPORT_SENDGRID_API = 'sendgrid_api';
 
     /**
+     * Is the SendGrid bridge actually installed?
+     *
+     * `symfony/sendgrid-mailer` is a composer dependency, and a server that
+     * has pulled the code but not yet run `composer install` has the option in
+     * the UI and not the class behind it. Asking before offering turns a fatal
+     * into a sentence.
+     */
+    public static function sendgridApiAvailable(): bool
+    {
+        return class_exists(SendgridTransportFactory::class);
+    }
+
+    /**
      * Laravel ships transports for SES, Postmark, Resend and Mailgun, but not
      * SendGrid. Symfony's bridge provides one; this is what makes
      * `mail.default = 'sendgrid_api'` mean anything.
      *
-     * Registered unconditionally at boot, whether or not it is in use, so the
-     * transport exists before any configuration can name it.
+     * Registered at boot whether or not it is in use, so the transport exists
+     * before any configuration can name it — but only when the bridge is
+     * actually present, since a deploy that pulled the code without running
+     * composer has the option and not the class.
      */
     public static function registerTransports(): void
     {
+        if (! self::sendgridApiAvailable()) {
+            return;
+        }
+
         Mail::extend(self::TRANSPORT_SENDGRID_API, function (array $config) {
             $key = (string) ($config['api_key'] ?? '');
 
@@ -69,7 +88,11 @@ final class MailRelay
         Config::set('mail.from.address', $relay->from_address);
         Config::set('mail.from.name', $relay->from_name);
 
-        if ($relay->transport === self::TRANSPORT_SENDGRID_API) {
+        // Falls through to SMTP when the bridge is missing rather than
+        // switching `mail.default` to a transport nothing can build. A relay
+        // that quietly keeps working beats one that fatals on the next
+        // password reset.
+        if ($relay->transport === self::TRANSPORT_SENDGRID_API && self::sendgridApiAvailable()) {
             Config::set('mail.mailers.'.self::TRANSPORT_SENDGRID_API, [
                 'transport' => self::TRANSPORT_SENDGRID_API,
                 // The same encrypted column SMTP uses: SendGrid's SMTP

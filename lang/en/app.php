@@ -1289,6 +1289,7 @@ return [
         'transport_api' => 'SendGrid API (HTTPS)',
         'transport_hint' => 'Both reach SendGrid. Use the API if the host blocks outbound SMTP — it is an ordinary HTTPS request.',
         'api_key' => 'API key',
+        'api_unavailable' => 'The SendGrid API package is not installed on this server. Run composer install, or use the SMTP relay.',
         'source_app' => 'set here',
         'source_env' => 'from .env',
         'last_tested' => 'Last tested :when',
