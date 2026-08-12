@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\EnforceKioskIdleTimeout;
 use App\Http\Middleware\EnsureKioskDevice;
+use App\Http\Middleware\RequirePasswordChange;
 use App\Http\Middleware\SecurityHeaders;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -70,6 +71,12 @@ return Application::configure(basePath: dirname(__DIR__))
             // Server-side half of the 2-minute kiosk idle drop. The Alpine
             // `idleRelease` component is a convenience; THIS is authoritative.
             'kiosk.idle' => EnforceKioskIdleTimeout::class,
+            /*
+             * Sends somebody signing in on an administrator-issued password
+             * to change it before doing anything else. Applied to the office
+             * `auth` group only — see the class for why the kiosk is exempt.
+             */
+            'password.change' => RequirePasswordChange::class,
             'role' => RoleMiddleware::class,
             'permission' => PermissionMiddleware::class,
         ]);

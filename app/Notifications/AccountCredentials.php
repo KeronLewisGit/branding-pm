@@ -50,30 +50,59 @@ class AccountCredentials extends Notification
 
     public function toMail(object $notifiable): MailMessage
     {
+        /*
+         * `route()` rather than a stored address, so the link is whatever this
+         * installation is actually reachable at — the request host in a web
+         * request, APP_URL when queued or sent from the console. An address
+         * typed into a setting would be one more thing to be wrong after a
+         * move.
+         */
+        $url = route('login');
+
         $message = (new MailMessage)
             ->subject(__('app.credentials_mail.subject', ['app' => (string) config('app.name')]))
             ->greeting(__('app.credentials_mail.greeting', ['name' => $notifiable->full_name]))
-            ->line(__('app.credentials_mail.intro', ['app' => (string) config('app.name')]))
-            ->line(__('app.credentials_mail.employee_number', ['number' => $notifiable->employee_number]));
+            ->line(__('app.credentials_mail.intro', ['app' => (string) config('app.name')]));
+
+        // The details together, so they are findable at a glance rather than
+        // mixed into prose somebody has to read twice.
+        $details = [__('app.credentials_mail.employee_number', ['number' => $notifiable->employee_number])];
+
+        if ($notifiable->email !== null && $notifiable->email !== '') {
+            $details[] = __('app.credentials_mail.email', ['email' => $notifiable->email]);
+        }
 
         // Only what was actually issued. An operator set up with a PIN and no
         // password must not be told about a password they do not have.
         if ($this->password !== null && $this->password !== '') {
-            $message->line(__('app.credentials_mail.password', ['password' => $this->password]));
+            $details[] = __('app.credentials_mail.password', ['password' => $this->password]);
         }
 
         if ($this->pin !== null && $this->pin !== '') {
-            $message->line(__('app.credentials_mail.pin', ['pin' => $this->pin]));
+            $details[] = __('app.credentials_mail.pin', ['pin' => $this->pin]);
+        }
+
+        foreach ($details as $detail) {
+            $message->line($detail);
         }
 
         if ($this->password !== null && $this->password !== '') {
-            $message->action(__('app.credentials_mail.button'), route('login'));
+            $message
+                ->line(__('app.credentials_mail.where'))
+                // No plain-text copy of the URL here: Laravel's mail template
+                // already appends "if you're having trouble clicking the
+                // button…" with the address beneath it, and saying it twice in
+                // near-identical words reads like a mistake.
+                ->action(__('app.credentials_mail.button'), $url)
+                ->line(__('app.credentials_mail.first_login'));
+        }
+
+        if ($this->pin !== null && $this->pin !== '') {
+            $message->line(__('app.credentials_mail.kiosk_note'));
         }
 
         return $message
-            // Said last, where it is read, rather than buried above the
-            // credentials it is about.
-            ->line(__('app.credentials_mail.change_it'))
-            ->salutation(__('app.auth.reset_email_salutation'));
+            ->line(__('app.credentials_mail.keep_safe'))
+            ->salutation(__('app.credentials_mail.salutation', ['app' => (string) config('app.name')]));
     }
 }
