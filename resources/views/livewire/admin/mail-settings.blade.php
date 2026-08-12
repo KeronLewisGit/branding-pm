@@ -17,7 +17,9 @@
     <x-card class="mb-6">
         <p class="text-sm font-semibold uppercase tracking-wide text-slate-500">{{ __('app.mail.in_force') }}</p>
         <p class="mt-1 text-lg font-semibold text-slate-900">
-            {{ $setting?->is_active ? $setting->host : $envHost }}
+            {{ $setting?->is_active
+                ? ($setting->transport === 'sendgrid_api' ? __('app.mail.transport_api') : $setting->host)
+                : $envHost }}
             <span class="text-base font-normal text-slate-500">
                 · {{ $setting?->is_active ? __('app.mail.source_app') : __('app.mail.source_env') }}
             </span>
@@ -39,6 +41,20 @@
 
     <x-card>
         <div class="space-y-5">
+            <div>
+                <x-label for="mail-transport" required>{{ __('app.mail.transport') }}</x-label>
+                <x-select id="mail-transport" wire:model.live="transport" class="mt-1 w-full">
+                    <option value="smtp">{{ __('app.mail.transport_smtp') }}</option>
+                    <option value="sendgrid_api">{{ __('app.mail.transport_api') }}</option>
+                </x-select>
+                <p class="mt-1 text-sm text-slate-500">{{ __('app.mail.transport_hint') }}</p>
+                @error('transport') <p class="mt-1 text-sm text-rose-600">{{ $message }}</p> @enderror
+            </div>
+
+            {{-- SMTP needs a host, a port and an encryption mode. The API is
+                 one HTTPS call to a fixed endpoint, so asking for them there
+                 would be asking for values that go nowhere. --}}
+            @if ($transport === 'smtp')
             <div class="grid gap-4 sm:grid-cols-3">
                 <div class="sm:col-span-2">
                     <x-label for="mail-host" required>{{ __('app.mail.host') }}</x-label>
@@ -53,17 +69,20 @@
                     @error('port') <p class="mt-1 text-sm text-rose-600">{{ $message }}</p> @enderror
                 </div>
             </div>
+            @endif
 
             <div class="grid gap-4 sm:grid-cols-2">
+                @if ($transport === 'smtp')
                 <div>
                     <x-label for="mail-username">{{ __('app.mail.username') }}</x-label>
                     <x-input id="mail-username" wire:model="username" class="mt-1 w-full" maxlength="190" autocomplete="off" />
                     <p class="mt-1 text-sm text-slate-500">{{ __('app.mail.username_hint') }}</p>
                     @error('username') <p class="mt-1 text-sm text-rose-600">{{ $message }}</p> @enderror
                 </div>
+                @endif
 
                 <div>
-                    <x-label for="mail-password">{{ __('app.mail.password') }}</x-label>
+                    <x-label for="mail-password">{{ $transport === 'sendgrid_api' ? __('app.mail.api_key') : __('app.mail.password') }}</x-label>
                     <x-input id="mail-password" type="password" wire:model="password" class="mt-1 w-full font-mono"
                              maxlength="500" autocomplete="new-password"
                              placeholder="{{ $setting?->host ? __('app.mail.password_unchanged') : '' }}" />
@@ -73,6 +92,7 @@
             </div>
 
             <div class="grid gap-4 sm:grid-cols-2">
+                @if ($transport === 'smtp')
                 <div>
                     <x-label for="mail-encryption">{{ __('app.mail.encryption') }}</x-label>
                     <x-select id="mail-encryption" wire:model="encryption" class="mt-1 w-full">
@@ -82,6 +102,7 @@
                     </x-select>
                     @error('encryption') <p class="mt-1 text-sm text-rose-600">{{ $message }}</p> @enderror
                 </div>
+                @endif
 
                 <div>
                     <x-label for="mail-from-name" required>{{ __('app.mail.from_name') }}</x-label>

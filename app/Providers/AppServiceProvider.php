@@ -59,6 +59,7 @@ class AppServiceProvider extends ServiceProvider
          * is one that can take the site down, and this application has already
          * been stranded once by exactly that shape of problem.
          */
+        MailRelay::registerTransports();
         MailRelay::apply();
 
         $this->warnAboutUnsafeProductionSettings();
