@@ -251,3 +251,82 @@ it('keeps the EHLO domain when falling back to SendGrid SMTP', function (): void
     expect(config('mail.mailers.smtp.local_domain'))->toBe('branding-pm.example')
         ->and(config('mail.mailers.smtp.host'))->toBe(MailRelay::SENDGRID_SMTP_HOST);
 });
+
+/*
+|--------------------------------------------------------------------------
+| Saying why, where it is read
+|--------------------------------------------------------------------------
+| A relay problem is discovered on the user form far more often than on the
+| screen built for it, because that is where somebody is standing when it
+| bites. The relay's own words say what happened; they never say what to do.
+*/
+
+it('names the switched-off relay as the reason', function (): void {
+    // The pilot server's actual state: a SendGrid relay saved, never switched
+    // on, .env quietly sending through an unauthenticated host instead.
+    storedRelay(['transport' => MailRelay::TRANSPORT_SENDGRID_API, 'is_active' => false]);
+    MailSetting::forget();
+    config(['mail.default' => 'smtp', 'mail.mailers.smtp.host' => 'smtp.hostinger.com', 'mail.mailers.smtp.username' => null]);
+
+    expect(MailRelay::diagnosis())->toBe('app.mail.diag.not_active');
+});
+
+it('reports the upstream fault, not the ones it causes', function (): void {
+    /*
+     * A relay saved but not switched on explains every symptom below it.
+     * Reporting those as well would send somebody to fix settings that are
+     * not in use.
+     */
+    storedRelay(['is_active' => false]);
+    MailSetting::forget();
+    config(['mail.default' => 'smtp', 'mail.mailers.smtp.host' => 'localhost', 'mail.mailers.smtp.username' => null]);
+
+    expect(MailRelay::diagnosis())->toBe('app.mail.diag.not_active');
+});
+
+it('says nothing when there is nothing to say', function (): void {
+    storedRelay();
+    MailSetting::forget();
+    MailRelay::apply();
+
+    expect(MailRelay::diagnosis())->toBeNull();
+});
+
+it('every diagnosis has wording', function (): void {
+    // A key with no translation renders as the key itself — a failure that
+    // looks like a message and tells nobody anything.
+    foreach (['not_active', 'bridge_missing', 'local', 'unauthenticated'] as $key) {
+        expect(__("app.mail.diag.{$key}"))->not->toBe("app.mail.diag.{$key}");
+    }
+});
+
+it('follows the relay refusal with what to do about it', function (): void {
+    /*
+     * Tested here rather than through the component: the message lands in a
+     * flash on a Livewire action, and the test harness ages flash data before
+     * an assertion can reach it — a known-good flash reads back null too. A
+     * pure function of the two halves is observable, and leaves a call site
+     * too small to be subtly wrong.
+     */
+    storedRelay(['is_active' => false]);
+    MailSetting::forget();
+
+    $explained = MailRelay::explain('Expected response code "250" but got code "554"');
+
+    // The provider's words kept, and kept first — they are the evidence, and
+    // the thing somebody will search for.
+    expect($explained)->toStartWith('Expected response code')
+        ->and($explained)->toContain('554')
+        ->and($explained)->toContain(__('app.mail.diag.not_active'));
+});
+
+it('adds nothing when the relay is healthy and the failure is elsewhere', function (): void {
+    // A rejected recipient, a full mailbox, a momentary outage: real failures
+    // with nothing to advise. Inventing advice would send somebody to change
+    // settings that are correct.
+    storedRelay();
+    MailSetting::forget();
+    MailRelay::apply();
+
+    expect(MailRelay::explain('550 mailbox unavailable'))->toBe('550 mailbox unavailable');
+});

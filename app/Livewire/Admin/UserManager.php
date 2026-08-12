@@ -8,6 +8,7 @@ use Closure;
 use App\Models\Site;
 use App\Notifications\AccountCredentials;
 use App\Models\User;
+use App\Support\MailRelay;
 use App\Support\Roles;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
@@ -476,8 +477,14 @@ class UserManager extends Component
                 // The account exists; only the email failed. Saying so beats
                 // a success message that leaves an administrator believing
                 // somebody was told when they were not.
+                /*
+                 * The relay's own words say what happened; they do not say
+                 * what to do. "554 Client host rejected" is accurate and
+                 * useless to the person reading it, who is standing in a user
+                 * form and not thinking about mail configuration at all.
+                 */
                 $flash .= ' '.__('app.users.credentials_failed', [
-                    'error' => mb_substr($e->getMessage(), 0, 200),
+                    'error' => MailRelay::explain(mb_substr($e->getMessage(), 0, 200)),
                 ]);
             }
         }
