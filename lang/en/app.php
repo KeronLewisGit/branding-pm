@@ -419,6 +419,11 @@ return [
         'employee_number_hint' => 'The number on the floor. This is what they type at the kiosk, and it never changes once work is signed under it.',
         'generate' => 'Generate',
         'generated_write_down' => 'Write this down now — it is not shown again after saving.',
+        'send_credentials' => 'Email these details to them',
+        'send_credentials_hint' => 'Sends their employee number and whichever of the password and PIN you set above. They should change it after signing in.',
+        'send_credentials_no_email' => 'Add an email address to enable this.',
+        'credentials_sent' => 'Details emailed to :email.',
+        'credentials_failed' => 'The account was created, but the email did not send: :error',
         'email' => 'Email address',
         'email_hint' => 'Leave blank for floor operators. Most have no company address, and they do not need one.',
         'role' => 'Role',
@@ -1321,5 +1326,21 @@ return [
         'test_no_recipient' => 'Your account has no email address, so there is nowhere to send the test.',
         'test_subject' => 'Mail test',
         'test_body' => 'This is a test message from :app. If you are reading it, the relay works.',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | "Here is how to sign in" — sent when an administrator creates an account
+    |--------------------------------------------------------------------------
+    */
+    'credentials_mail' => [
+        'subject' => 'Your :app sign-in details',
+        'greeting' => 'Hello :name,',
+        'intro' => 'An account has been created for you on :app.',
+        'employee_number' => '**Employee number:** :number',
+        'password' => '**Password:** :password',
+        'pin' => '**Kiosk PIN:** :pin',
+        'button' => 'Sign in',
+        'change_it' => 'Please change these after signing in. This email is not a safe place for them to stay.',
     ],
 ];

@@ -191,7 +191,7 @@
                     {{ __('app.users.email') }}
                     <span class="font-normal text-slate-500">({{ __('app.common.optional') }})</span>
                 </label>
-                <x-input id="user-email" type="email" wire:model="email" maxlength="190" class="w-full" />
+                <x-input id="user-email" type="email" wire:model.live.debounce.400ms="email" maxlength="190" class="w-full" />
                 <p class="mt-1 text-sm text-slate-500">{{ __('app.users.email_hint') }}</p>
                 @error('email') <p class="mt-1 text-sm text-rose-600">{{ $message }}</p> @enderror
             </div>
@@ -268,6 +268,23 @@
                 </div>
             </div>
 
+
+            {{-- Create only, and only with an address to send to. On an edit
+                 there is nothing to send: the stored password is a hash, so
+                 the plaintext exists solely in the request that set it. --}}
+            @if (! $editingId)
+                <div class="border-t border-slate-200 pt-4">
+                    <x-checkbox id="user-send-credentials" wire:model="sendCredentials"
+                                :disabled="trim($email) === ''">
+                        {{ __('app.users.send_credentials') }}
+                    </x-checkbox>
+                    <p class="mt-1 text-sm text-slate-500">
+                        {{ trim($email) === ''
+                            ? __('app.users.send_credentials_no_email')
+                            : __('app.users.send_credentials_hint') }}
+                    </p>
+                </div>
+            @endif
             <div>
                 <x-checkbox id="user-active" wire:model="isActive">{{ __('app.common.active') }}</x-checkbox>
                 <p class="mt-1 text-sm text-slate-500">{{ __('app.users.is_active_hint') }}</p>
