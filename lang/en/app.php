@@ -435,7 +435,7 @@ return [
         'send_credentials' => 'Email these details to them',
         'send_credentials_hint' => 'Sends their employee number and whichever of the password and PIN you set above. They should change it after signing in.',
         'send_credentials_no_email' => 'Add an email address to enable this.',
-        'credentials_sent' => 'Details emailed to :email.',
+        'credentials_sent' => 'Sign-in details accepted for delivery to :email. If they do not arrive within a few minutes, check junk mail, then the activity feed at your mail provider — once the relay takes a message, delivery is out of this system.',
         'credentials_failed' => 'The account was created, but the email did not send: :error',
         'email' => 'Email address',
         'email_hint' => 'Leave blank for floor operators. Most have no company address, and they do not need one.',
